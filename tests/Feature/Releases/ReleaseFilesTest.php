@@ -187,3 +187,11 @@ test('changing the catalog number of a release leaves its files alone', function
     $this->assertDatabaseHas('release_files', ['id' => $file->id]);
     Storage::disk('local')->assertExists($file->path);
 });
+
+test('the release list keeps showing the cover after other files are added', function () {
+    $cover = storedReleaseFile($this->release, ['kind' => 'cover', 'mime_type' => 'image/jpeg', 'original_name' => 'front.jpg', 'path' => 'releases/a/front.jpg']);
+    storedReleaseFile($this->release, ['kind' => 'audio', 'mime_type' => 'audio/wav', 'original_name' => 'a.wav', 'path' => 'releases/a/a.wav']);
+
+    $this->get(route('releases.index'))
+        ->assertInertia(fn ($page) => $page->where('releases.data.0.cover_file_id', $cover->id));
+});

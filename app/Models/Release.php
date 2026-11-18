@@ -140,7 +140,7 @@ class Release extends Model
      */
     public function cover(): HasOne
     {
-        return $this->hasOne(ReleaseFile::class)->where('kind', ReleaseFileKind::Cover)->latestOfMany();
+        return $this->hasOne(ReleaseFile::class)->ofMany(['id' => 'max'], fn ($query) => $query->where('kind', ReleaseFileKind::Cover));
     }
 
     /**
