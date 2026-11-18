@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Enums\LabelRole;
+use App\Models\Label;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -15,11 +17,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
+        $user = User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        $label = Label::factory()->create(['name' => 'Demo Label', 'slug' => 'demo-label', 'contact_email' => $user->email]);
+        $label->users()->attach($user, ['role' => LabelRole::Admin->value]);
+        $user->forceFill(['current_label_id' => $label->id])->save();
     }
 }

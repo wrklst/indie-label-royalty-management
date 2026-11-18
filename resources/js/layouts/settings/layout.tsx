@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
@@ -6,11 +6,13 @@ import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
+import { edit as editLabel } from '@/routes/label-settings';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
+import { index as team } from '@/routes/team';
 import type { NavItem } from '@/types';
 
-const sidebarNavItems: NavItem[] = [
+const accountNavItems: NavItem[] = [
     {
         title: 'Profile',
         href: edit(),
@@ -28,14 +30,32 @@ const sidebarNavItems: NavItem[] = [
     },
 ];
 
+const labelNavItems: NavItem[] = [
+    {
+        title: 'Label',
+        href: editLabel(),
+        icon: null,
+    },
+    {
+        title: 'Team',
+        href: team(),
+        icon: null,
+    },
+];
+
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
+    const { label } = usePage().props;
+    const sidebarNavItems =
+        label?.role === 'admin'
+            ? [...accountNavItems, ...labelNavItems]
+            : accountNavItems;
 
     return (
         <div className="px-4 py-6">
             <Heading
                 title="Settings"
-                description="Manage your profile and account settings"
+                description="Manage your account, your label and who has access"
             />
 
             <div className="flex flex-col lg:flex-row lg:space-x-12">

@@ -7,10 +7,14 @@ test('guests are redirected to the login page', function () {
     $response->assertRedirect(route('login'));
 });
 
-test('authenticated users can visit the dashboard', function () {
-    $user = User::factory()->create();
-    $this->actingAs($user);
+test('users without a label are sent to create one', function () {
+    $this->actingAs(User::factory()->create());
 
-    $response = $this->get(route('dashboard'));
-    $response->assertOk();
+    $this->get(route('dashboard'))->assertRedirect(route('labels.create'));
+});
+
+test('label admins can visit the dashboard', function () {
+    $this->actingAs(labelAdmin(currentLabel()));
+
+    $this->get(route('dashboard'))->assertOk();
 });

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\CurrentLabel;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -41,7 +42,26 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'label' => fn () => $this->currentLabel($request),
+            'labels' => fn () => $request->user()?->labels()->orderBy('name')->get(['labels.id', 'labels.name'])
+                ->map(fn ($label): array => ['id' => $label->id, 'name' => $label->name])->all() ?? [],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+        ];
+    }
+
+    /**
+     * @return array{id: int, name: string, currency: string, role: string|null}|null
+     */
+    private function currentLabel(Request $request): ?array
+    {
+        $current = app(CurrentLabel::class);
+        $label = $current->get() ?? $request->user()?->currentLabel;
+
+        return $label === null ? null : [
+            'id' => $label->id,
+            'name' => $label->name,
+            'currency' => $label->currency,
+            'role' => $current->role()?->value,
         ];
     }
 }

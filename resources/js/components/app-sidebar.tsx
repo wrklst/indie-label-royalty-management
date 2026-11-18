@@ -1,63 +1,107 @@
-import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
-import AppLogo from '@/components/app-logo';
-import { NavFooter } from '@/components/nav-footer';
+import { usePage } from '@inertiajs/react';
+import {
+    ArrowLeftRight,
+    Banknote,
+    BookOpenText,
+    CalendarRange,
+    Disc3,
+    FileSignature,
+    FileText,
+    LayoutGrid,
+    LibraryBig,
+    ListMusic,
+    Mic2,
+    Package,
+    Upload,
+    Users,
+} from 'lucide-react';
+import { LabelSwitcher } from '@/components/label-switcher';
 import { NavMain } from '@/components/nav-main';
+import type { NavGroup } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
     Sidebar,
     SidebarContent,
     SidebarFooter,
     SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+import { index as artists } from '@/routes/artists';
+import { index as catalog } from '@/routes/catalog';
+import { index as contracts } from '@/routes/contracts';
+import { index as dataImports } from '@/routes/data-imports';
+import { index as items } from '@/routes/items';
+import { index as ledgers } from '@/routes/ledgers';
+import { index as payees } from '@/routes/payees';
+import { index as payouts } from '@/routes/payouts';
+import { index as periods } from '@/routes/periods';
+import { index as portal } from '@/routes/portal';
+import { index as releases } from '@/routes/releases';
+import { index as statements } from '@/routes/statements';
+import { index as tracks } from '@/routes/tracks';
+import { index as transactions } from '@/routes/transactions';
 
-const mainNavItems: NavItem[] = [
+const adminGroups: NavGroup[] = [
     {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
+        title: 'Overview',
+        items: [{ title: 'Dashboard', href: dashboard(), icon: LayoutGrid }],
+    },
+    {
+        title: 'Royalties',
+        items: [
+            { title: 'Data imports', href: dataImports(), icon: Upload },
+            {
+                title: 'Transactions',
+                href: transactions(),
+                icon: ArrowLeftRight,
+            },
+            { title: 'Periods', href: periods(), icon: CalendarRange },
+            { title: 'Statements', href: statements(), icon: FileText },
+            { title: 'Payouts', href: payouts(), icon: Banknote },
+        ],
+    },
+    {
+        title: 'Catalog',
+        items: [
+            { title: 'Catalog manager', href: catalog(), icon: LibraryBig },
+            { title: 'Releases', href: releases(), icon: Disc3 },
+            { title: 'Tracks', href: tracks(), icon: ListMusic },
+            { title: 'Artists', href: artists(), icon: Mic2 },
+            { title: 'Items', href: items(), icon: Package },
+            { title: 'Contracts', href: contracts(), icon: FileSignature },
+            { title: 'Payees', href: payees(), icon: Users },
+            { title: 'Ledgers', href: ledgers(), icon: BookOpenText },
+        ],
     },
 ];
 
-const footerNavItems: NavItem[] = [
+const payeeGroups: NavGroup[] = [
     {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
+        title: 'Royalties',
+        items: [{ title: 'My statements', href: portal(), icon: FileText }],
     },
 ];
 
 export function AppSidebar() {
+    const { label } = usePage().props;
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
-                                <AppLogo />
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
+                <LabelSwitcher />
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                {label && (
+                    <NavMain
+                        groups={
+                            label.role === 'payee' ? payeeGroups : adminGroups
+                        }
+                    />
+                )}
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

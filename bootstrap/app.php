@@ -1,12 +1,15 @@
 <?php
 
+use App\Http\Middleware\EnsureLabelAdmin;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SetCurrentLabel;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,6 +24,18 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+        ]);
+
+        // The label scope must be in place before route model binding
+        // resolves records, or a record of another label could be loaded.
+        $middleware->prependToPriorityList(
+            before: SubstituteBindings::class,
+            prepend: SetCurrentLabel::class,
+        );
+
+        $middleware->alias([
+            'label' => SetCurrentLabel::class,
+            'label.admin' => EnsureLabelAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

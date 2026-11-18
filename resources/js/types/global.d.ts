@@ -1,4 +1,5 @@
 import type { Auth } from '@/types/auth';
+import type { CurrentLabel } from '@/types/royalties';
 
 declare module 'react' {
     interface InputHTMLAttributes<T> {
@@ -11,6 +12,8 @@ declare module '@inertiajs/core' {
         sharedPageProps: {
             name: string;
             auth: Auth;
+            label: CurrentLabel | null;
+            labels: { id: number; name: string }[];
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

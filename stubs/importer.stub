@@ -1,0 +1,98 @@
+<?php
+
+namespace {{ namespace }};
+
+use App\Services\Imports\ImportRow;
+use App\Services\Imports\Row;
+
+/**
+ * {{ sourceName }} statement{{ versionNote }}.
+ *
+ * Reads CSV and Excel files alike. Run it with:
+ * php artisan royalties:import path/to/file --label=your-label --importer={{ key }}
+ */
+class {{ class }} extends BaseImporter
+{
+    /**
+     * Permanent: stored with every import and used to recognise lines
+     * that were imported before. Never change it once files were imported.
+     */
+    public function key(): string
+    {
+        return '{{ key }}';
+    }
+
+    /**
+     * Importers sharing a source are offered as one entry in the upload
+     * form; the layout of the uploaded file decides which one runs.
+     */
+    public function source(): string
+    {
+        return '{{ source }}';
+    }
+
+    public function sourceName(): string
+    {
+        return '{{ sourceName }}';
+    }
+
+    public function version(): ?string
+    {
+        return {{ version }};
+    }
+
+    public function description(): string
+    {
+        return 'Describe where the user downloads this file.';
+    }
+
+    /**
+     * Return true when the file does not say when the label was paid, so
+     * the upload form asks for the date.
+     */
+    public function requiresPaidDate(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Headers that must be present. They identify this layout, so include
+     * the ones that tell it apart from other versions of the source.
+     * Capitalisation, underscores and title lines above the header are ignored.
+     */
+    public function requiredColumns(): array
+    {
+        return ['Date', 'Amount'];
+    }
+
+    /**
+     * Turn one line into a transaction. Only "total" is mandatory.
+     *
+     * $this->skip('reason') leaves out lines that are not transactions,
+     * $this->fail('reason') reports a broken line. $this->label and
+     * $this->options are available. See ImportRow for every field.
+     */
+    protected function map(Row $row): ImportRow
+    {
+        return new ImportRow(
+            total: $row->requireDecimal('Amount'),
+            timestamp: $row->requireDate('Date'),
+            // paidTimestamp: $row->date('Paid Date'),
+            currency: $row->upper('Currency'),
+            quantity: $row->decimal('Quantity'),
+            category: 'Distribution',
+            // format: 'Streaming/Other',
+            region: $row->region('Country'),
+            provider: '{{ sourceName }}',
+            retailer: $row->string('Store', 'Shop'),
+            source: '{{ sourceName }}',
+            artist: $row->string('Artist'),
+            releaseName: $row->string('Release', 'Album'),
+            trackName: $row->string('Track', 'Title'),
+            catalogNumber: $row->string('Catalog Number'),
+            upc: $row->upc('UPC', 'EAN'),
+            isrc: $row->isrc('ISRC'),
+            raw: $row->raw,
+        );
+    }
+}

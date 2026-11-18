@@ -1,0 +1,149 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Statement;
+use App\Support\Decimal;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+class StatementController extends Controller
+{
+    public function index(Request $request): Response
+    {
+        return Inertia::render('statements/index', [
+            'statements' => Statement::query()
+                ->with(['payee:id,name', 'period:id,name'])
+                ->when(! $request->boolean('archived'), fn ($query) => $query->where('archived', false))
+                ->when($request->integer('period'), fn ($query, int $period) => $query->where('period_id', $period))
+                ->latest('id')
+                ->paginate(50)
+                ->withQueryString()
+                ->through(fn (Statement $statement): array => [
+                    ...$statement->only(['id', 'name', 'archived', 'balance', 'payable', 'revision_of_id', 'payee_id', 'period_id']),
+                    'payee' => $statement->payee?->name,
+                    'period' => $statement->period?->name,
+                    'published' => $statement->published_at !== null,
+                    'created_at' => $statement->created_at->toDateTimeString(),
+                ]),
+            'filters' => ['archived' => $request->boolean('archived'), 'period' => $request->integer('period') ?: null],
+        ]);
+    }
+
+    public function show(Statement $statement): Response
+    {
+        return Inertia::render('statements/show', [
+            'statement' => [
+                ...$statement->only(['id', 'name', 'archived', 'revision_of_id', 'period_id', 'payee_id']),
+                'published' => $statement->published_at !== null,
+                'created_at' => $statement->created_at->toDateTimeString(),
+                'data' => $statement->data,
+            ],
+            'portal' => false,
+        ]);
+    }
+
+    /**
+     * Publish or unpublish a statement in the payee portal.
+     */
+    public function publish(Statement $statement): RedirectResponse
+    {
+        $statement->update(['published_at' => $statement->published_at ? null : now()]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $statement->published_at ? __('Statement published to the payee.') : __('Statement unpublished.')]);
+
+        return back();
+    }
+
+    public function destroy(Statement $statement): RedirectResponse
+    {
+        $statement->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Statement deleted.')]);
+
+        return to_route('statements.index');
+    }
+
+    public function download(Statement $statement): StreamedResponse
+    {
+        return self::csv($statement);
+    }
+
+    /**
+     * Stream a statement as a CSV with one section per part of the report.
+     */
+    public static function csv(Statement $statement): StreamedResponse
+    {
+        $data = $statement->data;
+        $money = fn (?string $value): string => Decimal::round($value, 4);
+
+        return response()->streamDownload(function () use ($data, $money): void {
+            $stream = fopen('php://output', 'w');
+            $put = fn (array $row) => fputcsv($stream, $row, ',', '"', '');
+
+            $put(['Statement', $data['payee_name'] ?? '']);
+            $put(['Period', $data['period']['name'] ?? '', $data['period']['starts_on'] ?? '', $data['period']['ends_on'] ?? '']);
+            $put(['Currency', $data['currency'] ?? '']);
+            $put([]);
+            $put(['Summary']);
+            $put(['Previous balance', 'Income', 'Expenses', 'Net', 'Your share', 'Transfers', 'Payable', 'Paid', 'Balance']);
+            $totals = $data['totals'] ?? [];
+            $put(array_map($money, [
+                $totals['previous_balance'] ?? '0', $totals['income'] ?? '0', $totals['expense'] ?? '0', $totals['net'] ?? '0',
+                $totals['payee_share'] ?? '0', $totals['transfers'] ?? '0', $totals['total_payable'] ?? '0', $totals['total_paid'] ?? '0', $totals['balance'] ?? '0',
+            ]));
+
+            foreach ($data['ledgers'] ?? [] as $ledger) {
+                $put([]);
+                $put(['Ledger', $ledger['ledger_name']]);
+                $put(['Release', 'Track', 'Contract', 'Split %', 'Income', 'Expenses', 'Net', 'Your share', 'Previous balance', 'Balance']);
+
+                foreach ($ledger['releases'] as $release) {
+                    foreach ($release['tracks'] as $track) {
+                        $put([
+                            $release['release_name'], $track['track_name'], $track['contract_name'], Decimal::round(Decimal::mul($track['split'], '100'), 4),
+                            $money($track['income']), $money($track['expense']), $money($track['net']), $money($track['payee_share']),
+                            $money($track['previous_balance']), $money($track['balance']),
+                        ]);
+                    }
+                }
+
+                $put(['Ledger total', '', '', '', $money($ledger['income']), $money($ledger['expense']), $money($ledger['net']), $money($ledger['payee_share']), $money($ledger['previous_balance']), $money($ledger['balance'])]);
+                $put(['Transfers', $money($ledger['transfers']), 'Payouts', $money($ledger['payouts'])]);
+            }
+
+            $put([]);
+            $put(['Income']);
+            $put(['Release', 'Track', 'Contract', 'Format', 'Quantity', 'Income', 'Split %', 'Your share']);
+
+            foreach ($data['income_rows'] ?? [] as $row) {
+                $put([$row['release_name'], $row['track_name'], $row['contract_name'], $row['format'], Decimal::round($row['quantity'], 2), $money($row['amount']), Decimal::round(Decimal::mul($row['split'], '100'), 4), $money($row['payee_share'])]);
+            }
+
+            $put([]);
+            $put(['Expenses']);
+            $put(['Release', 'Track', 'Contract', 'Category', 'Amount', 'Split %', 'Your share']);
+
+            foreach ($data['expense_rows'] ?? [] as $row) {
+                $put([$row['release_name'], $row['track_name'], $row['contract_name'], $row['category'], $money($row['amount']), Decimal::round(Decimal::mul($row['split'], '100'), 4), $money($row['payee_share'])]);
+            }
+
+            $put([]);
+            $put(['Transfers and payouts']);
+            $put(['Date', 'Type', 'Ledger', 'Release', 'Memo', 'Amount']);
+
+            foreach ($data['transfer_rows'] ?? [] as $row) {
+                $put([$row['date'], $row['category'] ?? 'Transfer', $row['ledger_name'], $row['release_name'], $row['memo'], $money($row['amount'])]);
+            }
+
+            foreach ($data['payout_rows'] ?? [] as $row) {
+                $put([$row['date'], 'Payout', '', '', $row['memo'], $money(Decimal::sub('0', $row['amount']))]);
+            }
+
+            fclose($stream);
+        }, str($statement->name)->slug().'.csv', ['Content-Type' => 'text/csv']);
+    }
+}
