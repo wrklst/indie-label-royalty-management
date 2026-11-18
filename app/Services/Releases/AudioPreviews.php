@@ -20,8 +20,8 @@ class AudioPreviews
 {
     /**
      * Mark the file as waiting for its playback copy and start the
-     * conversion: right after the response by default, or on the queue
-     * when the label runs a worker. An MP3 can be played straight away.
+     * conversion: on the queue by default, or right after the response
+     * where no worker runs. An MP3 can be played straight away.
      */
     public function queue(ReleaseFile $file, bool $force = false): void
     {
@@ -102,6 +102,13 @@ class AudioPreviews
             return $this->fail($file, $this->lastLines($result->errorOutput()) ?: 'ffmpeg wrote no file.');
         }
 
+        // Deleted while ffmpeg ran: nothing is left to own the copy.
+        if (ReleaseFile::query()->withoutGlobalScopes()->whereKey($file->id)->doesntExist()) {
+            $disk->delete($target);
+
+            return false;
+        }
+
         $this->forget($file, except: $target);
         $file->update([
             'preview_path' => $target,
@@ -129,11 +136,12 @@ class AudioPreviews
     }
 
     /**
-     * Whether the file is an MP3 already and needs no copy.
+     * Whether the file is an MP3 already and needs no copy. Its content
+     * decides, not its name: a renamed master still has to be converted.
      */
     public function isOwnPreview(ReleaseFile $file): bool
     {
-        return $file->mime_type === 'audio/mpeg' || strtolower(pathinfo($file->original_name, PATHINFO_EXTENSION)) === 'mp3';
+        return $file->mime_type === 'audio/mpeg';
     }
 
     /**

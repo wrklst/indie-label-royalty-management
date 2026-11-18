@@ -286,3 +286,39 @@ test('naming who an expense was paid to does not touch that payee\'s ledger', fu
         ->and($report['totals']['payee_share'])->toBe('30.000000000000000')
         ->and($report['totals']['total_payable'])->toBe('30.000000000000000');
 });
+
+test('a balance paid on a later period cannot be paid again on the earlier one', function () {
+    transaction(['total' => '100']);
+    $next = Period::factory()->create(['label_id' => $this->label->id, 'name' => '2026 Q2', 'starts_on' => '2026-04-01', 'ends_on' => '2026-06-30']);
+    $payouts = app(PayoutService::class);
+    $payouts->record($next, $this->payee, '50', '2026-07-10');
+
+    $payouts->record($this->period, $this->payee, '50', '2026-07-11');
+})->throws(ValidationException::class, 'The payout exceeds the 0.00 payable');
+
+test('a payee with two splits of one contract sees the income once at the combined split', function () {
+    $territory = Territory::factory()->create(['label_id' => $this->label->id, 'countries' => ['DE']]);
+    ContractSplit::factory()->create(['contract_id' => $this->contract->id, 'payee_id' => $this->payee->id, 'split_amount' => '0.1', 'territory_id' => $territory->id]);
+    transaction(['total' => '100', 'region' => 'DE', 'quantity' => 4]);
+
+    $report = payeeReport();
+    $line = collect($report['ledgers'][0]['releases'][0]['tracks'])->sole();
+    $detail = collect($report['income_rows'])->sole();
+
+    expect($line['income'])->toBe('100.000000000000000')
+        ->and($line['split'])->toBe('0.600000000000000')
+        ->and($line['payee_share'])->toBe('60.000000000000000')
+        ->and($detail['amount'])->toBe('100.000000000000000')
+        ->and($detail['quantity'])->toBe('4.000000000000000')
+        ->and($detail['payee_share'])->toBe('60.000000000000000');
+});
+
+test('regenerating statements archives the draft of a payee with nothing left to state', function () {
+    $transaction = transaction(['total' => '100']);
+    $generator = app(StatementGenerator::class);
+    $draft = $generator->generate($this->period)->sole();
+    $transaction->forceDelete();
+
+    expect($generator->generate($this->period))->toBeEmpty()
+        ->and($draft->refresh()->archived)->toBeTrue();
+});

@@ -1,3 +1,4 @@
+import { Link } from '@inertiajs/react';
 import { Pencil, Plus, Repeat } from 'lucide-react';
 import { useState } from 'react';
 import LabelCostController from '@/actions/App/Http/Controllers/LabelCostController';
@@ -59,7 +60,8 @@ type Props = {
     costs: Cost[];
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+// The local date: toISOString() is UTC and gives yesterday shortly after midnight.
+const today = () => new Date().toLocaleDateString('sv-SE');
 const plain = (value: string) => value.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
 const PER: Record<string, string> = {
     monthly: 'per month',
@@ -605,14 +607,14 @@ export default function LabelCosts({
                                                 size="icon"
                                                 asChild
                                             >
-                                                <a
+                                                <Link
                                                     href={TransactionController.edit.url(
                                                         cost.id,
                                                     )}
                                                     aria-label="Edit cost"
                                                 >
                                                     <Pencil className="text-muted-foreground" />
-                                                </a>
+                                                </Link>
                                             </Button>
                                             <DeleteButton
                                                 url={TransactionController.destroy.url(

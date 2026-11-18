@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\LabelRole;
 use App\Models\Contract;
 use App\Models\ContractSplit;
 use App\Models\Label;
@@ -11,6 +12,7 @@ use App\Models\Release;
 use App\Models\Statement;
 use App\Models\Track;
 use App\Models\Transaction;
+use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('the payee list shows each payee with its tags and usage counts', function () {
@@ -234,4 +236,16 @@ test('a payee without payouts or statements is deleted together with its splits'
     $this->assertModelMissing($payee);
     $this->assertModelExists($contract);
     $this->assertDatabaseCount('contract_splits', 0);
+});
+
+test('deleting a payee unlinks the member who signed in as them', function () {
+    $label = Label::factory()->create();
+    $payee = Payee::factory()->create(['label_id' => $label->id]);
+    $member = User::factory()->create();
+    $label->users()->attach($member, ['role' => LabelRole::Payee->value, 'payee_id' => $payee->id]);
+
+    $this->actingAs(labelAdmin($label))->delete(route('payees.destroy', $payee->id));
+
+    $this->assertModelMissing($payee);
+    $this->assertDatabaseHas('label_user', ['user_id' => $member->id, 'payee_id' => null]);
 });

@@ -29,10 +29,21 @@ class Decimal
             return null;
         }
 
-        $value = preg_replace('/[^\d,.\-eE+]/u', '', trim((string) $value)) ?? '';
+        $text = trim((string) $value);
+
+        // Accounting layouts write a negative as "(12.34)", typeset ones with a real minus sign.
+        $isNegative = preg_match('/^\(.*\)$|^[−–]/u', $text) === 1;
+
+        $value = preg_replace('/[^\d,.\-eE+]/u', '', $text) ?? '';
+        // An E is an exponent only between digits; elsewhere it is left over from a currency code.
+        $value = preg_replace('/(?<!\d)[eE]|[eE](?![\d+\-])/', '', $value) ?? '';
 
         if ($value === '' || ! preg_match('/\d/', $value)) {
             return null;
+        }
+
+        if ($isNegative && ! str_starts_with($value, '-')) {
+            $value = '-'.ltrim($value, '+');
         }
 
         $lastComma = strrpos($value, ',');

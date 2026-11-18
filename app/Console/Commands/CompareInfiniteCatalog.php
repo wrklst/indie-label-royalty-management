@@ -28,7 +28,7 @@ class CompareInfiniteCatalog extends Command
     public function handle(RoyaltyCalculator $calculator, CurrentLabel $currentLabel): int
     {
         $path = rtrim((string) $this->argument('directory'), '/').'/summaries.json';
-        $label = Label::query()->where('slug', $this->option('label'))->orWhere('id', $this->option('label'))->first();
+        $label = Label::query()->where(ctype_digit((string) $this->option('label')) ? 'id' : 'slug', $this->option('label'))->first();
 
         if ($label === null || ! is_file($path)) {
             $this->error('Pass --label and a directory containing summaries.json.');

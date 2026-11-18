@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 type FilterValue = string | number | boolean | null | undefined;
 
@@ -12,6 +12,16 @@ export function useFilters<T extends Record<string, FilterValue>>(
     current: T,
 ) {
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // A reload still waiting when the page is left would pull the user back to the list.
+    useEffect(
+        () => () => {
+            if (timer.current) {
+                clearTimeout(timer.current);
+            }
+        },
+        [],
+    );
 
     const apply = (changes: Partial<T>, debounce = false) => {
         const query: Record<string, string | number> = {};

@@ -34,6 +34,14 @@ return [
     |
     */
 
+    'audio' => [
+        'ffmpeg' => env('FFMPEG_BINARY', 'ffmpeg'),
+        'bitrate' => (int) env('AUDIO_PREVIEW_BITRATE', 320),
+        'sample_rate' => (int) env('AUDIO_PREVIEW_SAMPLE_RATE', 44100),
+        'timeout' => (int) env('AUDIO_PREVIEW_TIMEOUT', 600),
+        'queue' => (bool) env('AUDIO_PREVIEW_QUEUE', true),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Horizon dashboard
@@ -48,14 +56,6 @@ return [
         fn (string $email): string => strtolower(trim($email)),
         explode(',', (string) env('HORIZON_ALLOWED_EMAILS', '')),
     ))),
-
-    'audio' => [
-        'ffmpeg' => env('FFMPEG_BINARY', 'ffmpeg'),
-        'bitrate' => (int) env('AUDIO_PREVIEW_BITRATE', 320),
-        'sample_rate' => (int) env('AUDIO_PREVIEW_SAMPLE_RATE', 44100),
-        'timeout' => (int) env('AUDIO_PREVIEW_TIMEOUT', 600),
-        'queue' => (bool) env('AUDIO_PREVIEW_QUEUE', true),
-    ],
 
     /*
     |--------------------------------------------------------------------------

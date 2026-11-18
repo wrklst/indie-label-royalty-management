@@ -22,21 +22,25 @@ class PayoutService
      */
     public function record(Period $period, Payee $payee, string $total, string $paidOn, ?string $memo = null, ?User $user = null): Payout
     {
-        $report = $this->calculator->forPeriod($period, $payee->id);
-        $ledgers = collect($report['payees'][0]['ledgers'] ?? [])
-            ->filter(fn (array $ledger): bool => Decimal::isPositive($ledger['balance']))
-            ->sort(fn (array $a, array $b): int => Decimal::cmp($b['balance'], $a['balance']))
-            ->values();
+        return DB::transaction(function () use ($period, $payee, $total, $paidOn, $memo, $user): Payout {
+            // One payout per payee at a time, so two submissions cannot both pass the check below.
+            Payee::query()->withoutGlobalScope('label')->whereKey($payee->id)->lockForUpdate()->first();
 
-        $outstanding = $ledgers->reduce(fn (string $sum, array $ledger): string => Decimal::add($sum, $ledger['balance']), '0');
+            $report = $this->calculator->forPeriod($period, $payee->id);
+            $ledgers = collect($report['payees'][0]['ledgers'] ?? [])
+                ->filter(fn (array $ledger): bool => Decimal::isPositive($ledger['balance']))
+                ->sort(fn (array $a, array $b): int => Decimal::cmp($b['balance'], $a['balance']))
+                ->values();
 
-        if (Decimal::cmp($total, Decimal::add(Decimal::round($outstanding, 2), '0.005')) > 0) {
-            throw ValidationException::withMessages([
-                'total' => 'The payout exceeds the '.Decimal::round($outstanding, 2).' payable to '.$payee->name.' for this period.',
-            ]);
-        }
+            $outstanding = $ledgers->reduce(fn (string $sum, array $ledger): string => Decimal::add($sum, $ledger['balance']), '0');
+            $outstanding = Decimal::max('0', Decimal::sub($outstanding, $this->paidOnLaterPeriods($period, $payee)));
 
-        return DB::transaction(function () use ($period, $payee, $total, $paidOn, $memo, $user, $ledgers): Payout {
+            if (Decimal::cmp($total, Decimal::add(Decimal::round($outstanding, 2), '0.005')) > 0) {
+                throw ValidationException::withMessages([
+                    'total' => 'The payout exceeds the '.Decimal::round($outstanding, 2).' payable to '.$payee->name.' for this period.',
+                ]);
+            }
+
             $payout = Payout::query()->create([
                 'label_id' => $period->label_id,
                 'payee_id' => $payee->id,
@@ -62,5 +66,21 @@ class PayoutService
 
             return $payout;
         });
+    }
+
+    /**
+     * What the payee was already paid on later periods. Those periods
+     * carry this period's balance forward, so a payout booked there has
+     * settled it, although this period's own figures cannot show that.
+     */
+    private function paidOnLaterPeriods(Period $period, Payee $payee): string
+    {
+        return DB::table('payouts as p')
+            ->join('periods as pp', 'pp.id', '=', 'p.period_id')
+            ->where('p.label_id', $period->label_id)
+            ->where('p.payee_id', $payee->id)
+            ->where('pp.starts_on', '>', $period->ends_on->toDateString())
+            ->pluck('p.total')
+            ->reduce(fn (string $sum, mixed $paid): string => Decimal::add($sum, (string) $paid), '0');
     }
 }

@@ -27,7 +27,7 @@ class ImportStatement extends Command
     public function handle(ImporterRegistry $importers, ReaderFactory $readers, ImportRunner $runner, CurrentLabel $currentLabel): int
     {
         $path = (string) $this->argument('file');
-        $label = Label::query()->where('slug', $this->option('label'))->orWhere('id', $this->option('label'))->first();
+        $label = Label::query()->where(ctype_digit((string) $this->option('label')) ? 'id' : 'slug', $this->option('label'))->first();
 
         if (! is_file($path)) {
             $this->error("File not found: {$path}");

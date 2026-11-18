@@ -37,7 +37,10 @@ export function ArtistCreditRows({
 
     return (
         <div className="grid gap-2">
-            {!controlled && <input type="hidden" name="artists" value="" />}
+            {/* Sent only when no credit is left: next to artists[0][…] fields Inertia cannot read the form. */}
+            {!controlled && rows.length === 0 && (
+                <input type="hidden" name="artists" value="" />
+            )}
             {rows.map((row, position) => (
                 <div
                     key={position}

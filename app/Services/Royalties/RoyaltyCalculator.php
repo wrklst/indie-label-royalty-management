@@ -109,6 +109,11 @@ class RoyaltyCalculator
                 $totals[$isIncome ? 'income' : 'expense'] = Decimal::add($totals[$isIncome ? 'income' : 'expense'], $amount);
             }
 
+            // A payee can hold several splits of one contract. The row's amount
+            // then counts once per line, at the splits' combined fraction.
+            $lineFractions = [];
+            $detailFractions = [];
+
             foreach ($splits[$row['contract_id']] ?? [] as $split) {
                 if ($split['countries'] !== null && ! in_array($row['region'], $split['countries'], true)) {
                     continue;
@@ -118,11 +123,18 @@ class RoyaltyCalculator
                 $ledger = &$this->ledger($payees, $split['payee_id'], $split['ledger_id']);
                 $lineKey = implode('|', [$row['release_id'], $row['track_id'], $row['contract_id']]);
 
+                $ledgerKey = $split['payee_id'].'|'.$split['ledger_id'];
+                $isFirstOnLine = ! isset($lineFractions[$ledgerKey]);
+                $lineFractions[$ledgerKey] = Decimal::add($lineFractions[$ledgerKey] ?? '0', $split['fraction']);
+                $isFirstOnDetail = ! isset($detailFractions[$split['payee_id']]);
+                $detailFractions[$split['payee_id']] = Decimal::add($detailFractions[$split['payee_id']] ?? '0', $split['fraction']);
+
                 $ledger['lines'][$lineKey] ??= [
                     'release_id' => $row['release_id'], 'track_id' => $row['track_id'], 'contract_id' => $row['contract_id'],
                     'split' => $split['fraction'], 'income' => '0', 'expense' => '0', 'payee_share' => '0', 'previous_balance' => '0',
                 ];
                 $line = &$ledger['lines'][$lineKey];
+                $line['split'] = $lineFractions[$ledgerKey];
 
                 if ($isPrevious) {
                     $line['previous_balance'] = Decimal::add($line['previous_balance'], $share);
@@ -131,7 +143,10 @@ class RoyaltyCalculator
                     continue;
                 }
 
-                $line[$isIncome ? 'income' : 'expense'] = Decimal::add($line[$isIncome ? 'income' : 'expense'], $amount);
+                if ($isFirstOnLine) {
+                    $line[$isIncome ? 'income' : 'expense'] = Decimal::add($line[$isIncome ? 'income' : 'expense'], $amount);
+                }
+
                 $line['payee_share'] = Decimal::add($line['payee_share'], $share);
                 $totals['payee_share'] = Decimal::add($totals['payee_share'], $share);
 
@@ -142,8 +157,13 @@ class RoyaltyCalculator
                     'format' => $row['format'], 'category' => $row['category'], 'split' => $split['fraction'],
                     'quantity' => '0', 'amount' => '0', 'payee_share' => '0',
                 ];
-                $details[$detailKey]['quantity'] = Decimal::add($details[$detailKey]['quantity'], Decimal::parse($row['quantity']) ?? '0');
-                $details[$detailKey]['amount'] = Decimal::add($details[$detailKey]['amount'], $amount);
+                $details[$detailKey]['split'] = $detailFractions[$split['payee_id']];
+
+                if ($isFirstOnDetail) {
+                    $details[$detailKey]['quantity'] = Decimal::add($details[$detailKey]['quantity'], Decimal::parse($row['quantity']) ?? '0');
+                    $details[$detailKey]['amount'] = Decimal::add($details[$detailKey]['amount'], $amount);
+                }
+
                 $details[$detailKey]['payee_share'] = Decimal::add($details[$detailKey]['payee_share'], $share);
 
                 unset($line, $ledger, $details);

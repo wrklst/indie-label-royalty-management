@@ -120,6 +120,9 @@ class LoginCodeController extends Controller
         RateLimiter::clear(array_key_first($limits));
 
         if (! $user->hasVerifiedEmail()) {
+            // The code proves who owns the address; whoever registered the account did not have to.
+            $user->forceFill(['password' => Str::password(32)])->save();
+            $user->revokeAccessExceptPassword();
             $user->markEmailAsVerified();
         }
 

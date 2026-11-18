@@ -87,6 +87,28 @@ test('track details and credits are saved from the track dialog', function () {
         ->and($track->artists()->sole()->id)->toBe($remixer->id);
 });
 
+test('a credit given twice is kept once', function () {
+    $release = Release::factory()->create(['label_id' => $this->label->id]);
+    $track = Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $release->id]);
+    $remixer = Artist::factory()->create(['label_id' => $this->label->id]);
+    $credit = ['artist_id' => $remixer->id, 'role' => 'remixer'];
+
+    $this->put(route('tracks.update', $track->id), ['name' => 'Example Track', 'artists' => [$credit, $credit]])
+        ->assertSessionHasNoErrors();
+
+    expect($track->artists()->sole()->id)->toBe($remixer->id);
+});
+
+test('saving the release form keeps the version of its tracks', function () {
+    $release = Release::factory()->create(['label_id' => $this->label->id]);
+    $track = Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $release->id, 'version' => 'Radio Edit']);
+
+    $this->put(route('releases.update', $release->id), ['name' => 'Renamed', 'tracks' => [['id' => $track->id, 'name' => 'Example Track']]])
+        ->assertSessionHasNoErrors();
+
+    expect($track->refresh()->version)->toBe('Radio Edit');
+});
+
 test('track details are validated', function (array $input, string $field) {
     $track = Track::factory()->create(['label_id' => $this->label->id, 'release_id' => Release::factory()->create(['label_id' => $this->label->id])]);
 

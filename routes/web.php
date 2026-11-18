@@ -68,7 +68,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('settings/territories/{territory}', [LabelSettingsController::class, 'destroyTerritory'])->name('territories.destroy');
 
             Route::get('settings/team', [TeamController::class, 'index'])->name('team.index');
-            Route::post('settings/team', [TeamController::class, 'store'])->name('team.store');
+            Route::post('settings/team', [TeamController::class, 'store'])->middleware('throttle:30,60')->name('team.store');
             Route::put('settings/team/{user}', [TeamController::class, 'update'])->name('team.update');
             Route::delete('settings/team/{user}', [TeamController::class, 'destroy'])->name('team.destroy');
         });

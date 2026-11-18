@@ -71,7 +71,8 @@ type Props = {
     payees: PayeeRow[];
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+// The local date: toISOString() is UTC and gives yesterday shortly after midnight.
+const today = () => new Date().toLocaleDateString('sv-SE');
 const cents = (value: string) =>
     (Math.floor(Number(value) * 100 + 1e-6) / 100).toFixed(2);
 

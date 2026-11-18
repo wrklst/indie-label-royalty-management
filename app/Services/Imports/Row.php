@@ -126,7 +126,18 @@ class Row
         }
 
         try {
+            // Read freely, "31.03.26" is a time of day and a value without a year is today.
+            if (preg_match('/^\d{1,2}\.\d{1,2}\.\d{2}$/', $value) === 1) {
+                return CarbonImmutable::createFromFormat('!d.m.y', $value)->toDateString();
+            }
+
+            if (preg_match('/\d{4}/', $value) !== 1 || preg_match('/^(\d{1,2}[.\/-])?\d{4}$/', $value) === 1) {
+                throw new RowException("The date \"{$value}\" in \"{$column}\" could not be read. Use the format 2026-03-31.");
+            }
+
             return CarbonImmutable::parse($value)->toDateString();
+        } catch (RowException $exception) {
+            throw $exception;
         } catch (Throwable) {
             throw new RowException("The date \"{$value}\" in \"{$column}\" could not be read. Use the format 2026-03-31.");
         }

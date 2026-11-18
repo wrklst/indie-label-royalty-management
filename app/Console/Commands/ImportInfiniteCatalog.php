@@ -18,6 +18,7 @@ use App\Models\Statement;
 use App\Models\Territory;
 use App\Models\Track;
 use App\Models\Transaction;
+use App\Services\Imports\Identifiers;
 use App\Support\CurrentLabel;
 use App\Support\Decimal;
 use App\Support\Formats;
@@ -49,7 +50,7 @@ class ImportInfiniteCatalog extends Command
     public function handle(CurrentLabel $currentLabel): int
     {
         $this->directory = rtrim((string) $this->argument('directory'), '/');
-        $label = Label::query()->where('slug', $this->option('label'))->orWhere('id', $this->option('label'))->first();
+        $label = Label::query()->where(ctype_digit((string) $this->option('label')) ? 'id' : 'slug', $this->option('label'))->first();
 
         if ($label === null || ! is_file("{$this->directory}/transactions.ndjson")) {
             $this->error('Pass --label and a directory containing the export (transactions.ndjson and the entity JSON files).');
@@ -141,13 +142,27 @@ class ImportInfiniteCatalog extends Command
             ]);
         }
 
+        $upcs = [];
+
         foreach ($this->read('releases') as $release) {
+            $upc = Identifiers::upc($release['upc'] ?? null);
+
+            // A label holds each UPC once; a second release with it is imported without.
+            if ($upc !== null && isset($upcs[Identifiers::upcKey($upc)])) {
+                $this->warn("{$release['name']} shares its UPC {$upc} with another release and was imported without one.");
+                $upc = null;
+            }
+
+            if ($upc !== null) {
+                $upcs[Identifiers::upcKey($upc)] = true;
+            }
+
             $this->ids['releases'][$release['id']] = Release::query()->create([
                 'name' => $release['name'],
                 'artist_id' => $this->map('artists', $release['artist']),
                 'contract_id' => $this->map('contracts', $release['contract']),
                 'catalog_number' => $release['catalog_number'] ?: null,
-                'upc' => $release['upc'] ?: null,
+                'upc' => $upc,
             ])->id;
         }
 

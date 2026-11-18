@@ -23,7 +23,7 @@ class SyncBandcamp extends Command
         $connections = BandcampConnection::query()->orderBy('label_id');
 
         if ($this->option('label') !== null) {
-            $label = Label::query()->where('slug', $this->option('label'))->orWhere('id', $this->option('label'))->first();
+            $label = Label::query()->where(ctype_digit((string) $this->option('label')) ? 'id' : 'slug', $this->option('label'))->first();
 
             if ($label === null) {
                 $this->error('Label not found. Pass --label with a slug or id.');

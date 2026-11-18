@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -67,5 +69,26 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function currentLabel(): BelongsTo
     {
         return $this->belongsTo(Label::class, 'current_label_id');
+    }
+
+    /**
+     * Close every way into the account other than its password. Used
+     * when the owner of the email address takes over an account whose
+     * address was never proven: whoever registered it may be someone else.
+     */
+    public function revokeAccessExceptPassword(): void
+    {
+        $this->passkeys()->delete();
+
+        $this->forceFill([
+            'two_factor_secret' => null,
+            'two_factor_recovery_codes' => null,
+            'two_factor_confirmed_at' => null,
+            'remember_token' => Str::random(60),
+        ])->save();
+
+        if (config('session.driver') === 'database') {
+            DB::table(config('session.table'))->where('user_id', $this->id)->delete();
+        }
     }
 }

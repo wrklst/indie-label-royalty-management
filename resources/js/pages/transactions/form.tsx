@@ -62,7 +62,8 @@ const numberOrBlank = (value: string): number | '' =>
     value === '' ? '' : Number(value);
 const trim = (value: string | null | undefined): string =>
     value ? value.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1') : '';
-const today = () => new Date().toISOString().slice(0, 10);
+// The local date: toISOString() is UTC and gives yesterday shortly after midnight.
+const today = () => new Date().toLocaleDateString('sv-SE');
 
 export default function TransactionForm({
     transaction,

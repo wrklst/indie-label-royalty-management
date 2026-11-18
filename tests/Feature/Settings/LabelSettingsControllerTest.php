@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\LabelRole;
+use App\Models\Contract;
+use App\Models\ContractSplit;
 use App\Models\Label;
 use App\Models\Payee;
 use App\Models\Territory;
@@ -153,6 +155,25 @@ test('a territory can be deleted', function () {
         ->assertInertiaFlash('toast.message', 'Territory deleted.');
 
     $this->assertModelMissing($territory);
+});
+
+test('a territory that splits refer to is kept', function () {
+    $label = Label::factory()->create();
+    $territory = Territory::factory()->create(['label_id' => $label->id]);
+    $split = ContractSplit::factory()->create([
+        'contract_id' => Contract::factory()->create(['label_id' => $label->id]),
+        'payee_id' => Payee::factory()->create(['label_id' => $label->id]),
+        'territory_id' => $territory->id,
+    ]);
+
+    $this->actingAs(labelAdmin($label))
+        ->from(route('label-settings.edit'))
+        ->delete(route('territories.destroy', $territory->id))
+        ->assertRedirect(route('label-settings.edit'))
+        ->assertInertiaFlash('toast.message', 'This territory is used by contract splits. Change those splits first.');
+
+    $this->assertModelExists($territory);
+    expect($split->refresh()->territory_id)->toBe($territory->id);
 });
 
 test('a territory of another label cannot be deleted', function () {

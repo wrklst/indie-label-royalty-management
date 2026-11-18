@@ -5,6 +5,7 @@ namespace App\Services\Royalties;
 use App\Models\Period;
 use App\Models\Statement;
 use App\Support\Decimal;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -29,7 +30,7 @@ class StatementGenerator
         $report = $this->calculator->forPeriod($period);
 
         return DB::transaction(function () use ($period, $payeeIds, $report): Collection {
-            $statements = collect();
+            $statements = new EloquentCollection;
 
             foreach ($report['payees'] as $payee) {
                 if ($payeeIds !== null && ! in_array($payee['payee_id'], $payeeIds, true)) {
@@ -69,6 +70,15 @@ class StatementGenerator
                     ],
                 ]));
             }
+
+            // A draft of a payee who no longer has anything to state would otherwise stay publishable.
+            Statement::query()
+                ->where('period_id', $period->id)
+                ->where('archived', false)
+                ->whereNull('published_at')
+                ->whereNotIn('id', $statements->modelKeys())
+                ->when($payeeIds !== null, fn ($query) => $query->whereIn('payee_id', $payeeIds))
+                ->update(['archived' => true]);
 
             return $statements;
         });

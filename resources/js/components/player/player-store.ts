@@ -116,7 +116,13 @@ function save(): void {
             ...scope,
             queue: state.queue,
             index: state.index,
-            position: audio && loadedFileId ? audio.currentTime : 0,
+            // A restored position counts until the audio has loaded and moved there.
+            position:
+                pendingPosition > 0
+                    ? pendingPosition
+                    : audio && loadedFileId
+                      ? audio.currentTime
+                      : 0,
             volume: state.volume,
             muted: state.muted,
         };

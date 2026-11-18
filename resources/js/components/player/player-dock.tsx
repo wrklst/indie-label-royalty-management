@@ -236,7 +236,7 @@ function Queue({ onClose }: { onClose: () => void }) {
                                 onDragStart={(event) => {
                                     event.dataTransfer.effectAllowed = 'move';
                                     event.dataTransfer.setData(
-                                        'text/plain',
+                                        'application/x-queue-position',
                                         String(position),
                                     );
                                     setDragged(position);
@@ -246,13 +246,23 @@ function Queue({ onClose }: { onClose: () => void }) {
                                     setTarget(null);
                                 }}
                                 onKeyDown={(event) => {
-                                    if (event.key === 'ArrowUp') {
-                                        event.preventDefault();
-                                        move(position, position - 1);
-                                    } else if (event.key === 'ArrowDown') {
-                                        event.preventDefault();
-                                        move(position, position + 1);
+                                    if (
+                                        event.key !== 'ArrowUp' &&
+                                        event.key !== 'ArrowDown'
+                                    ) {
+                                        return;
                                     }
+
+                                    event.preventDefault();
+                                    move(
+                                        position,
+                                        position +
+                                            (event.key === 'ArrowUp' ? -1 : 1),
+                                    );
+
+                                    // Reordering can detach the row for a moment, which drops the focus.
+                                    const handle = event.currentTarget;
+                                    requestAnimationFrame(() => handle.focus());
                                 }}
                                 className="flex h-8 w-5 shrink-0 cursor-grab items-center justify-center rounded-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
                             >
@@ -390,6 +400,11 @@ export function PlayerDock() {
 
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [queueOpen]);
+
+    // Otherwise the next track played would bring the dock back with the queue open.
+    if (length === 0 && queueOpen) {
+        setQueueOpen(false);
+    }
 
     if (!track) {
         return null;

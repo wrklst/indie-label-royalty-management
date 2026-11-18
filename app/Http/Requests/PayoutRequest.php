@@ -15,7 +15,7 @@ class PayoutRequest extends LabelFormRequest
     {
         return [
             'payee_id' => ['required', 'integer', $this->inLabel('payees')],
-            'total' => ['required', 'numeric', 'gt:0'],
+            'total' => ['required', 'numeric', 'decimal:0,2', 'gt:0'],
             'paid_on' => ['required', 'date'],
             'memo' => ['nullable', 'string', 'max:1000'],
         ];

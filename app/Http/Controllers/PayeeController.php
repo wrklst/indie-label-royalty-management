@@ -14,6 +14,7 @@ use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -113,6 +114,8 @@ class PayeeController extends Controller
             return back();
         }
 
+        // A member linked to the payee goes back to being unlinked, not to an empty portal.
+        DB::table('label_user')->where('payee_id', $payee->id)->update(['payee_id' => null]);
         $payee->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Payee deleted.')]);

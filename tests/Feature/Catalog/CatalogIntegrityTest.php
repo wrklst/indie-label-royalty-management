@@ -32,7 +32,9 @@ test('a split percentage must be a plain decimal the split can store', function 
 
 test('splits may not pay out more than the whole', function (array $percentages, bool $accepted) {
     $payee = Payee::factory()->create(['label_id' => $this->label->id]);
-    $territories = Territory::factory()->count(2)->create(['label_id' => $this->label->id]);
+    $territories = Territory::factory()->count(3)
+        ->sequence(['countries' => ['DE', 'AT']], ['countries' => ['US']], ['countries' => ['DE', 'FR']])
+        ->create(['label_id' => $this->label->id]);
 
     $splits = collect($percentages)->map(fn (array $split): array => [
         'payee_id' => $payee->id,
@@ -49,6 +51,7 @@ test('splits may not pay out more than the whole', function (array $percentages,
     'worldwide plus one territory over the whole' => [[['60', null], ['50', 0]], false],
     'exactly the whole' => [[['50', null], ['50', null]], true],
     'two territories that never apply together' => [[['40', null], ['60', 0], ['60', 1]], true],
+    'two territories that share a country' => [[['40', null], ['40', 0], ['40', 2]], false],
 ]);
 
 test('renaming a contract keeps its splits and child contracts', function () {

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Contract;
+use App\Models\Territory;
 use App\Support\Decimal;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -55,8 +56,8 @@ class ContractRequest extends LabelFormRequest
     }
 
     /**
-     * Worldwide splits, plus those of any one territory, may not pay out
-     * more than the income they are taken from.
+     * Worldwide splits, plus those that apply in any one country, may
+     * not pay out more than the income they are taken from.
      */
     private function ensureSplitsFitTheWhole(Validator $validator): void
     {
@@ -74,7 +75,16 @@ class ContractRequest extends LabelFormRequest
             }
         }
 
-        $largest = array_reduce($territories, Decimal::max(...), '0');
+        // Territories may share countries, and a sale there is paid by all of them.
+        $countries = [];
+
+        foreach (Territory::query()->findMany(array_keys($territories)) as $territory) {
+            foreach ($territory->countries ?? [] as $country) {
+                $countries[$country] = Decimal::add($countries[$country] ?? '0', $territories[$territory->id]);
+            }
+        }
+
+        $largest = array_reduce($countries, Decimal::max(...), '0');
 
         if (Decimal::cmp(Decimal::add($world, $largest), '100') === 1) {
             $validator->errors()->add('splits', 'The splits add up to more than 100%. A contract cannot pay out more than it earns.');

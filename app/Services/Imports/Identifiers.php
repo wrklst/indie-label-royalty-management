@@ -22,9 +22,14 @@ class Identifiers
      */
     public static function upc(?string $value): ?string
     {
+        // A spreadsheet that turned the code into "4,01235E+12" has lost its digits.
+        if (preg_match('/\d[eE][+-]?\d/', (string) $value) === 1) {
+            return null;
+        }
+
         $value = preg_replace('/\D/', '', (string) $value) ?? '';
 
-        return strlen($value) >= 8 ? $value : null;
+        return strlen($value) >= 8 && strlen($value) <= 14 ? $value : null;
     }
 
     /**

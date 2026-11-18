@@ -57,11 +57,21 @@ class ArtistCredits
     public static function sync(Release|Track $record, array $credits): void
     {
         $record->artists()->detach();
+        $attached = [];
 
         foreach ($credits as $position => $credit) {
             if ((int) $credit['artist_id'] === $record->artist_id && $credit['role'] === ArtistRole::Primary->value) {
                 continue;
             }
+
+            // An artist holds a role once; a repeated credit would break the unique index.
+            $key = ((int) $credit['artist_id']).'|'.$credit['role'];
+
+            if (isset($attached[$key])) {
+                continue;
+            }
+
+            $attached[$key] = true;
 
             $record->artists()->attach((int) $credit['artist_id'], ['role' => $credit['role'], 'position' => $position]);
         }

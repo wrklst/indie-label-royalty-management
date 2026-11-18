@@ -262,8 +262,12 @@ class ReleaseController extends Controller
                 'iswc' => $row['iswc'] ?? null,
                 'track_number' => $row['track_number'] ?? null,
                 'duration' => $row['duration'] ?? null,
-                'version' => $row['version'] ?? null,
             ];
+
+            // The release form does not edit a track's version; leaving it out must not clear it.
+            if (array_key_exists('version', $row)) {
+                $attributes['version'] = $row['version'];
+            }
 
             $track = isset($row['id']) ? $release->tracks()->whereKey($row['id'])->first() : null;
             $track ? $track->update($attributes) : $track = $release->tracks()->create([...$attributes, 'label_id' => $release->label_id]);

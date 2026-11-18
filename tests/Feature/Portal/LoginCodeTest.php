@@ -7,6 +7,7 @@ use App\Models\Payee;
 use App\Models\User;
 use App\Notifications\LoginCodeNotification;
 use App\Notifications\LoginCodeUnavailable;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -410,6 +411,31 @@ test('signing in with a code verifies the email address', function () {
         ->assertRedirect(route('dashboard'));
 
     expect($user->refresh()->email_verified_at?->toDateTimeString())->toBe('2026-11-18 12:00:00');
+});
+
+test('signing in with a code to an unverified account shuts out whoever registered it', function () {
+    $user = User::factory()->unverified()->create(['password' => 'chosen-by-someone-else', 'remember_token' => 'kept-by-someone-else']);
+    pendingLoginCode($user);
+
+    $this->withSession(['login_code.email' => $user->email])
+        ->post(route('login.code.authenticate'), ['code' => '123456'])
+        ->assertRedirect(route('dashboard'));
+
+    $user->refresh();
+
+    expect(Hash::check('chosen-by-someone-else', $user->password))->toBeFalse()
+        ->and($user->remember_token)->not->toBe('kept-by-someone-else');
+});
+
+test('signing in with a code keeps the password of a verified account', function () {
+    $user = User::factory()->create(['password' => 'chosen-by-the-owner']);
+    pendingLoginCode($user);
+
+    $this->withSession(['login_code.email' => $user->email])
+        ->post(route('login.code.authenticate'), ['code' => '123456'])
+        ->assertRedirect(route('dashboard'));
+
+    expect(Hash::check('chosen-by-the-owner', $user->refresh()->password))->toBeTrue();
 });
 
 test('a wrong code does not verify the email address', function () {

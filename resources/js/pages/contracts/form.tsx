@@ -291,7 +291,8 @@ export default function ContractForm({
                                     </Button>
                                 </div>
                             ))}
-                            {worldTotal > 100 && (
+                            <InputError message={errors.splits} />
+                            {worldTotal > 100 + 1e-9 && (
                                 <p className="text-sm text-red-600 dark:text-red-400">
                                     The worldwide splits add up to more than
                                     100%. The label would pay out more than it
@@ -322,6 +323,7 @@ export default function ContractForm({
                         </Button>
                     }
                 >
+                    <InputError message={errors.children} />
                     {form.data.children.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
                             Not prorated. Leave empty for a normal contract.

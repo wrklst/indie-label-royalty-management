@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LabelSettingsRequest;
 use App\Http\Requests\TerritoryRequest;
+use App\Models\ContractSplit;
 use App\Models\Territory;
 use App\Models\Transaction;
 use App\Services\Royalties\Tools\MechanicalsTool;
@@ -76,8 +77,18 @@ class LabelSettingsController extends Controller
         return back();
     }
 
+    /**
+     * A territory that splits still refer to stays: without it they
+     * would apply worldwide and pay out on every sale.
+     */
     public function destroyTerritory(Territory $territory): RedirectResponse
     {
+        if (ContractSplit::query()->where('territory_id', $territory->id)->exists()) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('This territory is used by contract splits. Change those splits first.')]);
+
+            return back();
+        }
+
         $territory->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Territory deleted.')]);

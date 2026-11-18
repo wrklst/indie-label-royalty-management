@@ -33,7 +33,8 @@ export type ToolRun = {
 export const plain = (value: string) =>
     value.includes('.') ? value.replace(/\.?0+$/, '') : value;
 
-export const today = () => new Date().toISOString().slice(0, 10);
+// The local date: toISOString() is UTC and gives yesterday shortly after midnight.
+export const today = () => new Date().toLocaleDateString('sv-SE');
 
 export function Notice({ children }: { children: ReactNode }) {
     return (

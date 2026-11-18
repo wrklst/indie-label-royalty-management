@@ -9,8 +9,10 @@ use App\Models\Track;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 /**
  * Stores the files of a release on the private disk.
@@ -35,6 +37,11 @@ class ReleaseFileStore
     {
         $mimeType = $upload->getMimeType();
         $extension = strtolower($upload->getClientOriginalExtension() ?: (string) $upload->guessExtension());
+
+        // The extension becomes part of the stored path, which has to fit its column.
+        if (preg_match('/^[a-z0-9]{1,10}$/', $extension) !== 1) {
+            $extension = (string) $upload->guessExtension();
+        }
         $kind ??= ReleaseFileKind::guess($mimeType, $extension);
 
         if ($kind === ReleaseFileKind::Cover && ! in_array($mimeType, self::COVER_TYPES, true)) {
@@ -57,25 +64,32 @@ class ReleaseFileStore
             throw ValidationException::withMessages(['file' => 'The file could not be stored.']);
         }
 
-        $file = DB::transaction(function () use ($release, $upload, $kind, $trackId, $user, $path, $mimeType): ReleaseFile {
-            // A release shows one cover; an earlier one is kept as artwork.
-            if ($kind === ReleaseFileKind::Cover) {
-                $release->files()->where('kind', ReleaseFileKind::Cover)->update(['kind' => ReleaseFileKind::Artwork]);
-            }
+        try {
+            $file = DB::transaction(function () use ($release, $upload, $kind, $trackId, $user, $path, $mimeType): ReleaseFile {
+                // A release shows one cover; an earlier one is kept as artwork.
+                if ($kind === ReleaseFileKind::Cover) {
+                    $release->files()->where('kind', ReleaseFileKind::Cover)->update(['kind' => ReleaseFileKind::Artwork]);
+                }
 
-            return $release->files()->create([
-                'label_id' => $release->label_id,
-                'track_id' => $trackId,
-                'user_id' => $user?->id,
-                'kind' => $kind,
-                'disk' => self::DISK,
-                'path' => $path,
-                'original_name' => Str::limit(basename($upload->getClientOriginalName()), 250, ''),
-                'mime_type' => $mimeType,
-                'size' => $upload->getSize(),
-                'checksum' => hash_file('sha256', $upload->getRealPath()) ?: null,
-            ]);
-        });
+                return $release->files()->create([
+                    'label_id' => $release->label_id,
+                    'track_id' => $trackId,
+                    'user_id' => $user?->id,
+                    'kind' => $kind,
+                    'disk' => self::DISK,
+                    'path' => $path,
+                    'original_name' => Str::limit(basename($upload->getClientOriginalName()), 250, ''),
+                    'mime_type' => $mimeType,
+                    'size' => $upload->getSize(),
+                    'checksum' => hash_file('sha256', $upload->getRealPath()) ?: null,
+                ]);
+            });
+        } catch (Throwable $exception) {
+            // Without its record nothing would ever remove the stored file.
+            Storage::disk(self::DISK)->delete($path);
+
+            throw $exception;
+        }
 
         $this->previews->queue($file);
 
