@@ -14,3 +14,5 @@ Schedule::command('royalties:sync-bandcamp')
     ->onOneServer();
 
 Schedule::command('royalties:book-recurring-expenses')->dailyAt('04:00')->withoutOverlapping(60)->onOneServer();
+
+Schedule::command('horizon:snapshot')->everyFiveMinutes();

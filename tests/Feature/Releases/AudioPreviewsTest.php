@@ -14,6 +14,7 @@ use App\Services\Releases\AudioPreviews;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Process\Factory;
 use Illuminate\Process\PendingProcess;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -74,6 +75,20 @@ test('an uploaded audio file is queued for its playback copy', function () {
 
     expect($file->preview_status)->toBe(AudioPreviewStatus::Pending);
     Queue::assertPushed(GenerateAudioPreview::class, fn (GenerateAudioPreview $job): bool => $job->releaseFileId === $file->id && ! $job->force);
+});
+
+test('without a worker an uploaded audio file is converted once the upload has been answered', function () {
+    config(['royalties.audio.queue' => false]);
+    Bus::fake([GenerateAudioPreview::class]);
+
+    $this->post(route('release-files.store', $this->release), ['file' => UploadedFile::fake()->create('master.wav', 50, 'audio/wav')])
+        ->assertSessionHasNoErrors();
+
+    $file = ReleaseFile::query()->sole();
+
+    expect($file->preview_status)->toBe(AudioPreviewStatus::Pending);
+    Bus::assertDispatchedAfterResponse(GenerateAudioPreview::class, fn (GenerateAudioPreview $job): bool => $job->releaseFileId === $file->id);
+    Queue::assertNothingPushed();
 });
 
 test('a file that is not audio is not queued', function () {

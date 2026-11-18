@@ -651,6 +651,26 @@ export function remove(index: number): void {
     load(keepPlaying && !wasLast);
 }
 
+/**
+ * Move a queue entry to another position. Whatever is playing keeps
+ * playing: only its place in the queue changes.
+ */
+export function move(from: number, to: number): void {
+    const last = state.queue.length - 1;
+
+    if (from < 0 || from > last || to < 0 || to > last || from === to) {
+        return;
+    }
+
+    const current = state.queue[state.index];
+    const queue = [...state.queue];
+    const [moved] = queue.splice(from, 1);
+    queue.splice(to, 0, moved);
+
+    set({ queue, index: Math.max(0, queue.indexOf(current)) });
+    save();
+}
+
 export function clear(): void {
     unload();
     set({ ...EMPTY, volume: state.volume, muted: state.muted });

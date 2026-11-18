@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    GripVertical,
     ListMusic,
     Music,
     Pause,
@@ -17,6 +18,7 @@ import {
     clear,
     currentTrack,
     jumpTo,
+    move,
     next,
     previous,
     remove,
@@ -150,6 +152,17 @@ function Queue({ onClose }: { onClose: () => void }) {
     const index = usePlayer((state) => state.index);
     const playing = usePlayer((state) => state.playing);
     const failed = usePlayer((state) => state.failed);
+    const [dragged, setDragged] = useState<number | null>(null);
+    const [target, setTarget] = useState<number | null>(null);
+
+    const drop = () => {
+        if (dragged !== null && target !== null) {
+            move(dragged, target);
+        }
+
+        setDragged(null);
+        setTarget(null);
+    };
 
     return (
         <section
@@ -193,11 +206,58 @@ function Queue({ onClose }: { onClose: () => void }) {
                         <li
                             key={track.id}
                             data-current={current || undefined}
+                            onDragOver={(event) => {
+                                if (dragged !== null) {
+                                    event.preventDefault();
+                                    setTarget(position);
+                                }
+                            }}
+                            onDrop={(event) => {
+                                event.preventDefault();
+                                drop();
+                            }}
                             className={cn(
                                 'flex items-center gap-1 rounded-md',
                                 current && 'bg-accent text-accent-foreground',
+                                dragged === position && 'opacity-40',
+                                dragged !== null &&
+                                    target === position &&
+                                    dragged !== position &&
+                                    (dragged < position
+                                        ? 'shadow-[0_2px_0_0_var(--foreground)]'
+                                        : 'shadow-[0_-2px_0_0_var(--foreground)]'),
                             )}
                         >
+                            <button
+                                type="button"
+                                draggable
+                                aria-label={`Move ${track.title} in the queue`}
+                                title="Drag to reorder, or use the arrow keys"
+                                onDragStart={(event) => {
+                                    event.dataTransfer.effectAllowed = 'move';
+                                    event.dataTransfer.setData(
+                                        'text/plain',
+                                        String(position),
+                                    );
+                                    setDragged(position);
+                                }}
+                                onDragEnd={() => {
+                                    setDragged(null);
+                                    setTarget(null);
+                                }}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'ArrowUp') {
+                                        event.preventDefault();
+                                        move(position, position - 1);
+                                    } else if (event.key === 'ArrowDown') {
+                                        event.preventDefault();
+                                        move(position, position + 1);
+                                    }
+                                }}
+                                className="flex h-8 w-5 shrink-0 cursor-grab items-center justify-center rounded-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+                            >
+                                <GripVertical className="size-4" />
+                            </button>
                             <button
                                 type="button"
                                 aria-label={`Play ${track.title} from the queue`}

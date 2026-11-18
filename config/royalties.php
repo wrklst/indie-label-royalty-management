@@ -28,13 +28,33 @@ return [
     | kbit/s (constant, stereo), the sample rate in Hz, and the timeout is
     | how many seconds one conversion may take.
     |
+    | Conversions are queued and worked off by Horizon. Where no worker
+    | runs, set "queue" to false: a master is then converted in the web
+    | process right after the upload has been answered.
+    |
     */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Horizon dashboard
+    |--------------------------------------------------------------------------
+    |
+    | The email addresses of the users who may open /horizon outside the
+    | local environment, separated by commas.
+    |
+    */
+
+    'horizon_emails' => array_values(array_filter(array_map(
+        fn (string $email): string => strtolower(trim($email)),
+        explode(',', (string) env('HORIZON_ALLOWED_EMAILS', '')),
+    ))),
 
     'audio' => [
         'ffmpeg' => env('FFMPEG_BINARY', 'ffmpeg'),
         'bitrate' => (int) env('AUDIO_PREVIEW_BITRATE', 320),
         'sample_rate' => (int) env('AUDIO_PREVIEW_SAMPLE_RATE', 44100),
         'timeout' => (int) env('AUDIO_PREVIEW_TIMEOUT', 600),
+        'queue' => (bool) env('AUDIO_PREVIEW_QUEUE', true),
     ],
 
     /*

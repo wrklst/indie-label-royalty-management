@@ -68,7 +68,8 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+            // Longer than Horizon's worker timeout, so a running conversion is never handed out twice.
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', (int) env('AUDIO_PREVIEW_TIMEOUT', 600) + 300),
             'block_for' => null,
             'after_commit' => false,
         ],

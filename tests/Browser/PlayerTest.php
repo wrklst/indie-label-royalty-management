@@ -127,6 +127,15 @@ test('a release is played as a whole and the queue can be edited and cleared', f
         ->assertSeeIn('[data-player="title"]', 'Second Track')
         ->click('[aria-label="Open queue"]')
         ->assertSeeIn('#player-queue li:first-child', 'Second Track')
+        ->script('document.querySelector(\'[aria-label="Move Second Track in the queue"]\').dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }))');
+
+    // Moving the playing track changes its place, not what is playing.
+    $page->assertSeeIn('#player-queue li:first-child', 'Example Track')
+        ->assertSeeIn('#player-queue li[data-current]', 'Second Track')
+        ->assertSeeIn('[data-player="title"]', 'Second Track')
+        ->drag('[aria-label="Move Second Track in the queue"]', '#player-queue li:first-child')
+        ->assertSeeIn('#player-queue li:first-child', 'Second Track')
+        ->assertSeeIn('#player-queue li[data-current]', 'Second Track')
         ->click('[aria-label="Remove Second Track from the queue"]')
         ->assertSeeIn('[data-player="title"]', 'Example Track')
         ->press('Clear queue')

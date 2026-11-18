@@ -40,6 +40,9 @@ class GenerateAudioPreview implements ShouldBeUnique, ShouldQueue
 
     public function handle(AudioPreviews $previews): void
     {
+        // Run after a web response, the request's own time limit would cut a long conversion short.
+        set_time_limit($this->timeout);
+
         $file = $this->file();
 
         if ($file !== null) {

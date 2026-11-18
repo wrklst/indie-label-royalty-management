@@ -87,21 +87,29 @@ installation on the internet.
 
 - **Mail.** Sign-in codes and invitations are sent by email. Set the
   `MAIL_*` values in `.env`.
-- **Queue worker.** Those emails are queued. Run `php artisan queue:work`
-  (or set `QUEUE_CONNECTION=sync`), otherwise nothing is sent.
+- **Queue worker.** Those emails and the audio conversions are queued on
+  Redis and worked off by [Laravel Horizon](https://laravel.com/docs/horizon).
+  Keep `php artisan horizon` running (under Supervisor or similar in
+  production; `composer dev` starts it locally), otherwise nothing is sent
+  or converted. Its dashboard is at `/horizon`: open in the local
+  environment, elsewhere only to the signed-in users listed in
+  `HORIZON_ALLOWED_EMAILS`. Without Redis, set `QUEUE_CONNECTION=database`
+  and run `php artisan queue:work`, or `QUEUE_CONNECTION=sync`.
 - **Scheduler.** Recurring label costs and the weekly Bandcamp sync need
   Laravel's scheduler:
   run `php artisan schedule:run` every minute from cron.
 - **Uploads.** Audio masters are large. Raise PHP's `upload_max_filesize`
   and `post_max_size`, and set `RELEASE_UPLOAD_MAX_KB` to match.
 - **Playback copies.** The MP3 a master is played from is made by
-  [ffmpeg](https://ffmpeg.org) (built with libmp3lame) in a queued job, so
-  ffmpeg has to be installed and a queue worker running. Set
-  `FFMPEG_BINARY` to its full path if it is not on the worker's `PATH`;
-  `AUDIO_PREVIEW_BITRATE` (default `320`) sets the quality. A conversion
-  may take up to `AUDIO_PREVIEW_TIMEOUT` seconds (default `600`): keep
-  `DB_QUEUE_RETRY_AFTER` and the worker's `--timeout` above that for very
-  long recordings. Without a worker, or to catch up, run
+  [ffmpeg](https://ffmpeg.org) (built with libmp3lame), so ffmpeg has to
+  be installed. Set `FFMPEG_BINARY` to its full path if it is not on the
+  `PATH` of PHP; `AUDIO_PREVIEW_BITRATE` (default `320`) sets the quality.
+  Conversions are queued, so Horizon has to be running; a conversion may
+  take up to `AUDIO_PREVIEW_TIMEOUT` seconds (default `600`), and the
+  worker timeout and `REDIS_QUEUE_RETRY_AFTER` follow from it. Where no
+  worker runs, set `AUDIO_PREVIEW_QUEUE=false` and each master is
+  converted in the web process right after its upload instead. To catch
+  up, or to redo copies, run
   `php artisan royalties:generate-previews` (options: `--label=`,
   `--release=`, `--force`); it converts everything that has no copy yet.
   Without ffmpeg, MP3 uploads still play, WAV and FLAC play as uploaded in

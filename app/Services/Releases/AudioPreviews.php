@@ -19,8 +19,9 @@ use Throwable;
 class AudioPreviews
 {
     /**
-     * Mark the file as waiting for its playback copy and hand the work
-     * to the queue. An MP3 can be played straight away.
+     * Mark the file as waiting for its playback copy and start the
+     * conversion: right after the response by default, or on the queue
+     * when the label runs a worker. An MP3 can be played straight away.
      */
     public function queue(ReleaseFile $file, bool $force = false): void
     {
@@ -33,7 +34,14 @@ class AudioPreviews
             'preview_error' => null,
         ]);
 
-        GenerateAudioPreview::dispatch($file->id, $force);
+        if (config('royalties.audio.queue')) {
+            GenerateAudioPreview::dispatch($file->id, $force);
+
+            return;
+        }
+
+        // No worker needed: converted in this process once the response has been sent.
+        GenerateAudioPreview::dispatchAfterResponse($file->id, $force);
     }
 
     /**
