@@ -199,16 +199,22 @@ export default function Profitability({
                 <Input
                     aria-label="From"
                     type="date"
-                    value={filters.from ?? ''}
-                    onChange={(event) => apply({ from: event.target.value })}
+                    key={filters.from ?? ''}
+                    defaultValue={filters.from ?? ''}
+                    onChange={(event) =>
+                        apply({ from: event.target.value }, true)
+                    }
                     className="w-40"
                 />
                 <span className="text-sm text-muted-foreground">to</span>
                 <Input
                     aria-label="To"
                     type="date"
-                    value={filters.to ?? ''}
-                    onChange={(event) => apply({ to: event.target.value })}
+                    key={filters.to ?? ''}
+                    defaultValue={filters.to ?? ''}
+                    onChange={(event) =>
+                        apply({ to: event.target.value }, true)
+                    }
                     className="w-40"
                 />
                 <SelectInput

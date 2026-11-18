@@ -156,17 +156,21 @@ export default function Dashboard({
                     <Input
                         aria-label="From"
                         type="date"
-                        value={filters.from}
+                        key={filters.from}
+                        defaultValue={filters.from}
                         onChange={(event) =>
-                            apply({ from: event.target.value })
+                            apply({ from: event.target.value }, true)
                         }
                         className="w-40"
                     />
                     <Input
                         aria-label="To"
                         type="date"
-                        value={filters.to}
-                        onChange={(event) => apply({ to: event.target.value })}
+                        key={filters.to}
+                        defaultValue={filters.to}
+                        onChange={(event) =>
+                            apply({ to: event.target.value }, true)
+                        }
                         className="w-40"
                     />
                 </>

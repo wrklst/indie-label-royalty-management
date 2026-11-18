@@ -345,11 +345,11 @@ test('after ten failed codes for an address even the right code is refused for a
     pendingLoginCode($user);
 
     $this->post(route('login.code.authenticate'), ['code' => '123456'])
-        ->assertSessionHasErrors(['code' => 'Too many attempts. Please try again in 15 minutes.']);
+        ->assertSessionHasErrors(['code' => 'Too many attempts. Please try again in 60 minutes.']);
     $this->assertGuest();
     $this->assertDatabaseHas('login_codes', ['user_id' => $user->id, 'attempts' => 0]);
 
-    $this->travel(15)->minutes();
+    $this->travel(60)->minutes();
     $this->travel(1)->seconds();
     LoginCode::query()->delete();
     pendingLoginCode($user);

@@ -13,6 +13,7 @@ use App\Models\Transaction;
 use App\Services\Imports\Readers\ReaderFactory;
 use App\Support\Decimal;
 use App\Support\Formats;
+use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
@@ -49,7 +50,7 @@ class ImportRunner
             $reader = $this->readers->open(Storage::disk('local')->path($import->file_path));
 
             DB::transaction(function () use ($import, $label, $importer, $reader): void {
-                $this->process($import, $label, $importer->rows($reader, $label, $import->options ?? []));
+                $this->process($import, $label, fn (): iterable => $importer->rows($reader, $label, $import->options ?? []));
             });
         } catch (ImportException $exception) {
             $import->update([
@@ -71,9 +72,9 @@ class ImportRunner
     }
 
     /**
-     * @param  iterable<int, ImportRow|ImportRowError>  $rows
+     * @param  Closure(): iterable<int, ImportRow|ImportRowError>  $rows  Reads the file from its first line each time it is called.
      */
-    private function process(DataImport $import, Label $label, iterable $rows): void
+    private function process(DataImport $import, Label $label, Closure $rows): void
     {
         $matcher = new CatalogMatcher($label, $import->id);
         $payees = Payee::query()->where('label_id', $label->id)->pluck('id', 'name')
@@ -92,107 +93,116 @@ class ImportRunner
 
         $seen = [];
 
+        $foreignCurrencies = [];
+
         // Lines that name their release go first, so lines carrying only an
-        // ISRC can be matched to tracks created from the same file.
-        $identified = [];
-        $remaining = [];
-
-        foreach ($rows as $line => $row) {
-            if ($row instanceof ImportRow && ($row->upc || $row->catalogNumber || $row->releaseName)) {
-                $identified[] = [$line, $row];
-            } else {
-                $remaining[] = [$line, $row];
-            }
-        }
-
-        foreach ([...$identified, ...$remaining] as [$line, $row]) {
-            $stats['rows']++;
-
-            if ($row instanceof ImportRowError) {
-                $row->skipped ? $stats['skipped']++ : $stats['errors']++;
-
-                if (! $row->skipped && count($errors) < self::MAX_STORED_ERRORS) {
-                    $errors[] = ['line' => $line, 'message' => $row->message];
+        // ISRC can be matched to tracks created from the same file. The file
+        // is read once for each group instead of being held in memory.
+        foreach ([true, false] as $namesRelease) {
+            foreach ($rows() as $line => $row) {
+                if (($row instanceof ImportRow && ($row->upc || $row->catalogNumber || $row->releaseName)) !== $namesRelease) {
+                    continue;
                 }
 
-                continue;
-            }
+                $stats['rows']++;
 
-            $timestamp = $import->replace_timestamp || $row->timestamp === null
-                ? ($import->default_timestamp?->toDateString() ?? $row->timestamp)
-                : $row->timestamp;
-            $paid = $import->replace_paid_timestamp || $row->paidTimestamp === null
-                ? ($import->default_paid_timestamp?->toDateString() ?? $row->paidTimestamp)
-                : $row->paidTimestamp;
-            $timestamp ??= $paid;
-            $paid ??= $timestamp;
+                if ($row instanceof ImportRowError) {
+                    $row->skipped ? $stats['skipped']++ : $stats['errors']++;
 
-            if ($timestamp === null) {
-                $stats['errors']++;
+                    if (! $row->skipped && count($errors) < self::MAX_STORED_ERRORS) {
+                        $errors[] = ['line' => $line, 'message' => $row->message];
+                    }
 
-                if (count($errors) < self::MAX_STORED_ERRORS) {
-                    $errors[] = ['line' => $line, 'message' => 'The line has no date and the import has no default date.'];
+                    continue;
                 }
 
-                continue;
-            }
+                $timestamp = $import->replace_timestamp || $row->timestamp === null
+                    ? ($import->default_timestamp?->toDateString() ?? $row->timestamp)
+                    : $row->timestamp;
+                $paid = $import->replace_paid_timestamp || $row->paidTimestamp === null
+                    ? ($import->default_paid_timestamp?->toDateString() ?? $row->paidTimestamp)
+                    : $row->paidTimestamp;
+                $timestamp ??= $paid;
+                $paid ??= $timestamp;
 
-            $currency = $row->currency ?: $label->currency;
-            $rate = $currency === $label->currency ? '1' : $conversionRate;
-            $format = Formats::canonical($row->format);
-            $matched = $row->itemId !== null && $itemIds->has($row->itemId)
-                ? $this->matchByItem($row->itemId)
-                : $matcher->match($row, Formats::group($format));
+                if ($timestamp === null) {
+                    $stats['errors']++;
 
-            $payeeId = null;
+                    if (count($errors) < self::MAX_STORED_ERRORS) {
+                        $errors[] = ['line' => $line, 'message' => 'The line has no date and the import has no default date.'];
+                    }
 
-            if ($row->payeeName !== null) {
-                $payeeKey = Identifiers::nameKey($row->payeeName);
-                $payeeId = $payees[$payeeKey] ??= Payee::query()->create(['label_id' => $label->id, 'name' => trim($row->payeeName)])->id;
-            }
+                    continue;
+                }
 
-            // Identical lines are legitimate inside one statement, so the
-            // fingerprint counts repeats and only detects re-imports.
-            $hash = sha1($import->importer.'|'.json_encode($row->raw));
-            $seen[$hash] = ($seen[$hash] ?? 0) + 1;
+                $currency = $row->currency ?: $label->currency;
+                $rate = $currency === $label->currency ? '1' : $conversionRate;
 
-            $buffer[] = [
-                'label_id' => $label->id,
-                'data_import_id' => $import->id,
-                'release_id' => $matched['release_id'],
-                'track_id' => $matched['track_id'],
-                'item_id' => $matched['item_id'],
-                'contract_id' => $row->contractId !== null && $contractIds->has($row->contractId) ? $row->contractId : null,
-                'payee_id' => $payeeId,
-                'type' => $row->type->value,
-                'timestamp' => $timestamp,
-                'paid_timestamp' => $paid,
-                'quantity' => $row->quantity,
-                'price' => $row->price,
-                'total' => $row->total,
-                'currency' => $currency,
-                'conversion_rate' => $rate,
-                'converted_total' => $rate === null ? null : Decimal::mul($row->total, $rate),
-                'category' => $row->category,
-                'format' => $format,
-                'usage_type' => $row->usageType ? mb_substr($row->usageType, 0, 255) : null,
-                'region' => $row->region,
-                'provider' => $row->provider,
-                'retailer' => $row->retailer,
-                'external_id' => $row->externalId,
-                'source' => $row->source,
-                'importer_source' => $import->importer,
-                'memo' => $row->memo ? mb_substr($row->memo, 0, 1000) : null,
-                'published' => true,
-                'billable' => true,
-                'fingerprint' => sha1($hash.'|'.$seen[$hash]),
-                'raw_data' => json_encode($row->raw, JSON_UNESCAPED_UNICODE),
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
+                if ($rate !== '1' && $conversionRate !== null) {
+                    $foreignCurrencies[$currency] = true;
 
-            if (count($buffer) >= self::CHUNK) {
-                $this->flush($buffer, $stats, $total, $label, $skipDuplicates);
+                    if (count($foreignCurrencies) > 1) {
+                        throw new ImportException('The file holds amounts in '.implode(' and ', array_keys($foreignCurrencies)).', but an import has one conversion rate. Import each currency in a file of its own.');
+                    }
+                }
+                $format = Formats::canonical($row->format);
+                $matched = $row->itemId !== null && $itemIds->has($row->itemId)
+                    ? $this->matchByItem($row->itemId)
+                    : $matcher->match($row, Formats::group($format));
+
+                $payeeId = null;
+
+                if ($row->payeeName !== null) {
+                    $payeeKey = Identifiers::nameKey($row->payeeName);
+                    $payeeId = $payees[$payeeKey] ??= Payee::query()->create(['label_id' => $label->id, 'name' => trim($row->payeeName)])->id;
+                }
+
+                // Identical lines are legitimate inside one statement, so the
+                // fingerprint counts repeats and only detects re-imports.
+                // A line without a date belongs to the period chosen at upload: the same
+                // line in another period is another sale.
+                $period = $row->timestamp === null && $row->paidTimestamp === null ? "|{$timestamp}|{$paid}" : '';
+                $hash = sha1($import->importer.'|'.json_encode($row->raw).$period);
+                $seen[$hash] = ($seen[$hash] ?? 0) + 1;
+
+                $buffer[] = [
+                    'label_id' => $label->id,
+                    'data_import_id' => $import->id,
+                    'release_id' => $matched['release_id'],
+                    'track_id' => $matched['track_id'],
+                    'item_id' => $matched['item_id'],
+                    'contract_id' => $row->contractId !== null && $contractIds->has($row->contractId) ? $row->contractId : null,
+                    'payee_id' => $payeeId,
+                    'type' => $row->type->value,
+                    'timestamp' => $timestamp,
+                    'paid_timestamp' => $paid,
+                    'quantity' => $row->quantity,
+                    'price' => $row->price,
+                    'total' => $row->total,
+                    'currency' => $currency,
+                    'conversion_rate' => $rate,
+                    'converted_total' => $rate === null ? null : Decimal::mul($row->total, $rate),
+                    'category' => $row->category,
+                    'format' => $format,
+                    'usage_type' => $row->usageType ? mb_substr($row->usageType, 0, 255) : null,
+                    'region' => $row->region,
+                    'provider' => $row->provider,
+                    'retailer' => $row->retailer,
+                    'external_id' => $row->externalId,
+                    'source' => $row->source,
+                    'importer_source' => $import->importer,
+                    'memo' => $row->memo ? mb_substr($row->memo, 0, 1000) : null,
+                    'published' => true,
+                    'billable' => true,
+                    'fingerprint' => sha1($hash.'|'.$seen[$hash]),
+                    'raw_data' => json_encode($row->raw, JSON_UNESCAPED_UNICODE),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+
+                if (count($buffer) >= self::CHUNK) {
+                    $this->flush($buffer, $stats, $total, $label, $skipDuplicates);
+                }
             }
         }
 

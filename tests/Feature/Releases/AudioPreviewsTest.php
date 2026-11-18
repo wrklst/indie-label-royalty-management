@@ -330,7 +330,7 @@ test('without a finished copy a format browsers cannot play answers 409 with the
 test('asking for a stream of a file that is not audio changes nothing', function () {
     $file = storedAudio($this->release, ['kind' => 'document', 'mime_type' => 'application/pdf', 'original_name' => 'kit.pdf']);
 
-    $this->get(route('release-files.show', [$file->id, 'stream' => 1]))->assertOk()->assertHeader('Content-Type', 'application/pdf');
+    $this->get(route('release-files.show', [$file->id, 'stream' => 1]))->assertOk()->assertDownload('kit.pdf');
 });
 
 test('a conversion can be started again from the file table', function () {

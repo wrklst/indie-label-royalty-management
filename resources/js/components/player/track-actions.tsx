@@ -19,6 +19,12 @@ export function TrackActions({ track }: { track: PlayerTrack }) {
     const isCurrent = usePlayer(
         (state) => currentTrack(state)?.id === track.id,
     );
+    // The queue remembers the file it was given; a master uploaded since replaces it.
+    const isStale = usePlayer(
+        (state) =>
+            currentTrack(state)?.id === track.id &&
+            currentTrack(state)?.fileId !== track.fileId,
+    );
     const playing = usePlayer((state) => state.playing);
     const isPlaying = isCurrent && playing;
 
@@ -36,7 +42,9 @@ export function TrackActions({ track }: { track: PlayerTrack }) {
                           ? `Resume ${track.title}`
                           : `Play ${track.title}`
                 }
-                onClick={() => (isCurrent ? toggle() : playNow(track))}
+                onClick={() =>
+                    isCurrent && !isStale ? toggle() : playNow(track)
+                }
             >
                 {isPlaying ? <Pause /> : <Play />}
             </Button>

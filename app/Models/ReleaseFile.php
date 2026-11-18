@@ -49,7 +49,7 @@ class ReleaseFile extends Model
 
     /** Types a browser may display itself; everything else is downloaded. */
     private const array INLINE_TYPES = [
-        'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf',
+        'image/jpeg', 'image/png', 'image/webp', 'image/gif',
         'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/wave', 'audio/vnd.wave', 'audio/flac', 'audio/x-flac', 'audio/mp4',
         'audio/x-m4a', 'audio/aac', 'audio/ogg', 'audio/aiff', 'audio/x-aiff',
     ];

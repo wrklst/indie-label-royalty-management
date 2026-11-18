@@ -228,7 +228,7 @@ test('the original is sent when no variant applies', function (array $attributes
         ->and((string) $response->headers->get('Cache-Control'))->toContain('no-store')
         ->and(Storage::disk('local')->allFiles())->toBe([$file->path]);
 })->with([
-    'a file that is not an image' => [['kind' => 'document', 'mime_type' => 'application/pdf', 'original_name' => 'kit.pdf'], '%PDF-1.4', ['size' => 'thumb'], 'application/pdf'],
+    'a file that is not an image' => [['kind' => 'document', 'mime_type' => 'application/pdf', 'original_name' => 'kit.pdf'], '%PDF-1.4', ['size' => 'thumb'], 'application/octet-stream'],
     'an image that cannot be read' => [[], 'not really a jpeg', ['size' => 'thumb'], 'image/jpeg'],
     'an image cut off in the middle' => [[], substr(twoColourImage(300, 300, 'png'), 0, 120), ['size' => 'medium'], 'image/jpeg'],
     'a download' => [[], twoColourImage(300, 300), ['size' => 'thumb', 'download' => 1], 'application/octet-stream'],

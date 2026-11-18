@@ -6,6 +6,7 @@ use App\Enums\ImportStatus;
 use App\Models\BandcampConnection;
 use App\Models\DataImport;
 use App\Models\Label;
+use App\Services\Imports\Importers\BandcampImporter;
 use App\Services\Imports\ImportRunner;
 use App\Services\Imports\Row;
 use App\Support\CurrentLabel;
@@ -202,7 +203,7 @@ class BandcampSync
                 if ($itemId !== '') {
                     $itemIds["{$transaction->external_id}:{$itemId}"] = true;
                 } else {
-                    $key = $this->saleKey((string) $transaction->external_id, $raw['item type'] ?? '', $raw['item name'] ?? '');
+                    $key = BandcampImporter::saleKey((string) $transaction->external_id, $raw['item type'] ?? '', $raw['item name'] ?? '');
                     $unidentified[$key] = ($unidentified[$key] ?? 0) + 1;
                 }
             }
@@ -213,7 +214,7 @@ class BandcampSync
                 return false;
             }
 
-            $key = $this->saleKey($line['bandcamp_transaction_id'], $line['item_type'], $line['item_name']);
+            $key = BandcampImporter::saleKey($line['bandcamp_transaction_id'], $line['item_type'], $line['item_name']);
 
             if (($unidentified[$key] ?? 0) > 0) {
                 $unidentified[$key]--;
@@ -223,11 +224,6 @@ class BandcampSync
 
             return true;
         }));
-    }
-
-    private function saleKey(string $orderId, string $itemType, string $itemName): string
-    {
-        return $orderId.'|'.mb_strtolower(trim($itemType)).'|'.mb_strtolower(trim($itemName));
     }
 
     /**

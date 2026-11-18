@@ -422,3 +422,18 @@ test('a payee cannot create periods or generate statements', function () {
     $this->assertDatabaseMissing('periods', ['name' => 'Sneaky']);
     $this->assertDatabaseCount('statements', 0);
 });
+
+test('a period with payouts can be renamed but keeps its dates', function () {
+    $label = Label::factory()->create();
+    $period = Period::factory()->create(['label_id' => $label->id]);
+    Payout::factory()->create(['label_id' => $label->id, 'period_id' => $period->id, 'payee_id' => Payee::factory()->create(['label_id' => $label->id])]);
+    $this->actingAs(labelAdmin($label));
+
+    $this->put(route('periods.update', $period), ['name' => 'First quarter', 'starts_on' => '2026-01-01', 'ends_on' => '2026-03-31'])
+        ->assertSessionHasNoErrors();
+    $this->put(route('periods.update', $period), ['name' => 'First quarter', 'starts_on' => '2026-01-01', 'ends_on' => '2026-04-30'])
+        ->assertSessionHasErrors(['starts_on' => 'This period has payouts, so its dates can no longer change.']);
+
+    expect($period->refresh()->name)->toBe('First quarter')
+        ->and($period->ends_on->toDateString())->toBe('2026-03-31');
+});

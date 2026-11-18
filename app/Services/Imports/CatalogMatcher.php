@@ -37,6 +37,12 @@ class CatalogMatcher
     /** @var array<string, array{0: int, 1: int}> isrc => [track id, release id] */
     private array $tracksByIsrc = [];
 
+    /** @var array<int, true> Releases that have no UPC yet. */
+    private array $releasesWithoutUpc = [];
+
+    /** @var array<int, true> Tracks that have no ISRC yet. */
+    private array $tracksWithoutIsrc = [];
+
     /** @var array<string, int> */
     private array $artists = [];
 
@@ -114,8 +120,22 @@ class CatalogMatcher
 
         $catalogKey = Identifiers::catalogKey($row->catalogNumber);
 
-        if (! $row->upc && $catalogKey && isset($this->releasesByCatalog[$catalogKey])) {
-            return $this->releasesByCatalog[$catalogKey];
+        if ($catalogKey && isset($this->releasesByCatalog[$catalogKey])) {
+            $releaseId = $this->releasesByCatalog[$catalogKey];
+
+            if (! $row->upc) {
+                return $releaseId;
+            }
+
+            // A release entered by hand has its catalog number before its UPC:
+            // the first statement naming both completes it.
+            if (isset($this->releasesWithoutUpc[$releaseId])) {
+                Release::query()->withoutGlobalScopes()->whereKey($releaseId)->update(['upc' => $row->upc]);
+                unset($this->releasesWithoutUpc[$releaseId]);
+                $this->releasesByUpc[Identifiers::upcKey($row->upc)] = $releaseId;
+
+                return $releaseId;
+            }
         }
 
         $nameKey = Identifiers::nameKey($row->releaseName);
@@ -129,11 +149,27 @@ class CatalogMatcher
 
     private function findTrack(int $releaseId, ImportRow $row): ?int
     {
-        if ($row->isrc) {
-            return $this->tracksByReleaseIsrc["{$releaseId}|{$row->isrc}"] ?? null;
+        if ($row->isrc && isset($this->tracksByReleaseIsrc["{$releaseId}|{$row->isrc}"])) {
+            return $this->tracksByReleaseIsrc["{$releaseId}|{$row->isrc}"];
         }
 
-        return $this->tracksByReleaseName[$releaseId.'|'.Identifiers::nameKey($row->trackName)] ?? null;
+        $trackId = $this->tracksByReleaseName[$releaseId.'|'.Identifiers::nameKey($row->trackName)] ?? null;
+
+        if (! $row->isrc || $trackId === null) {
+            return $row->isrc ? null : $trackId;
+        }
+
+        // The same for a track entered by hand without its ISRC.
+        if (! isset($this->tracksWithoutIsrc[$trackId])) {
+            return null;
+        }
+
+        Track::query()->withoutGlobalScopes()->whereKey($trackId)->update(['isrc' => $row->isrc]);
+        unset($this->tracksWithoutIsrc[$trackId]);
+        $this->tracksByReleaseIsrc["{$releaseId}|{$row->isrc}"] = $trackId;
+        $this->tracksByIsrc[$row->isrc] ??= [$trackId, $releaseId];
+
+        return $trackId;
     }
 
     private function createRelease(ImportRow $row): int
@@ -215,6 +251,8 @@ class CatalogMatcher
     {
         if ($key = Identifiers::upcKey($release->upc)) {
             $this->releasesByUpc[$key] ??= $release->id;
+        } else {
+            $this->releasesWithoutUpc[$release->id] = true;
         }
 
         if ($key = Identifiers::catalogKey($release->catalog_number)) {
@@ -231,6 +269,8 @@ class CatalogMatcher
         if ($isrc = Identifiers::isrc($track->isrc)) {
             $this->tracksByReleaseIsrc["{$track->release_id}|{$isrc}"] ??= $track->id;
             $this->tracksByIsrc[$isrc] ??= [$track->id, $track->release_id];
+        } else {
+            $this->tracksWithoutIsrc[$track->id] = true;
         }
 
         if ($key = Identifiers::nameKey($track->name)) {

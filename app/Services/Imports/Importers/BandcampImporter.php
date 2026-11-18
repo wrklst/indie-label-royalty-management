@@ -5,6 +5,7 @@ namespace App\Services\Imports\Importers;
 use App\Services\Imports\ImportRow;
 use App\Services\Imports\Row;
 use App\Support\Decimal;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Bandcamp sales report, either the raw download from the Bandcamp
@@ -22,6 +23,9 @@ class BandcampImporter extends BaseImporter
     private bool $disableFee = false;
 
     private bool $excludePhysical = false;
+
+    /** @var array<string, int>|null Synced sales no line of this file has accounted for yet, by sale key. */
+    private ?array $synced = null;
 
     public function key(): string
     {
@@ -47,6 +51,59 @@ class BandcampImporter extends BaseImporter
     {
         $this->disableFee = (bool) ($this->options['disable_fee'] ?? $this->label->importerSetting('bandcamp.disable_fee', false));
         $this->excludePhysical = (bool) ($this->options['exclude_physical'] ?? $this->label->importerSetting('bandcamp.exclude_physical', false));
+        $this->synced = null;
+    }
+
+    /**
+     * What identifies a sale in both the API and a downloaded report.
+     */
+    public static function saleKey(string $orderId, string $itemType, string $itemName): string
+    {
+        return $orderId.'|'.mb_strtolower(trim($itemType)).'|'.mb_strtolower(trim($itemName));
+    }
+
+    /**
+     * Whether the sync has imported this line of a downloaded report
+     * already. A report line carries no item id, so it is matched by
+     * order, item type and item name; one synced sale accounts for one line.
+     */
+    private function wasSynced(string $orderId, string $itemType, string $itemName): bool
+    {
+        if ($this->synced === null) {
+            $this->synced = [];
+
+            // ponytail: reads every synced sale of the label once per file; narrow it to the file's order ids if uploads get slow.
+            DB::table('transactions')
+                ->where('label_id', $this->label->id)
+                ->where('importer_source', $this->key())
+                ->whereNotNull('external_id')
+                ->where('raw_data', 'like', '%transaction_item_id%')
+                ->orderBy('id')
+                ->select(['id', 'external_id', 'raw_data'])
+                ->lazy()
+                ->each(function (object $transaction): void {
+                    $raw = [];
+
+                    foreach ((array) json_decode((string) $transaction->raw_data, true) as $column => $value) {
+                        $raw[Row::normalize((string) $column)] = is_scalar($value) ? (string) $value : '';
+                    }
+
+                    if (($raw['bandcamp transaction item id'] ?? '') !== '') {
+                        $key = self::saleKey((string) $transaction->external_id, $raw['item type'] ?? '', $raw['item name'] ?? '');
+                        $this->synced[$key] = ($this->synced[$key] ?? 0) + 1;
+                    }
+                });
+        }
+
+        $key = self::saleKey($orderId, $itemType, $itemName);
+
+        if (($this->synced[$key] ?? 0) === 0) {
+            return false;
+        }
+
+        $this->synced[$key]--;
+
+        return true;
     }
 
     protected function map(Row $row): ImportRow
@@ -55,6 +112,17 @@ class BandcampImporter extends BaseImporter
 
         if ($itemType === 'payout') {
             $this->skip('Payout to your bank account is not a sale.');
+        }
+
+        $orderId = $row->string('bandcamp transaction id');
+
+        if (
+            $orderId !== null
+            && $row->string('bandcamp transaction item id') === null
+            && ($this->options['skip_duplicates'] ?? true)
+            && $this->wasSynced($orderId, $itemType, (string) $row->string('item name'))
+        ) {
+            $this->skip('Sale already imported by the Bandcamp sync.');
         }
 
         $net = $row->decimal('net amount') ?? $this->skip('Line without a net amount skipped.');

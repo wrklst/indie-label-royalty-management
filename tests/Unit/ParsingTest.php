@@ -36,4 +36,5 @@ test('a date is read as a date or rejected', function (string $written, ?string 
     'a year alone' => ['2025', null],
     'a month and a year' => ['12.2025', null],
     'a word' => ['tomorrow', null],
+    'day and month in an order nobody can tell' => ['03/04/2026', null],
 ]);

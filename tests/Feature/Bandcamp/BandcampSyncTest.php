@@ -215,6 +215,26 @@ test('a sale that was imported from an uploaded bandcamp report before is not im
         ->and(Transaction::query()->where('external_id', '577718015')->count())->toBe(1);
 });
 
+test('a bandcamp report uploaded after a sync does not book the synced sales again', function () {
+    $this->travelTo('2023-08-20 12:00:00');
+    $connection = connectedLabel('2023-08-01');
+    $label = Label::query()->findOrFail($connection->label_id);
+    fakeBandcampSales(['2023-08-01 00:00:00' => [
+        bandcampSale(['bandcamp_transaction_id' => 577718015, 'bandcamp_transaction_item_id' => 700000010, 'date' => '03 Aug 2023 21:15:00 GMT', 'item_type' => 'track', 'item_name' => 'Example Track (Remix)', 'net_amount' => 1.14]),
+        bandcampSale(['bandcamp_transaction_id' => 577718099, 'bandcamp_transaction_item_id' => 700000011, 'date' => '05 Aug 2023 11:02:00 GMT', 'net_amount' => 5.6]),
+    ]]);
+    app(BandcampSync::class)->run($connection);
+
+    Storage::disk('local')->put('imports/manual.csv', file_get_contents(base_path('tests/Fixtures/bandcamp_raw_sample.csv')));
+    $upload = app(ImportRunner::class)->run(DataImport::factory()->create([
+        'label_id' => $label->id, 'importer' => 'bandcamp', 'status' => 'pending', 'file_path' => 'imports/manual.csv',
+    ]), $label);
+
+    expect($upload->status)->toBe(ImportStatus::Imported)
+        ->and($upload->transactions_count)->toBe(0)
+        ->and(Transaction::query()->count())->toBe(2);
+});
+
 test('a failing month stops the sync and leaves the cursor at the last good month', function () {
     Sleep::fake();
     $this->travelTo('2026-04-10 12:00:00');

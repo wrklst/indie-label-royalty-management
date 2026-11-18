@@ -227,6 +227,13 @@ return [
                 'maxProcesses' => 2,
             ],
         ],
+
+        // Any other environment (staging, …) still gets workers.
+        '*' => [
+            'supervisor-1' => [
+                'maxProcesses' => 2,
+            ],
+        ],
     ],
 
     /*

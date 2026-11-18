@@ -131,6 +131,11 @@ class Row
                 return CarbonImmutable::createFromFormat('!d.m.y', $value)->toDateString();
             }
 
+            // "03/04/2026" is 3 April in Europe and 4 March in the US: not guessed without a format.
+            if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{2,4}$/', $value) === 1) {
+                throw new RowException("The date \"{$value}\" in \"{$column}\" can be read two ways. Use the format 2026-03-31.");
+            }
+
             if (preg_match('/\d{4}/', $value) !== 1 || preg_match('/^(\d{1,2}[.\/-])?\d{4}$/', $value) === 1) {
                 throw new RowException("The date \"{$value}\" in \"{$column}\" could not be read. Use the format 2026-03-31.");
             }

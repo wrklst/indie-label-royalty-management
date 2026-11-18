@@ -24,13 +24,15 @@ class GenerateAudioPreview implements ShouldBeUnique, ShouldQueue
 
     public int $timeout;
 
-    /** The lock that keeps a file from being queued twice is given up after an hour. */
-    public int $uniqueFor = 3600;
+    /** How long the lock lasts that keeps a file from being queued twice. */
+    public int $uniqueFor;
 
     public function __construct(public int $releaseFileId, public bool $force = false)
     {
         // A little longer than ffmpeg itself may take, so its own timeout is the one that reports.
         $this->timeout = (int) config('royalties.audio.timeout') + 60;
+        // As long as every attempt may take: a conversion whose process died frees the file soon after.
+        $this->uniqueFor = $this->timeout * $this->tries + 60;
     }
 
     public function uniqueId(): string

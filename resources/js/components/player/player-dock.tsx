@@ -228,8 +228,10 @@ function Queue({ onClose }: { onClose: () => void }) {
                                         : 'shadow-[0_-2px_0_0_var(--foreground)]'),
                             )}
                         >
-                            <button
-                                type="button"
+                            {/* A span: Firefox does not start a drag from a button. */}
+                            <span
+                                role="button"
+                                tabIndex={0}
                                 draggable
                                 aria-label={`Move ${track.title} in the queue`}
                                 title="Drag to reorder, or use the arrow keys"
@@ -267,7 +269,7 @@ function Queue({ onClose }: { onClose: () => void }) {
                                 className="flex h-8 w-5 shrink-0 cursor-grab items-center justify-center rounded-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
                             >
                                 <GripVertical className="size-4" />
-                            </button>
+                            </span>
                             <button
                                 type="button"
                                 aria-label={`Play ${track.title} from the queue`}

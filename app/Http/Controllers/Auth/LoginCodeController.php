@@ -32,6 +32,9 @@ class LoginCodeController extends Controller
 
     private const int FAILURES_PER_EMAIL = 10;
 
+    /** Wrong codes for one address count for an hour: codes are short, so guessing has to be slow. */
+    private const int FAILURE_SECONDS_PER_EMAIL = 3600;
+
     private const int FAILURES_PER_IP = 30;
 
     public function create(Request $request): Response
@@ -108,8 +111,8 @@ class LoginCodeController extends Controller
         $user = $this->findUser($email);
 
         if (! $user || $user->hasEnabledTwoFactorAuthentication() || ! LoginCode::redeem($user, $request->string('code')->toString())) {
-            foreach (array_keys($limits) as $key) {
-                RateLimiter::hit($key, self::THROTTLE_SECONDS);
+            foreach (array_keys($limits) as $position => $key) {
+                RateLimiter::hit($key, $position === 0 ? self::FAILURE_SECONDS_PER_EMAIL : self::THROTTLE_SECONDS);
             }
 
             throw ValidationException::withMessages([

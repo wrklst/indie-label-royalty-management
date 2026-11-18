@@ -1,7 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Disc3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { dashboard, login, register } from '@/routes';
+import { dashboard, login } from '@/routes';
 
 export default function Welcome() {
     const { auth, name } = usePage().props;
@@ -31,14 +31,9 @@ export default function Welcome() {
                             <Link href={dashboard()}>Open dashboard</Link>
                         </Button>
                     ) : (
-                        <>
-                            <Button asChild>
-                                <Link href={login()}>Log in</Link>
-                            </Button>
-                            <Button variant="outline" asChild>
-                                <Link href={register()}>Create account</Link>
-                            </Button>
-                        </>
+                        <Button asChild>
+                            <Link href={login()}>Log in</Link>
+                        </Button>
                     )}
                 </div>
             </div>

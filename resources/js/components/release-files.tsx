@@ -211,6 +211,8 @@ export function ReleaseFiles({
         setErrors([]);
         setQueue(chosen.map((file) => ({ name: file.name, progress: 0 })));
 
+        let cancelled = false;
+
         for (const [position, file] of chosen.entries()) {
             if (file.size > maxMegabytes * 1024 * 1024) {
                 problems.push(
@@ -242,10 +244,21 @@ export function ReleaseFiles({
                             problems.push(
                                 `${file.name}: ${Object.values(response).join(' ')}`,
                             ),
+                        onCancel: () => {
+                            cancelled = true;
+                        },
                         onFinish: () => resolve(),
                     },
                 );
             });
+
+            // Leaving the page cancels the upload; the next one would pull the user back.
+            if (cancelled) {
+                problems.push(
+                    `${file.name} and the files after it were not uploaded.`,
+                );
+                break;
+            }
         }
 
         setQueue([]);
