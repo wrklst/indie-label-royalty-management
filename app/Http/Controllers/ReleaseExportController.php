@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Release;
 use App\Services\Releases\ReleaseMetadataExport;
 use App\Services\Releases\ReleasePackage;
+use App\Services\Releases\SubvertPackage;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -12,6 +14,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReleaseExportController extends Controller
 {
+    private const int ARCHIVE_SECONDS = 900;
+
     /**
      * The metadata of every release, or of one, as a CSV sheet with one
      * line per track.
@@ -47,8 +51,55 @@ class ReleaseExportController extends Controller
      */
     public function package(Release $release, ReleasePackage $package): BinaryFileResponse
     {
+        $this->allowLongRequest();
+
+        return $this->archive($package->build($release), $package->folderName($release).'.zip');
+    }
+
+    /**
+     * The cover and one audio file per track as the single ZIP file
+     * Subvert's uploader takes. When something is missing the release
+     * page says what, instead of a download that Subvert would reject.
+     */
+    public function subvertPackage(Release $release, SubvertPackage $package): BinaryFileResponse|RedirectResponse
+    {
+        $release->load(['files', 'tracks']);
+        $problems = $package->problems($release);
+
+        if ($problems !== []) {
+            return to_route('releases.show', $release)->withErrors(['subvert_package' => implode("\n", $problems)]);
+        }
+
+        $this->allowLongRequest();
+
+        return $this->archive($package->build($release), $package->fileName($release));
+    }
+
+    /**
+     * Send a temporary archive and remove it afterwards, also when the
+     * download is cancelled half way.
+     */
+    private function archive(string $path, string $name): BinaryFileResponse
+    {
         return response()
-            ->download($package->build($release), $package->folderName($release).'.zip', ['Content-Type' => 'application/zip'])
+            ->download($path, $name, ['Content-Type' => 'application/zip'])
             ->deleteFileAfterSend();
+    }
+
+    /**
+     * Copying gigabytes of masters into an archive and sending it takes
+     * longer than a page may; these downloads get a quarter of an hour.
+     * The request also runs on after the browser went away, so that the
+     * temporary archive is still removed.
+     */
+    private function allowLongRequest(): void
+    {
+        $limit = (int) ini_get('max_execution_time');
+
+        if ($limit !== 0 && $limit < self::ARCHIVE_SECONDS) {
+            set_time_limit(self::ARCHIVE_SECONDS);
+        }
+
+        ignore_user_abort(true);
     }
 }

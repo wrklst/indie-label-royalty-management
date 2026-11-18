@@ -21,11 +21,12 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property bool $accounts_ppd
  * @property bool $accounts_reserves
  * @property array<string, mixed>|null $importer_settings
+ * @property array<string, mixed>|null $royalty_tool_settings
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Pivot&object{role: string, payee_id: int|null} $pivot Membership of the user when loaded through User::labels().
  */
-#[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings'])]
+#[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings', 'royalty_tool_settings'])]
 class Label extends Model
 {
     /** @use HasFactory<LabelFactory> */
@@ -41,6 +42,7 @@ class Label extends Model
             'accounts_ppd' => 'boolean',
             'accounts_reserves' => 'boolean',
             'importer_settings' => 'array',
+            'royalty_tool_settings' => 'array',
         ];
     }
 

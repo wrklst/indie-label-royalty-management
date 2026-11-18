@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ReleaseFileKind;
 use App\Http\Requests\TrackRequest;
 use App\Models\Artist;
 use App\Models\Contract;
@@ -9,6 +10,7 @@ use App\Models\Release;
 use App\Models\Track;
 use App\Services\Imports\Identifiers;
 use App\Services\Releases\ArtistCredits;
+use App\Services\Releases\PlayableAudio;
 use App\Support\Options;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
@@ -30,7 +32,11 @@ class TrackController extends Controller
         ], fn (Builder $query) => $query->orderBy('name'));
 
         $tracks = Track::query()
-            ->with(['artist:id,name', 'contract:id,name', 'release:id,name,catalog_number,contract_id', 'release.contract:id,name'])
+            ->with([
+                'artist:id,name', 'artists:id,name', 'contract:id,name', 'release:id,name,catalog_number,contract_id,artist_id', 'release.contract:id,name',
+                'release.artist:id,name', 'release.artists:id,name', 'release.cover:id,release_id',
+                'files' => fn ($query) => $query->where('kind', ReleaseFileKind::Audio)->orderBy('id')->select(['id', 'track_id', 'mime_type']),
+            ])
             ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('isrc', 'like', '%'.str_replace('-', '', $search).'%')))
@@ -39,9 +45,12 @@ class TrackController extends Controller
             ->paginate(50)
             ->withQueryString()
             ->through(fn (Track $track): array => [
-                ...$track->only(['id', 'name', 'artist_id', 'contract_id', 'isrc', 'iswc', 'track_number', 'duration', 'mechanicals_rate', 'ppd_rate', 'release_id']),
+                ...$track->only(['id', 'name', 'artist_id', 'contract_id', 'isrc', 'iswc', 'track_number', 'duration', 'mechanicals_rate', 'ppd_rate', 'release_id', 'version']),
                 'artist' => $track->artist?->name,
                 'release' => $track->release?->only(['id', 'name', 'catalog_number']),
+                'audio_file_id' => PlayableAudio::pick($track->files)?->id,
+                'credited_artist' => ArtistCredits::display($track) ?? ($track->release ? ArtistCredits::display($track->release) : null),
+                'cover_file_id' => $track->release?->cover?->id,
                 'contract' => $track->contract?->only(['id', 'name']),
                 'inherited_contract' => $track->contract ? null : $track->release?->contract?->only(['id', 'name']),
             ]);

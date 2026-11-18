@@ -8,10 +8,12 @@ use App\Models\ReleaseFile;
 use App\Models\Track;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     Storage::fake('local');
+    Queue::fake();
     $this->label = Label::factory()->create();
     $this->release = Release::factory()->create(['label_id' => $this->label->id, 'name' => 'Example Release']);
     $this->actingAs(labelAdmin($this->label));

@@ -19,6 +19,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Playback copies of audio
+    |--------------------------------------------------------------------------
+    |
+    | Uploaded masters are kept untouched; for listening in the browser
+    | ffmpeg (built with libmp3lame) makes an MP3 of each. The binary is
+    | looked up on the PATH unless a full path is given. The bitrate is in
+    | kbit/s (constant, stereo), the sample rate in Hz, and the timeout is
+    | how many seconds one conversion may take.
+    |
+    */
+
+    'audio' => [
+        'ffmpeg' => env('FFMPEG_BINARY', 'ffmpeg'),
+        'bitrate' => (int) env('AUDIO_PREVIEW_BITRATE', 320),
+        'sample_rate' => (int) env('AUDIO_PREVIEW_SAMPLE_RATE', 44100),
+        'timeout' => (int) env('AUDIO_PREVIEW_TIMEOUT', 600),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Transaction categories
     |--------------------------------------------------------------------------
     |
@@ -31,13 +51,14 @@ return [
     'categories' => [
         'income' => [
             '3rd Party License', 'Album License', 'Artist Copies', 'Direct to Fan/Show', 'Direct to Fan/Webstore',
-            'Distribution', 'Grant Funding', 'Master Use License', 'Master/Sync License (all in)', 'PPD',
+            'Distribution', 'Grant Funding', 'Master Use License', 'Master/Sync License (all in)', 'Mechanicals', 'PPD',
             'Publishing Royalties', 'Publishing Sync License', 'Refund', 'Reserves', 'Rights', 'Sample Usage License',
             'Sub-Label', 'Ticket Sales/Show Fee', 'Wholesale',
         ],
         'expense' => [
             'Advertising', 'Artwork/Design', 'Bio', 'Distribution Fee', 'Event', 'Fee', 'License Fee',
-            'Manufacturing (CD)', 'Manufacturing (LP)', 'Manufacturing (Misc.)', 'Marketing', 'Mastering', 'Mixing',
+            'Manufacturing (CD)', 'Manufacturing (LP)', 'Manufacturing (Misc.)', 'Marketing', 'Mastering', 'Mechanicals',
+            'Mixing',
             'Photos', 'PR', 'Radio', 'Recording - Mixing', 'Recording - Musician', 'Recording - Producer',
             'Recording - Studio', 'Remix', 'Return Processing Fee', 'Rights', 'Shipping/Freight', 'Storage Fee',
             'Studio', 'Ticket Buy', 'Tour Support', 'Video',
@@ -80,6 +101,31 @@ return [
         ],
         'Publishing' => ['Mechanical', 'Performance', 'Publishing/Other', 'Print'],
         'Reserves' => ['Reserves (Held)', 'Reserves (Liquidated)'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Mechanicals tool
+    |--------------------------------------------------------------------------
+    |
+    | The US statutory mechanical rates for physical copies and permanent
+    | downloads, in US dollars per unit: a flat rate per work for
+    | recordings of up to five minutes and a rate per started minute for
+    | longer ones. A run of the tool picks one table. The download formats
+    | are the ones counted as units; physical formats are added when the
+    | label asks for it.
+    |
+    */
+
+    'mechanicals' => [
+        'statutory_rates' => [
+            '2026' => ['per_work' => '0.131', 'per_minute' => '0.0252'],
+            '2025' => ['per_work' => '0.127', 'per_minute' => '0.0245'],
+            '2024' => ['per_work' => '0.124', 'per_minute' => '0.0239'],
+            '2023' => ['per_work' => '0.12', 'per_minute' => '0.0231'],
+            'pre-2023' => ['per_work' => '0.091', 'per_minute' => '0.0175'],
+        ],
+        'download_formats' => ['Download Album', 'Download Track', 'Download/Other'],
     ],
 
 ];

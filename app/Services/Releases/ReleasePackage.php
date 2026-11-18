@@ -22,11 +22,14 @@ class ReleasePackage
 
     public function folderName(Release $release): string
     {
-        return $this->fileName(implode(' - ', array_filter([$release->catalog_number, ArtistCredits::display($release), $release->name])));
+        return SafeFileName::from(implode(' - ', array_filter([$release->catalog_number, ArtistCredits::display($release), $release->name])));
     }
 
     /**
-     * Build the archive and return the path of the temporary zip file.
+     * Build the archive and return the path of the temporary zip file,
+     * which the caller removes. Stored files are added by path and kept
+     * uncompressed, so a release of several gigabytes is copied by the
+     * zip library in small pieces and never read into memory.
      */
     public function build(Release $release): string
     {
@@ -70,8 +73,8 @@ class ReleasePackage
             match ($file->kind) {
                 ReleaseFileKind::Cover => $add($file, "cover{$suffix}"),
                 ReleaseFileKind::Audio => $add($file, 'audio/'.$this->audioName($release, $file).$suffix),
-                ReleaseFileKind::Artwork => $add($file, 'artwork/'.$this->fileName(pathinfo($file->original_name, PATHINFO_FILENAME)).$suffix),
-                default => $add($file, 'documents/'.$this->fileName(pathinfo($file->original_name, PATHINFO_FILENAME)).$suffix),
+                ReleaseFileKind::Artwork => $add($file, 'artwork/'.SafeFileName::from(pathinfo($file->original_name, PATHINFO_FILENAME)).$suffix),
+                default => $add($file, 'documents/'.SafeFileName::from(pathinfo($file->original_name, PATHINFO_FILENAME)).$suffix),
             };
         }
 
@@ -87,7 +90,12 @@ class ReleasePackage
         fclose($sheet);
 
         $zip->addFromString("{$folder}/release.txt", $this->labelCopy($release));
-        $zip->close();
+
+        if (! $zip->close()) {
+            @unlink($path);
+
+            throw new RuntimeException('The package could not be written.');
+        }
 
         return $path;
     }
@@ -154,27 +162,17 @@ class ReleasePackage
         $track = $file->track_id === null ? null : $release->tracks->firstWhere('id', $file->track_id);
 
         if (! $track instanceof Track) {
-            return $this->fileName(pathinfo($file->original_name, PATHINFO_FILENAME));
+            return SafeFileName::from(pathinfo($file->original_name, PATHINFO_FILENAME));
         }
 
         $artist = implode(' & ', ArtistCredits::names($track, ArtistRole::Primary)) ?: (ArtistCredits::display($release) ?? '');
 
-        return $this->fileName(sprintf(
+        return SafeFileName::from(sprintf(
             '%s - %s%s%s',
             str_pad((string) ($track->track_number ?? 0), 2, '0', STR_PAD_LEFT),
             $artist !== '' ? "{$artist} - " : '',
             $track->name,
             $track->version ? " ({$track->version})" : '',
         ));
-    }
-
-    /**
-     * Remove what file systems and zip tools choke on.
-     */
-    private function fileName(string $name): string
-    {
-        $name = trim(preg_replace('/\s+/', ' ', preg_replace('/[\/\\\\:*?"<>|\x00-\x1F]/u', ' ', $name) ?? '') ?? '', ' .');
-
-        return $name === '' ? 'untitled' : mb_substr($name, 0, 150);
     }
 }

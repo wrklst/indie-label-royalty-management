@@ -808,84 +808,99 @@ export default function ReleaseForm({
                     )}
                 </Panel>
 
-                {label?.role === 'admin' && (
-                    <Panel
-                        title="Mechanicals, PPD and reserves"
-                        description="Stored with the release for your records. These rates are not applied to statements yet."
-                    >
-                        <div className="grid gap-4 md:grid-cols-3">
-                            <Field
-                                label="Mechanicals rate"
-                                htmlFor="mechanicals_rate"
-                                error={errors.mechanicals_rate}
-                            >
-                                <Input
-                                    id="mechanicals_rate"
-                                    type="number"
-                                    step="any"
-                                    min="0"
-                                    value={form.data.mechanicals_rate}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'mechanicals_rate',
-                                            event.target.value,
-                                        )
-                                    }
-                                />
-                            </Field>
-                            <Field
-                                label="PPD"
-                                htmlFor="ppd_rate"
-                                error={errors.ppd_rate}
-                            >
-                                <Input
-                                    id="ppd_rate"
-                                    type="number"
-                                    step="any"
-                                    min="0"
-                                    value={form.data.ppd_rate}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'ppd_rate',
-                                            event.target.value,
-                                        )
-                                    }
-                                />
-                            </Field>
-                            <Field
-                                label="Reserves %"
-                                htmlFor="reserves_rate"
-                                error={errors.reserves_rate}
-                            >
-                                <Input
-                                    id="reserves_rate"
-                                    type="number"
-                                    step="any"
-                                    min="0"
-                                    max="100"
-                                    value={form.data.reserves_rate}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'reserves_rate',
-                                            event.target.value,
-                                        )
-                                    }
-                                />
-                            </Field>
-                            <CheckField
-                                label="Account for mechanicals"
-                                checked={form.data.accounts_mechanicals}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'accounts_mechanicals',
-                                        event.target.checked,
-                                    )
-                                }
-                                className="md:col-span-3"
-                            />
-                        </div>
-                    </Panel>
-                )}
+                {label?.role === 'admin' &&
+                    (label.tools.mechanicals ||
+                        label.tools.ppd ||
+                        label.tools.reserves) && (
+                        <Panel
+                            title="Mechanicals, PPD and reserves"
+                            description="Used by the tools under Royalties when you run them. Rates of single tracks and items are set from the tool pages."
+                        >
+                            <div className="grid gap-4 md:grid-cols-3">
+                                {label.tools.mechanicals && (
+                                    <Field
+                                        label="Mechanicals rate"
+                                        htmlFor="mechanicals_rate"
+                                        error={errors.mechanicals_rate}
+                                        hint={`${label.currency} per unit and track. Empty: statutory rate.`}
+                                    >
+                                        <Input
+                                            id="mechanicals_rate"
+                                            type="number"
+                                            step="any"
+                                            min="0"
+                                            value={form.data.mechanicals_rate}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'mechanicals_rate',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </Field>
+                                )}
+                                {label.tools.ppd && (
+                                    <Field
+                                        label="PPD"
+                                        htmlFor="ppd_rate"
+                                        error={errors.ppd_rate}
+                                        hint={`${label.currency} per unit sold. Empty: no PPD.`}
+                                    >
+                                        <Input
+                                            id="ppd_rate"
+                                            type="number"
+                                            step="any"
+                                            min="0"
+                                            value={form.data.ppd_rate}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'ppd_rate',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </Field>
+                                )}
+                                {label.tools.reserves && (
+                                    <Field
+                                        label="Reserves %"
+                                        htmlFor="reserves_rate"
+                                        error={errors.reserves_rate}
+                                        hint="Percentage of physical income to hold: 25 means 25%."
+                                    >
+                                        <Input
+                                            id="reserves_rate"
+                                            type="number"
+                                            step="any"
+                                            min="0"
+                                            max="100"
+                                            value={form.data.reserves_rate}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'reserves_rate',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </Field>
+                                )}
+                                {label.tools.mechanicals && (
+                                    <CheckField
+                                        label="Account for mechanicals"
+                                        hint="Tracks follow this unless they are set otherwise."
+                                        checked={form.data.accounts_mechanicals}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'accounts_mechanicals',
+                                                event.target.checked,
+                                            )
+                                        }
+                                        className="md:col-span-3"
+                                    />
+                                )}
+                            </div>
+                        </Panel>
+                    )}
 
                 <div className="flex items-center gap-3">
                     <Button disabled={form.processing}>

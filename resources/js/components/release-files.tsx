@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import { Download, Upload } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ReleaseFileController from '@/actions/App/Http/Controllers/ReleaseFileController';
 import { DeleteButton } from '@/components/delete-button';
 import { SelectInput } from '@/components/field';
@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import { useTableSort } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
-import { show } from '@/routes/release-files';
+import { previews, show } from '@/routes/release-files';
 import type { Option } from '@/types';
 
 export type ReleaseFile = {
@@ -31,6 +31,114 @@ export type ReleaseFile = {
     is_image: boolean;
     uploaded_at: string | null;
 };
+
+/** How far the MP3 an audio file is played from has come. */
+type PlaybackCopy = {
+    id: number;
+    status: 'pending' | 'ready' | 'failed' | null;
+    error: string | null;
+    converted: boolean;
+};
+
+/**
+ * The playback copies of a release's audio files, asked for again
+ * whenever the files change and every few seconds while one is being made.
+ */
+function usePlaybackCopies(releaseId: number, audioFiles: string) {
+    const [copies, setCopies] = useState<Record<number, PlaybackCopy>>({});
+    const [round, setRound] = useState(0);
+
+    useEffect(() => {
+        if (audioFiles === '') {
+            return;
+        }
+
+        let timer: number | undefined;
+        const request = new AbortController();
+
+        fetch(previews.url(releaseId), {
+            headers: { Accept: 'application/json' },
+            signal: request.signal,
+        })
+            .then((response) => (response.ok ? response.json() : []))
+            .then((list: PlaybackCopy[]) => {
+                setCopies(
+                    Object.fromEntries(list.map((copy) => [copy.id, copy])),
+                );
+
+                if (list.some((copy) => copy.status === 'pending')) {
+                    timer = window.setTimeout(
+                        () => setRound((current) => current + 1),
+                        5000,
+                    );
+                }
+            })
+            .catch(() => undefined);
+
+        return () => {
+            request.abort();
+            window.clearTimeout(timer);
+        };
+    }, [releaseId, audioFiles, round]);
+
+    return { copies, refresh: () => setRound((current) => current + 1) };
+}
+
+function PlaybackCopyNote({
+    file,
+    copy,
+    onConvert,
+}: {
+    file: ReleaseFile;
+    copy: PlaybackCopy | undefined;
+    onConvert: () => void;
+}) {
+    if (file.kind !== 'audio' || copy === undefined) {
+        return null;
+    }
+
+    if (copy.status === 'ready') {
+        return (
+            <span className="block text-xs text-muted-foreground">
+                {copy.converted
+                    ? 'MP3 playback copy ready'
+                    : 'Played as uploaded'}
+            </span>
+        );
+    }
+
+    if (copy.status === 'pending') {
+        return (
+            <span className="block text-xs text-muted-foreground">
+                Converting for playback…
+            </span>
+        );
+    }
+
+    return (
+        <span className="flex items-center gap-2 text-xs">
+            {copy.status === 'failed' ? (
+                <span
+                    title={copy.error ?? undefined}
+                    className="text-red-600 underline decoration-dotted underline-offset-2 dark:text-red-400"
+                >
+                    Playback copy failed
+                </span>
+            ) : (
+                <span className="text-muted-foreground">
+                    No playback copy yet
+                </span>
+            )}
+            <button
+                type="button"
+                onClick={onConvert}
+                className="underline decoration-muted-foreground/40 underline-offset-2"
+            >
+                {copy.status === 'failed' ? 'Convert again' : 'Convert'}
+            </button>
+        </span>
+    );
+}
 
 function fileSize(bytes: number): string {
     if (bytes >= 1024 * 1024 * 1024) {
@@ -76,6 +184,24 @@ export function ReleaseFiles({
         [],
     );
     const [errors, setErrors] = useState<string[]>([]);
+    const { copies, refresh } = usePlaybackCopies(
+        releaseId,
+        files
+            .filter((file) => file.kind === 'audio')
+            .map((file) => file.id)
+            .join(','),
+    );
+
+    const convert = (file: ReleaseFile) =>
+        router.post(
+            ReleaseFileController.preview.url(file.id),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: refresh,
+            },
+        );
 
     // One file per request keeps every upload under the server's size limit.
     const upload = async (selected: FileList | null) => {
@@ -278,6 +404,11 @@ export function ReleaseFiles({
                                             {file.original_name}
                                         </span>
                                     )}
+                                    <PlaybackCopyNote
+                                        file={file}
+                                        copy={copies[file.id]}
+                                        onConvert={() => convert(file)}
+                                    />
                                 </TableCell>
                                 <TableCell>
                                     <SelectInput

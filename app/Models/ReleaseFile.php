@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use App\Enums\AudioPreviewStatus;
 use App\Enums\ReleaseFileKind;
 use App\Models\Concerns\BelongsToLabel;
+use App\Services\Releases\AudioPreviews;
+use App\Services\Releases\ReleaseImageVariants;
 use Carbon\CarbonImmutable;
 use Database\Factories\ReleaseFileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -29,12 +32,16 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $mime_type
  * @property int $size
  * @property string|null $checksum
+ * @property string|null $preview_path
+ * @property AudioPreviewStatus|null $preview_status
+ * @property string|null $preview_error
+ * @property int|null $duration
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Release $release
  * @property-read Track|null $track
  */
-#[Fillable(['label_id', 'release_id', 'track_id', 'user_id', 'kind', 'disk', 'path', 'original_name', 'mime_type', 'size', 'checksum'])]
+#[Fillable(['label_id', 'release_id', 'track_id', 'user_id', 'kind', 'disk', 'path', 'original_name', 'mime_type', 'size', 'checksum', 'preview_path', 'preview_status', 'preview_error', 'duration'])]
 class ReleaseFile extends Model
 {
     /** @use HasFactory<ReleaseFileFactory> */
@@ -48,12 +55,15 @@ class ReleaseFile extends Model
     ];
 
     /**
-     * The stored file goes when its record goes.
+     * The stored file goes when its record goes, and with it the resized
+     * copies made of an image and the MP3 made of an audio master.
      */
     protected static function booted(): void
     {
         static::deleted(function (ReleaseFile $file): void {
             Storage::disk($file->disk)->delete($file->path);
+            app(ReleaseImageVariants::class)->forget($file);
+            app(AudioPreviews::class)->forget($file);
         });
     }
 
@@ -65,6 +75,8 @@ class ReleaseFile extends Model
         return [
             'kind' => ReleaseFileKind::class,
             'size' => 'integer',
+            'preview_status' => AudioPreviewStatus::class,
+            'duration' => 'integer',
         ];
     }
 

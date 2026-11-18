@@ -22,9 +22,12 @@ class ReleaseFileStore
     /** @var list<string> */
     public const array COVER_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
+    public function __construct(private readonly AudioPreviews $previews) {}
+
     /**
      * Keep an uploaded file with the release. Audio is attached to the
-     * track its file name points at when no track is given.
+     * track its file name points at when no track is given, and queued
+     * for its MP3 playback copy.
      *
      * @throws ValidationException when a cover is not a JPEG, PNG or WebP image
      */
@@ -54,7 +57,7 @@ class ReleaseFileStore
             throw ValidationException::withMessages(['file' => 'The file could not be stored.']);
         }
 
-        return DB::transaction(function () use ($release, $upload, $kind, $trackId, $user, $path, $mimeType): ReleaseFile {
+        $file = DB::transaction(function () use ($release, $upload, $kind, $trackId, $user, $path, $mimeType): ReleaseFile {
             // A release shows one cover; an earlier one is kept as artwork.
             if ($kind === ReleaseFileKind::Cover) {
                 $release->files()->where('kind', ReleaseFileKind::Cover)->update(['kind' => ReleaseFileKind::Artwork]);
@@ -73,6 +76,10 @@ class ReleaseFileStore
                 'checksum' => hash_file('sha256', $upload->getRealPath()) ?: null,
             ]);
         });
+
+        $this->previews->queue($file);
+
+        return $file;
     }
 
     /**

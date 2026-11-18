@@ -7,6 +7,8 @@ use App\Http\Requests\LabelSettingsRequest;
 use App\Http\Requests\TerritoryRequest;
 use App\Models\Territory;
 use App\Models\Transaction;
+use App\Services\Royalties\Tools\MechanicalsTool;
+use App\Services\Royalties\Tools\ToolSettings;
 use App\Support\CurrentLabel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
@@ -18,12 +20,18 @@ class LabelSettingsController extends Controller
     public function edit(CurrentLabel $currentLabel): Response
     {
         $label = $currentLabel->get();
+        $tools = ToolSettings::for($label);
 
         return Inertia::render('settings/label', [
             'settings' => [
                 ...$label->only(['name', 'currency', 'contact_email', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves']),
                 'bandcamp_disable_fee' => (bool) $label->importerSetting('bandcamp.disable_fee', false),
                 'bandcamp_exclude_physical' => (bool) $label->importerSetting('bandcamp.exclude_physical', false),
+            ],
+            'royaltyTools' => [
+                'mechanicals_usd_rate' => $tools->usdRate === null ? null : MechanicalsTool::plain($tools->usdRate),
+                'mechanicals_include_physical' => $tools->includePhysical,
+                'ignore_negative_quantities' => $tools->ignoreNegativeQuantities,
             ],
             'territories' => Territory::query()->orderBy('name')->get()->map->only(['id', 'name', 'countries']),
         ]);
@@ -32,6 +40,7 @@ class LabelSettingsController extends Controller
     public function update(LabelSettingsRequest $request, CurrentLabel $currentLabel): RedirectResponse
     {
         $label = $currentLabel->get();
+        $tools = ToolSettings::for($label);
 
         if ($request->validated('currency') !== $label->currency && Transaction::query()->exists()) {
             throw ValidationException::withMessages([
@@ -45,6 +54,12 @@ class LabelSettingsController extends Controller
                 'disable_fee' => $request->boolean('bandcamp_disable_fee'),
                 'exclude_physical' => $request->boolean('bandcamp_exclude_physical'),
             ]]),
+            // A form that does not send the tool settings leaves them alone.
+            'royalty_tool_settings' => [
+                'usd_rate' => $request->has('mechanicals_usd_rate') ? $request->validated('mechanicals_usd_rate') : $tools->usdRate,
+                'include_physical' => $request->boolean('mechanicals_include_physical', $tools->includePhysical),
+                'ignore_negative_quantities' => $request->boolean('ignore_negative_quantities', $tools->ignoreNegativeQuantities),
+            ],
         ]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Label settings saved.')]);

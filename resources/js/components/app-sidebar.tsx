@@ -4,6 +4,7 @@ import {
     Banknote,
     BookOpenText,
     CalendarRange,
+    Coins,
     Disc3,
     FileSignature,
     FileText,
@@ -12,6 +13,8 @@ import {
     ListMusic,
     Mic2,
     Package,
+    PiggyBank,
+    Tags,
     Receipt,
     TrendingUp,
     Upload,
@@ -41,6 +44,9 @@ import { index as periods } from '@/routes/periods';
 import { index as portal } from '@/routes/portal';
 import { index as profitability } from '@/routes/profitability';
 import { index as releases } from '@/routes/releases';
+import { index as mechanicals } from '@/routes/royalty-tools/mechanicals';
+import { index as ppd } from '@/routes/royalty-tools/ppd';
+import { index as reserves } from '@/routes/royalty-tools/reserves';
 import { index as statements } from '@/routes/statements';
 import { index as tracks } from '@/routes/tracks';
 import { index as transactions } from '@/routes/transactions';
@@ -92,6 +98,35 @@ const payeeGroups: NavGroup[] = [
     },
 ];
 
+/**
+ * The mechanicals, PPD and reserves tools appear under Royalties only for
+ * a label that switched them on.
+ */
+function withTools(
+    groups: NavGroup[],
+    tools: { mechanicals: boolean; ppd: boolean; reserves: boolean },
+): NavGroup[] {
+    const extra = [
+        tools.mechanicals && {
+            title: 'Mechanicals',
+            href: mechanicals(),
+            icon: Coins,
+        },
+        tools.ppd && { title: 'PPD', href: ppd(), icon: Tags },
+        tools.reserves && {
+            title: 'Reserves',
+            href: reserves(),
+            icon: PiggyBank,
+        },
+    ].filter((item) => item !== false);
+
+    return groups.map((group) =>
+        group.title === 'Royalties'
+            ? { ...group, items: [...group.items, ...extra] }
+            : group,
+    );
+}
+
 export function AppSidebar() {
     const { label } = usePage().props;
 
@@ -105,7 +140,9 @@ export function AppSidebar() {
                 {label && (
                     <NavMain
                         groups={
-                            label.role === 'payee' ? payeeGroups : adminGroups
+                            label.role === 'payee'
+                                ? payeeGroups
+                                : withTools(adminGroups, label.tools)
                         }
                     />
                 )}

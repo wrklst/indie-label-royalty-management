@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ImportStatus;
+use App\Enums\RoyaltyTool;
 use App\Http\Requests\DataImportRequest;
 use App\Models\DataImport;
 use App\Models\Item;
@@ -48,7 +49,7 @@ class DataImportController extends Controller
                 ->withQueryString()
                 ->through(fn (DataImport $import): array => [
                     ...$import->only(['id', 'name', 'importer', 'original_filename', 'rows_count', 'transactions_count', 'duplicates_count', 'errors_count', 'needs_cleanup', 'total', 'tags']),
-                    'importer_name' => $names[$import->importer] ?? $import->importer,
+                    'importer_name' => $names[$import->importer] ?? RoyaltyTool::importerName($import->importer) ?? $import->importer,
                     'status' => $import->status->value,
                     'default_paid_timestamp' => $import->default_paid_timestamp?->toDateString(),
                     'created_at' => $import->created_at->toDateTimeString(),
@@ -119,7 +120,7 @@ class DataImportController extends Controller
         return Inertia::render('data-imports/show', [
             'import' => [
                 ...$dataImport->only(['id', 'name', 'importer', 'original_filename', 'rows_count', 'transactions_count', 'duplicates_count', 'errors_count', 'created_releases_count', 'created_tracks_count', 'needs_cleanup', 'total', 'errors', 'metadata', 'tags', 'replace_timestamp', 'replace_paid_timestamp']),
-                'importer_name' => $importers->find($dataImport->importer)?->name() ?? $dataImport->importer,
+                'importer_name' => $importers->find($dataImport->importer)?->name() ?? RoyaltyTool::importerName($dataImport->importer) ?? $dataImport->importer,
                 'status' => $dataImport->status->value,
                 'default_timestamp' => $dataImport->default_timestamp?->toDateString(),
                 'default_paid_timestamp' => $dataImport->default_paid_timestamp?->toDateString(),

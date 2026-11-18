@@ -41,8 +41,11 @@ jobs:
           touch database/database.sqlite
           composer setup
 
-      - name: Install browser for interface tests
-        run: npx playwright install --with-deps chromium
+      - name: Install browser for interface tests and ffmpeg for audio conversion
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          npx playwright install --with-deps chromium
 
       - name: Run CI Checks
         run: composer ci:check

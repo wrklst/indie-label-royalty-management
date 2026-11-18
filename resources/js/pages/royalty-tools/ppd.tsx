@@ -1,0 +1,471 @@
+import { Form, Link } from '@inertiajs/react';
+import { useState } from 'react';
+import PpdController from '@/actions/App/Http/Controllers/RoyaltyTools/PpdController';
+import RatesController from '@/actions/App/Http/Controllers/RoyaltyTools/RatesController';
+import TransactionController from '@/actions/App/Http/Controllers/TransactionController';
+import { Amount } from '@/components/amount';
+import { Field, SelectInput } from '@/components/field';
+import { Page, Panel, Stat } from '@/components/page';
+import {
+    CreateTransactions,
+    Notice,
+    OverlapNotice,
+    RunsPanel,
+    plain,
+    today,
+} from '@/components/royalty-tool';
+import type { ToolRun } from '@/components/royalty-tool';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableFooter,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { date, quantity } from '@/lib/format';
+import { index as items } from '@/routes/items';
+import { edit as labelSettings } from '@/routes/label-settings';
+import { index } from '@/routes/royalty-tools/ppd';
+import type { Option } from '@/types';
+
+type Row = {
+    release_id: number;
+    release_name: string;
+    track_id: number | null;
+    track_name: string | null;
+    item_id: number | null;
+    item_name: string | null;
+    quantity: string;
+    rate: string;
+    rate_source: 'item' | 'track' | 'release';
+    amount: string;
+};
+
+type Report = {
+    rows: Row[];
+    groups: { release_id: number; track_id: number | null }[];
+    total: string;
+    quantity: string;
+    unconverted: number;
+    unassigned: number;
+    without_quantity_count: number;
+    without_quantity: {
+        id: number;
+        paid_on: string;
+        description: string;
+        release_name: string | null;
+    }[];
+};
+
+type Props = {
+    currency: string;
+    runs: ToolRun[];
+    overlaps: ToolRun[];
+    filters: {
+        from: string | null;
+        to: string | null;
+        artist_id: number | null;
+        release_id: number | null;
+        format: string | null;
+    };
+    settings: { ignore_negative_quantities: boolean };
+    report: Report | null;
+    artistOptions: Option[];
+    releaseOptions: Option[];
+    formatOptions: string[];
+};
+
+export default function Ppd({
+    currency,
+    runs,
+    overlaps,
+    filters,
+    settings,
+    report,
+    artistOptions,
+    releaseOptions,
+    formatOptions,
+}: Props) {
+    const [ratesRelease, setRatesRelease] = useState('');
+
+    return (
+        <Page
+            title="PPD"
+            description="Calculate royalties based on PPD (Published Price to Dealer) rates and transaction quantities. Pick the paid dates, check the report, then create the transactions."
+        >
+            <Panel
+                title="How it is booked"
+                description="The transactions are ordinary ones and flow through contracts, statements and ledgers like any other."
+            >
+                <div className="grid max-w-3xl gap-2 text-sm text-muted-foreground">
+                    <p>
+                        A rate is an amount in {currency} per unit sold, set on
+                        a release, a track or a single item; the most specific
+                        one wins. Every income transaction paid in the range
+                        whose item, track or release has a rate takes part: its
+                        quantity × the rate, summed by release and track.
+                    </p>
+                    <p>
+                        Each total is booked twice: as income on “[PPD Income]”
+                        and with the opposite sign on “[PPD Income Offset]”, so
+                        nothing changes until contracts say so. A payee owed 15%
+                        of PPD gets it from a contract with a 15% split on the
+                        PPD Income item; give the offset item to whoever bears
+                        that cost. Both are set on the{' '}
+                        <Link
+                            href={items({ query: { search: '[PPD' } })}
+                            className="underline"
+                        >
+                            Items page
+                        </Link>
+                        .
+                    </p>
+                    <p>
+                        {settings.ignore_negative_quantities
+                            ? 'Returns (negative quantities) are ignored.'
+                            : 'Returns (negative quantities) reduce the units.'}{' '}
+                        Change this in the{' '}
+                        <Link href={labelSettings()} className="underline">
+                            label settings
+                        </Link>
+                        .
+                    </p>
+                </div>
+            </Panel>
+
+            <Panel
+                title="Rates"
+                description="Set the PPD rate of a release, of single tracks, or of single items when formats have different prices."
+            >
+                <div className="flex flex-wrap items-end gap-3">
+                    <Field
+                        label="Release"
+                        htmlFor="rates_release"
+                        className="w-full max-w-sm"
+                    >
+                        <SelectInput
+                            id="rates_release"
+                            value={ratesRelease}
+                            onChange={(event) =>
+                                setRatesRelease(event.target.value)
+                            }
+                            options={releaseOptions}
+                            placeholder="Choose a release…"
+                        />
+                    </Field>
+                    {ratesRelease === '' ? (
+                        <Button variant="outline" disabled>
+                            Edit rates
+                        </Button>
+                    ) : (
+                        <Button variant="outline" asChild>
+                            <Link
+                                href={RatesController.edit.url({
+                                    tool: 'ppd',
+                                    release: Number(ratesRelease),
+                                })}
+                            >
+                                Edit rates
+                            </Link>
+                        </Button>
+                    )}
+                </div>
+            </Panel>
+
+            <Panel title="Report">
+                <Form
+                    action={index.url()}
+                    method="get"
+                    options={{ preserveScroll: true }}
+                    className="grid gap-4"
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                                <Field
+                                    label="Paid from"
+                                    htmlFor="from"
+                                    error={errors.from}
+                                    required
+                                >
+                                    <Input
+                                        id="from"
+                                        name="from"
+                                        type="date"
+                                        defaultValue={filters.from ?? ''}
+                                        required
+                                    />
+                                </Field>
+                                <Field
+                                    label="Paid until"
+                                    htmlFor="to"
+                                    error={errors.to}
+                                    required
+                                >
+                                    <Input
+                                        id="to"
+                                        name="to"
+                                        type="date"
+                                        defaultValue={filters.to ?? ''}
+                                        required
+                                    />
+                                </Field>
+                                <Field
+                                    label="Artist"
+                                    htmlFor="artist_id"
+                                    error={errors.artist_id}
+                                >
+                                    <SelectInput
+                                        id="artist_id"
+                                        name="artist_id"
+                                        defaultValue={filters.artist_id ?? ''}
+                                        options={artistOptions}
+                                        placeholder="All artists"
+                                    />
+                                </Field>
+                                <Field
+                                    label="Release"
+                                    htmlFor="release_id"
+                                    error={errors.release_id}
+                                >
+                                    <SelectInput
+                                        id="release_id"
+                                        name="release_id"
+                                        defaultValue={filters.release_id ?? ''}
+                                        options={releaseOptions}
+                                        placeholder="All releases"
+                                    />
+                                </Field>
+                                <Field
+                                    label="Format"
+                                    htmlFor="format"
+                                    error={errors.format}
+                                >
+                                    <SelectInput
+                                        id="format"
+                                        name="format"
+                                        defaultValue={filters.format ?? ''}
+                                        options={formatOptions}
+                                        placeholder="All formats"
+                                    />
+                                </Field>
+                            </div>
+                            <div>
+                                <Button disabled={processing}>
+                                    Show report
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </Form>
+            </Panel>
+
+            {report && (
+                <>
+                    <OverlapNotice overlaps={overlaps} />
+
+                    {report.unconverted > 0 && (
+                        <Notice>
+                            {report.unconverted} matching{' '}
+                            {report.unconverted === 1
+                                ? 'transaction has'
+                                : 'transactions have'}{' '}
+                            no converted amount and{' '}
+                            {report.unconverted === 1 ? 'is' : 'are'} not
+                            counted.
+                        </Notice>
+                    )}
+                    {report.unassigned > 0 && (
+                        <Notice>
+                            {report.unassigned} matching{' '}
+                            {report.unassigned === 1
+                                ? 'transaction belongs'
+                                : 'transactions belong'}{' '}
+                            to no release and{' '}
+                            {report.unassigned === 1 ? 'is' : 'are'} not
+                            counted.
+                        </Notice>
+                    )}
+                    {report.without_quantity_count > 0 && (
+                        <Notice>
+                            <p className="font-medium">
+                                {report.without_quantity_count} matching{' '}
+                                {report.without_quantity_count === 1
+                                    ? 'transaction has'
+                                    : 'transactions have'}{' '}
+                                no quantity and{' '}
+                                {report.without_quantity_count === 1
+                                    ? 'is'
+                                    : 'are'}{' '}
+                                not counted. Enter the quantity to include{' '}
+                                {report.without_quantity_count === 1
+                                    ? 'it'
+                                    : 'them'}
+                                .
+                            </p>
+                            <ul className="list-disc pl-4">
+                                {report.without_quantity.map((transaction) => (
+                                    <li key={transaction.id}>
+                                        <Link
+                                            href={TransactionController.edit.url(
+                                                transaction.id,
+                                            )}
+                                            className="underline"
+                                        >
+                                            {date(transaction.paid_on)} ·{' '}
+                                            {transaction.description}
+                                        </Link>
+                                        {transaction.release_name &&
+                                            ` (${transaction.release_name})`}
+                                    </li>
+                                ))}
+                            </ul>
+                            {report.without_quantity_count >
+                                report.without_quantity.length && (
+                                <p>
+                                    The first {report.without_quantity.length}{' '}
+                                    are listed.
+                                </p>
+                            )}
+                        </Notice>
+                    )}
+
+                    <div className="grid gap-4 sm:grid-cols-3">
+                        <Stat
+                            label="PPD total"
+                            value={
+                                <Amount
+                                    value={report.total}
+                                    currency={currency}
+                                />
+                            }
+                        />
+                        <Stat label="Units" value={quantity(report.quantity)} />
+                        <Stat
+                            label="Releases and tracks"
+                            value={report.groups.length}
+                        />
+                    </div>
+
+                    <Panel
+                        title="Calculated PPD"
+                        actions={
+                            report.rows.length > 0 && (
+                                <CreateTransactions
+                                    form={PpdController.store.form()}
+                                    fields={filters}
+                                    overlaps={overlaps}
+                                    description={`Books the PPD total and its offset for each of the ${report.groups.length} releases and tracks, as one data import.`}
+                                >
+                                    {(errors) => (
+                                        <Field
+                                            label="Paid date of the transactions"
+                                            htmlFor="paid_on"
+                                            error={errors.paid_on}
+                                            hint="Decides the period the PPD royalties fall in."
+                                            required
+                                        >
+                                            <Input
+                                                id="paid_on"
+                                                name="paid_on"
+                                                type="date"
+                                                defaultValue={
+                                                    filters.to ?? today()
+                                                }
+                                                required
+                                            />
+                                        </Field>
+                                    )}
+                                </CreateTransactions>
+                            )
+                        }
+                        flush
+                    >
+                        {report.rows.length === 0 ? (
+                            <p className="p-4 text-sm text-muted-foreground">
+                                No income with a quantity was paid in this range
+                                on anything that has a PPD rate.
+                            </p>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Release</TableHead>
+                                        <TableHead>Track</TableHead>
+                                        <TableHead>Rate from</TableHead>
+                                        <TableHead className="text-right">
+                                            Quantity
+                                        </TableHead>
+                                        <TableHead className="text-right">
+                                            Rate
+                                        </TableHead>
+                                        <TableHead className="text-right">
+                                            PPD
+                                        </TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {report.rows.map((row) => (
+                                        <TableRow
+                                            key={`${row.release_id}-${row.track_id}-${row.rate_source}-${row.item_id}-${row.rate}`}
+                                        >
+                                            <TableCell>
+                                                {row.release_name}
+                                            </TableCell>
+                                            <TableCell>
+                                                {row.track_name ?? '–'}
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground">
+                                                {row.rate_source === 'item'
+                                                    ? `Item: ${row.item_name}`
+                                                    : row.rate_source ===
+                                                        'track'
+                                                      ? 'Track'
+                                                      : 'Release'}
+                                            </TableCell>
+                                            <TableCell className="text-right tabular-nums">
+                                                {quantity(row.quantity)}
+                                            </TableCell>
+                                            <TableCell className="text-right tabular-nums">
+                                                {plain(row.rate)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Amount
+                                                    value={row.amount}
+                                                    currency={currency}
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                                <TableFooter>
+                                    <TableRow>
+                                        <TableCell colSpan={3}>Total</TableCell>
+                                        <TableCell className="text-right tabular-nums">
+                                            {quantity(report.quantity)}
+                                        </TableCell>
+                                        <TableCell />
+                                        <TableCell className="text-right">
+                                            <Amount
+                                                value={report.total}
+                                                currency={currency}
+                                            />
+                                        </TableCell>
+                                    </TableRow>
+                                </TableFooter>
+                            </Table>
+                        )}
+                    </Panel>
+                </>
+            )}
+
+            <RunsPanel runs={runs} currency={currency} totalLabel="PPD total" />
+        </Page>
+    );
+}
+
+Ppd.layout = { breadcrumbs: [{ title: 'PPD', href: index() }] };

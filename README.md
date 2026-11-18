@@ -48,8 +48,18 @@ Built with Laravel, Inertia and React.
 - Files per release (cover, audio masters, artwork, documents) on a private
   disk. They are only served to signed-in admins of the label, and audio
   can be played in the browser.
+- Masters are kept exactly as uploaded. For listening, an MP3 copy
+  (320 kbit/s by default) is made of each with ffmpeg; downloads and
+  packages always contain the original.
+- Covers are shown as small resized copies, made on first use and kept on
+  the same private disk.
 - Export of all metadata as a CSV sheet, and a delivery package per release
   (cover, audio named after the track list, metadata sheet, label copy).
+- A ZIP per release for [Subvert](https://subvert.fm)'s uploader: the cover
+  and the best audio file of each track, named in track order. Pricing,
+  credits and rights are entered on Subvert's form. Subvert offers no sales
+  export or API yet, so its income is entered by hand or with the
+  spreadsheet template.
 
 ## Requirements
 
@@ -84,6 +94,26 @@ installation on the internet.
   run `php artisan schedule:run` every minute from cron.
 - **Uploads.** Audio masters are large. Raise PHP's `upload_max_filesize`
   and `post_max_size`, and set `RELEASE_UPLOAD_MAX_KB` to match.
+- **Playback copies.** The MP3 a master is played from is made by
+  [ffmpeg](https://ffmpeg.org) (built with libmp3lame) in a queued job, so
+  ffmpeg has to be installed and a queue worker running. Set
+  `FFMPEG_BINARY` to its full path if it is not on the worker's `PATH`;
+  `AUDIO_PREVIEW_BITRATE` (default `320`) sets the quality. A conversion
+  may take up to `AUDIO_PREVIEW_TIMEOUT` seconds (default `600`): keep
+  `DB_QUEUE_RETRY_AFTER` and the worker's `--timeout` above that for very
+  long recordings. Without a worker, or to catch up, run
+  `php artisan royalties:generate-previews` (options: `--label=`,
+  `--release=`, `--force`); it converts everything that has no copy yet.
+  Without ffmpeg, MP3 uploads still play, WAV and FLAC play as uploaded in
+  browsers that support them, and other formats cannot be played; the file
+  table of a release shows the state of each file.
+- **Cover thumbnails** need PHP's `gd` extension (and `exif` to honour the
+  rotation of photos). Without it the full-size cover is shown.
+- **Large packages.** A delivery package or Subvert ZIP is written to the
+  system's temporary directory before it is sent, so that directory needs
+  as much free space as the release is large, and the web server must
+  allow the request to run for a few minutes (PHP's own time limit is
+  raised to 15 minutes for these downloads).
 - **Registration.** Anyone who can reach the site can create an account and
   their own label. Remove `Features::registration()` from
   `config/fortify.php` to make an installation invitation-only.
@@ -124,6 +154,39 @@ See `app/Services/Imports/Importers/BaseImporter.php`.
   positive ledgers are payable, and ledgers never offset one another.
 - A payout is deducted in the period it settles.
 
+## Mechanicals, PPD and reserves
+
+Three optional tools, switched on per label under Settings → Label. None of
+them is part of the period calculation. Each is run by hand under
+Royalties: choose a range of paid dates, check the report, then create the
+transactions. A run is one data import of ordinary transactions on
+dedicated items, so it flows through contracts, statements and ledgers like
+everything else, and deleting the import undoes it. Running a range that
+overlaps an earlier run asks for confirmation, because it would count the
+same sales twice.
+
+- **Mechanicals**: units × a rate per track. Units are permanent downloads
+  (and physical sales if the label wants them) paid in the range, plus any
+  manufacturing runs you enter. The rate is the track's own, else the
+  release's, else the US statutory rate for the track's duration,
+  converted with the rate from the label settings when the label does not
+  account in US dollars. Each track gets an expense on
+  “Track [Mechanicals Expenses]” and the same amount as income on
+  “Track [Mechanicals Income]”. The pair cancels out until the income item
+  is given a publishing contract, which is what pays the songwriter.
+- **PPD**: quantity × a rate per unit, set on the item, else the track,
+  else the release. Each release and track gets the total as income on
+  “[PPD Income]” and its negative on “[PPD Income Offset]”. A payee owed
+  15% of PPD gets it from a contract with a 15% split on the income item.
+- **Reserves**: physical income of a release paid in the range × its
+  reserves percentage (25 means 25%). You enter the day the reserve is
+  held and the day it is liquidated; the release earns that much less in
+  the period of the first date and gets it back in the period of the
+  second.
+
+The items the tools create have no contract of their own and follow the
+track or release. Set one on the Items page to change who is paid.
+
 ## Migrating from Infinite Catalog
 
 `php artisan royalties:import-infinite-catalog <export-directory> --label=…`
@@ -135,8 +198,11 @@ included. This project is not affiliated with Infinite Catalog.
 
 ## Not included
 
-- Mechanicals, PPD and reserves: the rates can be stored but nothing is
-  calculated from them.
+- Mechanicals: no Harry Fox Agency file is produced, and the statutory
+  rates are the US ones only.
+- Mechanicals, PPD and reserves are never calculated on their own or as
+  part of a period; see the tools above. Reserves are not liquidated
+  automatically after a number of periods.
 - Statements are downloaded as CSV, not Excel or PDF.
 - Imports and delivery packages are built while you wait, not in the
   background.

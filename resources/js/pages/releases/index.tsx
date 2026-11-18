@@ -211,9 +211,17 @@ export default function Releases({
                                                 <img
                                                     src={showFile.url(
                                                         release.cover_file_id,
+                                                        {
+                                                            query: {
+                                                                size: 'thumb',
+                                                            },
+                                                        },
                                                     )}
                                                     alt=""
+                                                    width={96}
+                                                    height={96}
                                                     loading="lazy"
+                                                    decoding="async"
                                                     className="size-full object-cover"
                                                 />
                                             )}

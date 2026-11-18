@@ -32,6 +32,9 @@ class LabelSettingsRequest extends LabelFormRequest
             'accounts_reserves' => ['boolean'],
             'bandcamp_disable_fee' => ['boolean'],
             'bandcamp_exclude_physical' => ['boolean'],
+            'mechanicals_usd_rate' => ['nullable', 'numeric', 'decimal:0,10', 'gt:0', 'max:999999'],
+            'mechanicals_include_physical' => ['boolean'],
+            'ignore_negative_quantities' => ['boolean'],
         ];
     }
 }

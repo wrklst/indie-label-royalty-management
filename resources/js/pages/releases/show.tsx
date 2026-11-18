@@ -1,16 +1,21 @@
 import { Link } from '@inertiajs/react';
-import { Download, FileSpreadsheet, Pencil, Plus } from 'lucide-react';
+import { Pencil, Plus } from 'lucide-react';
 import TrackController from '@/actions/App/Http/Controllers/TrackController';
 import { Amount } from '@/components/amount';
 import { ArtistCreditRows } from '@/components/artist-credit-rows';
 import type { ArtistCredit } from '@/components/artist-credit-rows';
+import { DeliveryMenu } from '@/components/delivery-menu';
 import { Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { Page, Panel, Stat } from '@/components/page';
+import type { PlayerTrack } from '@/components/player/player-store';
+import {
+    ReleaseActions,
+    TrackActions,
+} from '@/components/player/track-actions';
 import { ReleaseFiles } from '@/components/release-files';
 import type { ReleaseFile } from '@/components/release-files';
 import { SortableHead } from '@/components/sortable-head';
-import { TrackPlayer } from '@/components/track-player';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +32,7 @@ import { useTableSort } from '@/hooks/use-table-sort';
 import { country, date, duration, quantity } from '@/lib/format';
 import { edit as editContract } from '@/routes/contracts';
 import { show as showFile } from '@/routes/release-files';
-import { edit, index, metadata, packageMethod } from '@/routes/releases';
+import { edit, index } from '@/routes/releases';
 import {
     create as createTransaction,
     index as transactions,
@@ -434,6 +439,17 @@ export default function ShowRelease({
     const title = release.version
         ? `${release.name} (${release.version})`
         : release.name;
+    const playerTrack = (track: Track, fileId: number): PlayerTrack => ({
+        id: track.id,
+        fileId,
+        title: track.version ? `${track.name} (${track.version})` : track.name,
+        artist: track.artist ?? release.artist,
+        release: { id: release.id, name: release.name },
+        coverFileId: release.cover_file_id,
+    });
+    const playableTracks = release.tracks.flatMap((track) =>
+        track.audio_file_id ? [playerTrack(track, track.audio_file_id)] : [],
+    );
 
     return (
         <Page
@@ -455,22 +471,7 @@ export default function ShowRelease({
             }
             actions={
                 <>
-                    <Button variant="outline" asChild>
-                        <a href={packageMethod.url(release.id)}>
-                            <Download />
-                            Delivery package
-                        </a>
-                    </Button>
-                    <Button variant="outline" asChild>
-                        <a
-                            href={metadata.url({
-                                query: { release: release.id },
-                            })}
-                        >
-                            <FileSpreadsheet />
-                            Metadata CSV
-                        </a>
-                    </Button>
+                    <DeliveryMenu releaseId={release.id} />
                     <Button variant="outline" asChild>
                         <Link
                             href={createTransaction({
@@ -493,11 +494,25 @@ export default function ShowRelease({
             <div className="grid gap-4 lg:grid-cols-[13rem_1fr]">
                 <div className="aspect-square w-52 overflow-hidden rounded-xl border bg-muted">
                     {release.cover_file_id ? (
-                        <img
-                            src={showFile.url(release.cover_file_id)}
-                            alt={`Cover of ${release.name}`}
-                            className="size-full object-cover"
-                        />
+                        <a
+                            href={showFile.url(release.cover_file_id)}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Open the original"
+                            className="block size-full"
+                        >
+                            <img
+                                src={showFile.url(release.cover_file_id, {
+                                    query: { size: 'medium' },
+                                })}
+                                alt={`Cover of ${release.name}`}
+                                width={600}
+                                height={600}
+                                loading="lazy"
+                                decoding="async"
+                                className="size-full object-cover"
+                            />
+                        </a>
                     ) : (
                         <div className="flex size-full items-center justify-center p-4 text-center text-xs text-muted-foreground">
                             No cover yet. Upload one under Files.
@@ -551,16 +566,19 @@ export default function ShowRelease({
                 title="Tracks"
                 flush
                 actions={
-                    <Button variant="outline" size="sm" asChild>
-                        <Link
-                            href={transactions({
-                                query: { release: release.id },
-                            })}
-                        >
-                            {totals.transactions.toLocaleString('en-GB')}{' '}
-                            transactions
-                        </Link>
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <ReleaseActions tracks={playableTracks} />
+                        <Button variant="outline" size="sm" asChild>
+                            <Link
+                                href={transactions({
+                                    query: { release: release.id },
+                                })}
+                            >
+                                {totals.transactions.toLocaleString('en-GB')}{' '}
+                                transactions
+                            </Link>
+                        </Button>
+                    </div>
                 }
             >
                 {release.tracks.length === 0 ? (
@@ -641,11 +659,11 @@ export default function ShowRelease({
                                     </TableCell>
                                     <TableCell>
                                         {track.audio_file_id ? (
-                                            <TrackPlayer
-                                                src={showFile.url(
+                                            <TrackActions
+                                                track={playerTrack(
+                                                    track,
                                                     track.audio_file_id,
                                                 )}
-                                                title={track.name}
                                             />
                                         ) : (
                                             <span className="text-xs text-muted-foreground">

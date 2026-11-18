@@ -15,12 +15,12 @@ use App\Models\Track;
 use App\Models\Transaction;
 use App\Services\Imports\Identifiers;
 use App\Services\Releases\ArtistCredits;
+use App\Services\Releases\PlayableAudio;
 use App\Support\Options;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -143,7 +143,7 @@ class ReleaseController extends Controller
                     'bpm' => $track->bpm === null ? null : rtrim(rtrim((string) $track->bpm, '0'), '.'),
                     'artist' => ArtistCredits::display($track),
                     'artists' => $track->artists->map(fn (Artist $artist): array => ['artist_id' => $artist->id, 'role' => $artist->pivot->role])->values(),
-                    'audio_file_id' => $this->playable($audioByTrack->get($track->id))?->id,
+                    'audio_file_id' => PlayableAudio::pick($audioByTrack->get($track->id))?->id,
                     'contract' => $track->contract?->only(['id', 'name']),
                     'income' => (string) ($incomeByTrack[$track->id]->total ?? '0'),
                     'quantity' => (string) ($incomeByTrack[$track->id]->quantity ?? '0'),
@@ -240,23 +240,6 @@ class ReleaseController extends Controller
         if ($request->has('artists')) {
             ArtistCredits::sync($release, $request->validated('artists', []));
         }
-    }
-
-    /**
-     * The audio file the player uses for a track: a format every browser
-     * plays if there is one, otherwise the first upload.
-     *
-     * @param  Collection<int, ReleaseFile>|null  $files
-     */
-    private function playable(?Collection $files): ?ReleaseFile
-    {
-        if ($files === null) {
-            return null;
-        }
-
-        return $files->first(fn (ReleaseFile $file): bool => in_array($file->mime_type, ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/aac'], true))
-            ?? $files->first(fn (ReleaseFile $file): bool => $file->canBeShownInline())
-            ?? $files->first();
     }
 
     /**

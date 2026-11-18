@@ -11,7 +11,7 @@ class ItemRequest extends LabelFormRequest
      */
     protected function prepareForValidation(): void
     {
-        $this->nullify(['release_id', 'track_id', 'contract_id', 'territory_id']);
+        $this->nullify(['release_id', 'track_id', 'contract_id', 'territory_id', 'ppd_rate']);
     }
 
     /**
@@ -26,6 +26,7 @@ class ItemRequest extends LabelFormRequest
             'track_id' => ['nullable', 'integer', $this->inLabel('tracks')],
             'contract_id' => ['nullable', 'integer', $this->inLabel('contracts')],
             'territory_id' => ['nullable', 'integer', $this->inLabel('territories')],
+            'ppd_rate' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

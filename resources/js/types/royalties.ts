@@ -18,6 +18,7 @@ export type CurrentLabel = {
     name: string;
     currency: string;
     role: 'admin' | 'payee' | null;
+    tools: { mechanicals: boolean; ppd: boolean; reserves: boolean };
 };
 
 export type PayeeTotals = {

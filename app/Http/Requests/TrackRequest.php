@@ -19,7 +19,7 @@ class TrackRequest extends LabelFormRequest
             $this->merge(['artists' => []]);
         }
 
-        $this->nullify(['artist_id', 'contract_id', 'track_number', 'duration', 'mechanicals_rate', 'ppd_rate', 'disc_number', 'explicit', 'bpm', 'preview_start']);
+        $this->nullify(['artist_id', 'contract_id', 'track_number', 'duration', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'disc_number', 'explicit', 'bpm', 'preview_start']);
 
         // Credits may arrive as "Name One, Name Two" per role from text fields.
         $credits = $this->input('credits');
@@ -54,6 +54,8 @@ class TrackRequest extends LabelFormRequest
             'iswc' => ['nullable', 'string', 'max:16'],
             'track_number' => ['nullable', 'integer', 'min:1', 'max:999'],
             'duration' => ['nullable', 'integer', 'min:0'],
+            // Null follows the release.
+            'accounts_mechanicals' => ['nullable', 'boolean'],
             'mechanicals_rate' => ['nullable', 'numeric', 'min:0'],
             'ppd_rate' => ['nullable', 'numeric', 'min:0'],
             'disc_number' => ['nullable', 'integer', 'min:1', 'max:99'],

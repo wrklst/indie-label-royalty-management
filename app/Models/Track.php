@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $iswc
  * @property int|null $track_number
  * @property int|null $duration
+ * @property bool|null $accounts_mechanicals Null follows the release.
  * @property string|float|int|null $mechanicals_rate
  * @property string|float|int|null $ppd_rate
  * @property int|null $disc_number
@@ -39,7 +40,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['label_id', 'release_id', 'artist_id', 'contract_id', 'name', 'isrc', 'iswc', 'track_number', 'duration', 'mechanicals_rate', 'ppd_rate', 'disc_number', 'version', 'genre', 'language', 'explicit', 'bpm', 'musical_key', 'preview_start', 'p_line', 'credits', 'lyrics'])]
+#[Fillable(['label_id', 'release_id', 'artist_id', 'contract_id', 'name', 'isrc', 'iswc', 'track_number', 'duration', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'disc_number', 'version', 'genre', 'language', 'explicit', 'bpm', 'musical_key', 'preview_start', 'p_line', 'credits', 'lyrics'])]
 class Track extends Model
 {
     /** @use HasFactory<TrackFactory> */
@@ -62,6 +63,7 @@ class Track extends Model
     protected function casts(): array
     {
         return [
+            'accounts_mechanicals' => 'boolean',
             'credits' => 'array',
         ];
     }

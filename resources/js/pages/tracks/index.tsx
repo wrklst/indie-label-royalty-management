@@ -6,6 +6,7 @@ import { Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import { TrackActions } from '@/components/player/track-actions';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -34,7 +35,11 @@ type Track = {
     iswc: string | null;
     track_number: number | null;
     duration: number | null;
+    version: string | null;
     artist: string | null;
+    credited_artist: string | null;
+    audio_file_id: number | null;
+    cover_file_id: number | null;
     release: { id: number; name: string; catalog_number: string | null } | null;
     contract: Option | null;
     inherited_contract: Option | null;
@@ -124,6 +129,7 @@ export default function Tracks({
                                 <SortableHead column="contract" sorter={sorter}>
                                     Contract
                                 </SortableHead>
+                                <TableHead>Listen</TableHead>
                                 <TableHead className="w-20" />
                             </TableRow>
                         </TableHeader>
@@ -161,6 +167,31 @@ export default function Tracks({
                                             <Badge variant="outline">
                                                 none
                                             </Badge>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        {track.audio_file_id ? (
+                                            <TrackActions
+                                                track={{
+                                                    id: track.id,
+                                                    fileId: track.audio_file_id,
+                                                    title: track.version
+                                                        ? `${track.name} (${track.version})`
+                                                        : track.name,
+                                                    artist: track.credited_artist,
+                                                    release: track.release && {
+                                                        id: track.release.id,
+                                                        name: track.release
+                                                            .name,
+                                                    },
+                                                    coverFileId:
+                                                        track.cover_file_id,
+                                                }}
+                                            />
+                                        ) : (
+                                            <span className="text-xs text-muted-foreground">
+                                                No audio
+                                            </span>
                                         )}
                                     </TableCell>
                                     <TableCell>

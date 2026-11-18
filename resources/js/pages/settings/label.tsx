@@ -1,4 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
+import { useState } from 'react';
 import LabelSettingsController from '@/actions/App/Http/Controllers/Settings/LabelSettingsController';
 import { DeleteButton } from '@/components/delete-button';
 import { CheckField, Field } from '@/components/field';
@@ -18,6 +19,11 @@ type Props = {
         bandcamp_disable_fee: boolean;
         bandcamp_exclude_physical: boolean;
     };
+    royaltyTools: {
+        mechanicals_usd_rate: string | null;
+        mechanicals_include_physical: boolean;
+        ignore_negative_quantities: boolean;
+    };
     territories: { id: number; name: string; countries: string[] }[];
 };
 
@@ -26,11 +32,13 @@ function Toggle({
     label,
     hint,
     defaultChecked,
+    onChange,
 }: {
     name: string;
     label: string;
     hint?: string;
     defaultChecked: boolean;
+    onChange?: (checked: boolean) => void;
 }) {
     return (
         <>
@@ -41,12 +49,22 @@ function Toggle({
                 label={label}
                 hint={hint}
                 defaultChecked={defaultChecked}
+                onChange={(event) => onChange?.(event.target.checked)}
             />
         </>
     );
 }
 
-export default function LabelSettings({ settings, territories }: Props) {
+export default function LabelSettings({
+    settings,
+    royaltyTools,
+    territories,
+}: Props) {
+    const [tools, setTools] = useState({
+        mechanicals: settings.accounts_mechanicals,
+        ppd: settings.accounts_ppd,
+    });
+
     return (
         <>
             <Head title="Label settings" />
@@ -135,25 +153,81 @@ export default function LabelSettings({ settings, territories }: Props) {
                                     Accounting features
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                    Recorded for the label. Mechanicals, PPD and
-                                    reserves rates can be stored on releases but
-                                    are not calculated on statements yet.
+                                    Each feature adds a tool under Royalties.
+                                    Nothing is calculated on its own: you run
+                                    the tool for a range of paid dates and it
+                                    creates ordinary transactions.
                                 </p>
                                 <Toggle
                                     name="accounts_mechanicals"
-                                    label="We account mechanicals"
+                                    label="Mechanicals"
+                                    hint="Calculate mechanical royalties owed to songwriters for digital downloads and physical manufacturing or sales."
                                     defaultChecked={
                                         settings.accounts_mechanicals
                                     }
+                                    onChange={(checked) =>
+                                        setTools({
+                                            ...tools,
+                                            mechanicals: checked,
+                                        })
+                                    }
                                 />
+                                {tools.mechanicals && (
+                                    <div className="ml-6 grid gap-3 border-l pl-4">
+                                        <Toggle
+                                            name="mechanicals_include_physical"
+                                            label="Include physical sales"
+                                            hint="Count sold physical copies as units, next to downloads. Leave off when you enter manufacturing runs instead."
+                                            defaultChecked={
+                                                royaltyTools.mechanicals_include_physical
+                                            }
+                                        />
+                                        <Field
+                                            label={`Statutory rate conversion: 1 USD = ? ${settings.currency}`}
+                                            htmlFor="mechanicals_usd_rate"
+                                            error={errors.mechanicals_usd_rate}
+                                            hint="The statutory mechanical rates are in US dollars. Needed for tracks without their own rate when the label currency is not USD."
+                                        >
+                                            <Input
+                                                id="mechanicals_usd_rate"
+                                                name="mechanicals_usd_rate"
+                                                type="number"
+                                                step="any"
+                                                min="0"
+                                                className="w-40"
+                                                defaultValue={
+                                                    royaltyTools.mechanicals_usd_rate ??
+                                                    ''
+                                                }
+                                            />
+                                        </Field>
+                                    </div>
+                                )}
                                 <Toggle
                                     name="accounts_ppd"
-                                    label="We account by PPD"
+                                    label="PPD"
+                                    hint="Calculate royalties based on PPD (Published Price to Dealer) rates and transaction quantities."
                                     defaultChecked={settings.accounts_ppd}
+                                    onChange={(checked) =>
+                                        setTools({ ...tools, ppd: checked })
+                                    }
                                 />
+                                {(tools.mechanicals || tools.ppd) && (
+                                    <div className="ml-6 grid gap-3 border-l pl-4">
+                                        <Toggle
+                                            name="ignore_negative_quantities"
+                                            label="Ignore negative quantities"
+                                            hint="By default returns reduce the units mechanicals and PPD are calculated on."
+                                            defaultChecked={
+                                                royaltyTools.ignore_negative_quantities
+                                            }
+                                        />
+                                    </div>
+                                )}
                                 <Toggle
                                     name="accounts_reserves"
-                                    label="We hold reserves"
+                                    label="Reserves"
+                                    hint="Hold a percentage of income for custom periods of time to account for returns etc."
                                     defaultChecked={settings.accounts_reserves}
                                 />
                             </div>

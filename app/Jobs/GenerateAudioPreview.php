@@ -1,0 +1,65 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Enums\AudioPreviewStatus;
+use App\Models\ReleaseFile;
+use App\Services\Releases\AudioPreviews;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Str;
+use Throwable;
+
+/**
+ * Makes the MP3 an audio master is played from. A file that cannot be
+ * converted is recorded as failed rather than tried again and again;
+ * the second attempt is for a worker that was stopped half way.
+ */
+class GenerateAudioPreview implements ShouldBeUnique, ShouldQueue
+{
+    use Queueable;
+
+    public int $tries = 2;
+
+    public int $timeout;
+
+    /** The lock that keeps a file from being queued twice is given up after an hour. */
+    public int $uniqueFor = 3600;
+
+    public function __construct(public int $releaseFileId, public bool $force = false)
+    {
+        // A little longer than ffmpeg itself may take, so its own timeout is the one that reports.
+        $this->timeout = (int) config('royalties.audio.timeout') + 60;
+    }
+
+    public function uniqueId(): string
+    {
+        return (string) $this->releaseFileId;
+    }
+
+    public function handle(AudioPreviews $previews): void
+    {
+        $file = $this->file();
+
+        if ($file !== null) {
+            $previews->generate($file, $this->force);
+        }
+    }
+
+    public function failed(?Throwable $exception): void
+    {
+        $this->file()?->update([
+            'preview_status' => AudioPreviewStatus::Failed,
+            'preview_error' => Str::limit($exception?->getMessage() ?? 'The conversion did not finish.', 1000),
+        ]);
+    }
+
+    /**
+     * Workers have no label signed in; the file is looked up across labels.
+     */
+    private function file(): ?ReleaseFile
+    {
+        return ReleaseFile::query()->withoutGlobalScopes()->whereKey($this->releaseFileId)->first();
+    }
+}
