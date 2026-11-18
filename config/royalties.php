@@ -42,6 +42,11 @@ return [
             'Recording - Studio', 'Remix', 'Return Processing Fee', 'Rights', 'Shipping/Freight', 'Storage Fee',
             'Studio', 'Ticket Buy', 'Tour Support', 'Video',
         ],
+        // Running costs of the label itself, not tied to a release.
+        'overhead' => [
+            'Subscriptions', 'Software', 'Hosting', 'Accounting', 'Legal', 'Bank Fees', 'Insurance', 'Office', 'Travel',
+            'Marketing', 'Fee', 'Other',
+        ],
         'transfer' => [
             'Advance', 'Artist Merch Given', 'Artist Payback to Label', 'Event', 'Legal Services', 'Mastering',
             'Mechanicals', 'Payout', 'Previous Balance', 'Studio', 'Tour Support',

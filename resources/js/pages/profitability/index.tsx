@@ -296,7 +296,9 @@ export default function Profitability({
                         </TableHeader>
                         <TableBody>
                             {rows.map((row) => (
-                                <TableRow key={row.release_id ?? 'unassigned'}>
+                                <TableRow
+                                    key={row.release_id ?? row.release_name}
+                                >
                                     <TableCell className="max-w-xs">
                                         {row.release_id === null ? (
                                             <span className="text-muted-foreground">

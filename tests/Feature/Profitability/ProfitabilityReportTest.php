@@ -177,19 +177,20 @@ test('the date range applies to the sale date or the paid date', function (array
     'paid from' => [['from' => '2026-04-10', 'byPaidDate' => true], '40.000000000000000'],
 ]);
 
-test('transactions without a release are shown in one row after the releases', function () {
+test('income without a release and label costs without a release get their own rows after the releases', function () {
     booked(['total' => '10']);
     booked(['total' => '300', 'release_id' => null]);
     booked(['type' => 'expense', 'total' => '-25', 'release_id' => null, 'recoupable' => false]);
 
     $rows = profitability()['rows'];
 
-    expect(array_column($rows, 'release_name'))->toBe(['Example Release', 'Not assigned to a release'])
+    expect(array_column($rows, 'release_name'))->toBe(['Example Release', 'Not assigned to a release', 'Label overheads'])
         ->and($rows[1]['release_id'])->toBeNull()
         ->and($rows[1]['income'])->toBe('300.000000000000000')
         ->and($rows[1]['payee_share'])->toBe('0.000000000000000')
-        ->and($rows[1]['label_costs'])->toBe('-25.000000000000000')
-        ->and($rows[1]['label_result'])->toBe('275.000000000000000');
+        ->and($rows[1]['label_result'])->toBe('300.000000000000000')
+        ->and($rows[2]['label_costs'])->toBe('-25.000000000000000')
+        ->and($rows[2]['label_result'])->toBe('-25.000000000000000');
 });
 
 test('releases are listed by label result, best first, with totals over all rows', function () {

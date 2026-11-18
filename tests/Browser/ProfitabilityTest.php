@@ -58,3 +58,22 @@ test('the profitability filters narrow the report without leaving the page', fun
         ->assertPathIs('/profitability')
         ->assertNoJavaScriptErrors();
 });
+
+test('a recurring label cost is added in a dialog and shows up as overheads', function () {
+    $scenario = royaltyScenario();
+    $this->actingAs($scenario['admin']);
+
+    visit('/label-costs')
+        ->assertSee('No label costs booked yet')
+        ->click('Recurring cost')
+        ->fill('name', 'Example Subscription')
+        ->fill('amount', '10')
+        ->fill('starts_on', now()->subMonths(2)->toDateString())
+        ->press('Add recurring cost')
+        ->assertSee('3 past payments booked')
+        ->assertSee('per month')
+        ->assertSee('3×')
+        ->assertNoJavaScriptErrors();
+
+    visit('/profitability')->assertSee('Label overheads')->assertNoJavaScriptErrors();
+});

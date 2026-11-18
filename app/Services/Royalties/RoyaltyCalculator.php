@@ -511,7 +511,7 @@ class RoyaltyCalculator
             ->whereBetween('t.paid_timestamp', [$start, $end])
             ->selectRaw(
                 'COUNT(*) as transactions, '
-                ."SUM(CASE WHEN t.type <> 'transfer' AND t.release_id IS NULL THEN 1 ELSE 0 END) as unassigned, "
+                ."SUM(CASE WHEN t.type <> 'transfer' AND t.release_id IS NULL AND (t.type <> 'expense' OR t.recoupable = 1) THEN 1 ELSE 0 END) as unassigned, "
                 ."SUM(CASE WHEN t.type <> 'transfer' AND t.release_id IS NOT NULL AND ".self::RESOLVED_CONTRACT.' IS NULL THEN 1 ELSE 0 END) as missing_contract, '
                 .'SUM(CASE WHEN t.converted_total IS NULL THEN 1 ELSE 0 END) as unconverted',
             )

@@ -12,6 +12,7 @@ import {
     ListMusic,
     Mic2,
     Package,
+    Receipt,
     TrendingUp,
     Upload,
     Users,
@@ -32,6 +33,7 @@ import { index as catalog } from '@/routes/catalog';
 import { index as contracts } from '@/routes/contracts';
 import { index as dataImports } from '@/routes/data-imports';
 import { index as items } from '@/routes/items';
+import { index as labelCosts } from '@/routes/label-costs';
 import { index as ledgers } from '@/routes/ledgers';
 import { index as payees } from '@/routes/payees';
 import { index as payouts } from '@/routes/payouts';
@@ -65,6 +67,7 @@ const adminGroups: NavGroup[] = [
                 href: profitability(),
                 icon: TrendingUp,
             },
+            { title: 'Label costs', href: labelCosts(), icon: Receipt },
         ],
     },
     {

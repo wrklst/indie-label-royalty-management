@@ -1,11 +1,13 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/react-starter-kit",
+    "name": "wrklst/indie-label-royalty-management",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Royalty accounting and release management for independent record labels.",
     "keywords": [
-        "laravel",
-        "framework"
+        "royalties",
+        "record-label",
+        "music",
+        "laravel"
     ],
     "license": "MIT",
     "require": {

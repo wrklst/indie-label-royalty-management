@@ -12,3 +12,5 @@ Schedule::command('royalties:sync-bandcamp')
     ->weeklyOn(1, '05:00')
     ->withoutOverlapping(180)
     ->onOneServer();
+
+Schedule::command('royalties:book-recurring-expenses')->dailyAt('04:00')->withoutOverlapping(60)->onOneServer();

@@ -140,7 +140,8 @@ class TransactionController extends Controller
             ->when($request->string('retailer')->value(), fn ($query, string $retailer) => $query->where('retailer', $retailer))
             ->when($request->date('from'), fn ($query, $from) => $query->where($dateColumn, '>=', $from->toDateString()))
             ->when($request->date('to'), fn ($query, $to) => $query->where($dateColumn, '<=', $to->toDateString()))
-            ->when($request->boolean('unassigned'), fn ($query) => $query->whereNull('release_id')->where('type', '<>', 'transfer'))
+            ->when($request->boolean('unassigned'), fn ($query) => $query->whereNull('release_id')->where('type', '<>', 'transfer')
+                ->where(fn ($query) => $query->where('type', '<>', 'expense')->orWhere('recoupable', true)))
             ->when($request->boolean('unconverted'), fn ($query) => $query->whereNull('converted_total'))
             ->when($request->string('search')->trim()->value(), function ($query, string $search) {
                 // Typed text is matched literally: % and _ are not wildcards.

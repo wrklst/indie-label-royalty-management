@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\DB;
  * - Label costs are expenses that are not recoupable: the label bears them
  *   alone, so they lower the label result but not the payee share.
  * - Label result = net − payee share + label costs (costs are negative).
+ * - Label costs without a release (subscriptions, admin) are listed as
+ *   "Label overheads".
  * - Advances are transfers given to payees. They are prepaid royalties, not
  *   costs, and are listed for information only.
  * - Transactions without a converted amount are left out and counted.
@@ -73,6 +75,11 @@ class ProfitabilityReport
 {
     public const string UNASSIGNED = 'Not assigned to a release';
 
+    public const string OVERHEADS = 'Label overheads';
+
+    /** Row key for label costs that belong to no release. */
+    private const int OVERHEAD_KEY = -1;
+
     private const string RESOLVED_CONTRACT = 'COALESCE(t.contract_id, i.contract_id, tr.contract_id, r.contract_id)';
 
     public function __construct(private readonly SplitResolver $splitResolver) {}
@@ -93,11 +100,12 @@ class ProfitabilityReport
         $releases = [];
 
         foreach ($this->activity($scope(), $usesTerritories) as $row) {
-            $key = $row['release_id'] ?? 0;
+            $isLabelCost = $row['type'] === 'expense' && ! $row['recoupable'];
+            $key = $row['release_id'] ?? ($isLabelCost ? self::OVERHEAD_KEY : 0);
             $releases[$key] ??= $this->emptySums();
             $amount = Decimal::parse($row['total']) ?? '0';
 
-            if ($row['type'] === 'expense' && ! $row['recoupable']) {
+            if ($isLabelCost) {
                 $releases[$key]['label_costs'] = Decimal::add($releases[$key]['label_costs'], $amount);
 
                 continue;
@@ -131,11 +139,18 @@ class ProfitabilityReport
 
         $rows = [];
         $unassigned = null;
+        $overheads = null;
         $totals = $this->emptySums();
 
         foreach ($releases as $releaseId => $sums) {
             foreach ($sums as $column => $value) {
                 $totals[$column] = Decimal::add($totals[$column], $value);
+            }
+
+            if ($releaseId === self::OVERHEAD_KEY) {
+                $overheads = ['release_id' => null, 'release_name' => self::OVERHEADS, 'catalog_number' => null, 'artist_name' => null, ...$this->figures($sums)];
+
+                continue;
             }
 
             if ($releaseId === 0) {
@@ -159,6 +174,10 @@ class ProfitabilityReport
 
         if ($unassigned !== null) {
             $rows[] = $unassigned;
+        }
+
+        if ($overheads !== null) {
+            $rows[] = $overheads;
         }
 
         return [

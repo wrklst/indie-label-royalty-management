@@ -107,8 +107,10 @@ test('deleting asks for confirmation and says what is affected', function () {
         ->click('[aria-label="Delete Album advance?"]')
         ->assertSeeIn('[role="dialog"]', 'move to the primary ledger')
         ->click('[role="dialog"] button:has-text("Cancel")')
+        ->assertMissing('[role="dialog"]')
         ->assertSeeIn('[data-slot="table"]', 'Album advance')
         ->click('[aria-label="Delete Album advance?"]')
+        ->assertSeeIn('[role="dialog"]', 'move to the primary ledger')
         ->click('[role="dialog"] button:has-text("Delete")')
         ->assertSee('Only the primary ledger so far');
 
