@@ -229,12 +229,17 @@ class ImportInfiniteCatalog extends Command
     {
         $regions = collect($this->read('regions'))->pluck('alpha_2', 'id');
         $rates = collect($this->option('rate'))
+            ->filter()
             ->mapWithKeys(fn (string $rate): array => [strtoupper(str($rate)->before('=')->value()) => Decimal::parse(str($rate)->after('=')->value())]);
         $now = now();
         $buffer = [];
         $skippedPayoutTransfers = 0;
         $unconverted = 0;
         $handle = fopen("{$this->directory}/transactions.ndjson", 'r');
+
+        if ($handle === false) {
+            throw new RuntimeException('transactions.ndjson could not be opened.');
+        }
 
         while (($line = fgets($handle)) !== false) {
             $row = json_decode($line, true);

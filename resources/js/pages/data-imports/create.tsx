@@ -102,6 +102,7 @@ export default function CreateDataImport({
                                 <input
                                     type="radio"
                                     name="importer"
+                                    value={candidate.key}
                                     className="mt-1 accent-primary"
                                     checked={
                                         candidate.key === form.data.importer

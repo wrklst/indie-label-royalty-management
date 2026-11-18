@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DataImportController extends Controller
@@ -138,6 +139,11 @@ class DataImportController extends Controller
     {
         return response()->streamDownload(function (): void {
             $stream = fopen('php://output', 'w');
+
+            if ($stream === false) {
+                throw new RuntimeException('The download stream could not be opened.');
+            }
+
             fputcsv($stream, TemplateImporter::COLUMNS, ',', '"', '');
             fputcsv($stream, ['2026-03-31', '2026-04-15', 'income', '125.50', 'EUR', '', 'Artist name', 'Release name', 'Track name', 'CAT001', 'DEXXX2600001', '4000000000000', '', '', 'Sync fee', 'Publisher', 'Master Use License', 'Sync', '1', '', 'Publisher', '', 'DE'], ',', '"', '');
             fclose($stream);

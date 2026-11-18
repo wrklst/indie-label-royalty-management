@@ -43,7 +43,13 @@ class TrackController extends Controller
 
     public function update(TrackRequest $request, Track $track): RedirectResponse
     {
-        $track->update([...$request->validated(), 'isrc' => Identifiers::isrc($request->validated('isrc'))]);
+        $attributes = $request->validated();
+
+        if (array_key_exists('isrc', $attributes)) {
+            $attributes['isrc'] = Identifiers::isrc($attributes['isrc']);
+        }
+
+        $track->update($attributes);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Track saved.')]);
 

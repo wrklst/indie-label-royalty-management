@@ -11,13 +11,15 @@ use App\Support\Decimal;
  * A plain contract pays its own splits. A prorated contract (one with
  * child contracts, used for compilations and bundles) pays the splits of
  * its children instead, each scaled by the child's share of the weights.
+ *
+ * @phpstan-type Split array{payee_id: int, ledger_id: int|null, countries: list<string>|null, fraction: string, contract_id: int}
  */
 class SplitResolver
 {
     private const int MAX_DEPTH = 5;
 
     /**
-     * @return array<int, list<array{payee_id: int, ledger_id: int|null, countries: list<string>|null, fraction: string, contract_id: int}>>
+     * @return array<int, array<int, Split>>
      */
     public function forLabel(int $labelId): array
     {
@@ -56,10 +58,10 @@ class SplitResolver
     }
 
     /**
-     * @param  array<int, list<array<string, mixed>>>  $own
-     * @param  array<int, list<array{id: int, weight: string}>>  $children
+     * @param  array<int, array<int, Split>>  $own
+     * @param  array<int, array<int, array{id: int, weight: string}>>  $children
      * @param  list<int>  $path
-     * @return list<array<string, mixed>>
+     * @return array<int, Split>
      */
     private function expand(int $contractId, array $own, array $children, string $scale, int $depth, array $path): array
     {

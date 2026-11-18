@@ -23,7 +23,7 @@ class PayoutController extends Controller
                     'period' => $payout->period?->name,
                     'user' => $payout->user?->name,
                     'ledgers' => $payout->allocations->map(fn ($allocation): array => [
-                        'name' => $allocation->ledger?->name ?? 'Primary',
+                        'name' => $allocation->ledger->name ?? 'Primary',
                         'amount' => $allocation->amount,
                     ]),
                 ]),

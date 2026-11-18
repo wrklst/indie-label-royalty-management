@@ -55,7 +55,7 @@ class Options
         return self::named(Territory::class);
     }
 
-    /** @return list<array{id: int, name: string}> */
+    /** @return array<int, array{id: int, name: string}> */
     public static function releases(): array
     {
         return Release::query()->orderBy('name')->get(['id', 'name', 'catalog_number'])
@@ -65,7 +65,7 @@ class Options
             ])->all();
     }
 
-    /** @return list<array{id: int, name: string, release_id: int}> */
+    /** @return array<int, array{id: int, name: string, release_id: int}> */
     public static function tracks(): array
     {
         return Track::query()->orderBy('track_number')->orderBy('name')->get(['id', 'name', 'release_id', 'isrc'])

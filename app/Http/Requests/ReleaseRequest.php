@@ -2,6 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Release;
+use App\Rules\Isrc;
+use App\Rules\Upc;
 use Illuminate\Contracts\Validation\ValidationRule;
 
 class ReleaseRequest extends LabelFormRequest
@@ -21,12 +24,14 @@ class ReleaseRequest extends LabelFormRequest
      */
     public function rules(): array
     {
+        $release = $this->route('release');
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'artist_id' => ['nullable', 'integer', $this->inLabel('artists')],
             'contract_id' => ['nullable', 'integer', $this->inLabel('contracts')],
             'catalog_number' => ['nullable', 'string', 'max:255'],
-            'upc' => ['nullable', 'string', 'max:32'],
+            'upc' => ['nullable', 'string', 'max:32', new Upc],
             'released_on' => ['nullable', 'date'],
             'spotify_id' => ['nullable', 'string', 'max:255'],
             'discogs_id' => ['nullable', 'string', 'max:255'],
@@ -36,11 +41,11 @@ class ReleaseRequest extends LabelFormRequest
             'reserves_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'tracks' => ['array'],
-            'tracks.*.id' => ['nullable', 'integer', $this->inLabel('tracks')],
+            'tracks.*.id' => ['nullable', 'integer', 'distinct', $this->inLabel('tracks')->where('release_id', $release instanceof Release ? $release->id : 0)],
             'tracks.*.name' => ['required', 'string', 'max:255'],
             'tracks.*.artist_id' => ['nullable', 'integer', $this->inLabel('artists')],
             'tracks.*.contract_id' => ['nullable', 'integer', $this->inLabel('contracts')],
-            'tracks.*.isrc' => ['nullable', 'string', 'max:16'],
+            'tracks.*.isrc' => ['nullable', 'string', 'max:16', new Isrc],
             'tracks.*.iswc' => ['nullable', 'string', 'max:16'],
             'tracks.*.track_number' => ['nullable', 'integer', 'min:1', 'max:999'],
             'tracks.*.duration' => ['nullable', 'integer', 'min:0'],

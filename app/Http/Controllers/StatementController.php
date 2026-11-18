@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StatementController extends Controller
@@ -82,6 +83,11 @@ class StatementController extends Controller
 
         return response()->streamDownload(function () use ($data, $money): void {
             $stream = fopen('php://output', 'w');
+
+            if ($stream === false) {
+                throw new RuntimeException('The download stream could not be opened.');
+            }
+
             $put = fn (array $row) => fputcsv($stream, $row, ',', '"', '');
 
             $put(['Statement', $data['payee_name'] ?? '']);

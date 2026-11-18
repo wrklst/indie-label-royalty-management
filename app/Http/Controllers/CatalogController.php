@@ -49,7 +49,7 @@ class CatalogController extends Controller
         ]);
 
         $model = $validated['type'] === 'release' ? Release::class : Track::class;
-        $model::query()->findOrFail($validated['id'])->update(['contract_id' => $validated['contract_id'] ?? null]);
+        $model::query()->whereKey($validated['id'])->firstOrFail()->update(['contract_id' => $validated['contract_id'] ?? null]);
 
         return back();
     }

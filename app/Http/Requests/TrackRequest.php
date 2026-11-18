@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\Isrc;
 use Illuminate\Contracts\Validation\ValidationRule;
 
 class TrackRequest extends LabelFormRequest
@@ -25,7 +26,7 @@ class TrackRequest extends LabelFormRequest
             'name' => ['required', 'string', 'max:255'],
             'artist_id' => ['nullable', 'integer', $this->inLabel('artists')],
             'contract_id' => ['nullable', 'integer', $this->inLabel('contracts')],
-            'isrc' => ['nullable', 'string', 'max:16'],
+            'isrc' => ['nullable', 'string', 'max:16', new Isrc],
             'iswc' => ['nullable', 'string', 'max:16'],
             'track_number' => ['nullable', 'integer', 'min:1', 'max:999'],
             'duration' => ['nullable', 'integer', 'min:0'],

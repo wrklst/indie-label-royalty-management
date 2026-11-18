@@ -103,7 +103,7 @@ class ReleaseController extends Controller
                 'income' => (string) ($byType['income']->total ?? '0'),
                 'expense' => (string) ($byType['expense']->total ?? '0'),
                 'transactions' => (int) $byType->sum('transactions'),
-                'release_level_income' => (string) ($incomeByTrack->get('')?->total ?? '0'),
+                'release_level_income' => (string) ($incomeByTrack->get('')->total ?? '0'),
             ],
             'retailers' => $byRetailer->map(fn ($row): array => [
                 'retailer' => $row->retailer ?? 'Unknown', 'total' => (string) $row->total, 'quantity' => (string) $row->quantity,
@@ -153,7 +153,10 @@ class ReleaseController extends Controller
     private function attributes(ReleaseRequest $request): array
     {
         $attributes = $request->safe()->except('tracks');
-        $attributes['upc'] = Identifiers::upc($attributes['upc'] ?? null);
+
+        if (array_key_exists('upc', $attributes)) {
+            $attributes['upc'] = Identifiers::upc($attributes['upc']);
+        }
 
         return $attributes;
     }
@@ -180,12 +183,12 @@ class ReleaseController extends Controller
                 'duration' => $row['duration'] ?? null,
             ];
 
-            $track = isset($row['id']) ? $release->tracks()->find($row['id']) : null;
+            $track = isset($row['id']) ? $release->tracks()->whereKey($row['id'])->first() : null;
             $track ? $track->update($attributes) : $track = $release->tracks()->create([...$attributes, 'label_id' => $release->label_id]);
             $kept[] = $track->id;
         }
 
-        $release->tracks()->whereNotIn('id', $kept)->delete();
+        $release->tracks()->whereNotIn('id', $kept)->get()->each->delete();
     }
 
     /**

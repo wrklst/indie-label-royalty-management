@@ -1,0 +1,325 @@
+<?php
+
+use App\Models\Artist;
+use App\Models\Contract;
+use App\Models\Label;
+use App\Models\Release;
+use App\Models\Track;
+use App\Models\Transaction;
+use Inertia\Testing\AssertableInertia as Assert;
+
+test('searching the release list matches name, catalog number and UPC', function (string $search) {
+    $label = Label::factory()->create();
+    Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'catalog_number' => 'EX001', 'upc' => '4000000000017']);
+    Release::factory()->create(['label_id' => $label->id, 'name' => 'Sample Album', 'catalog_number' => 'SMP900', 'upc' => '4999999999994']);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('releases.index', ['search' => $search]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('releases.data', 1)
+            ->where('releases.data.0.name', 'Example Release'));
+})->with([
+    'part of the name' => 'xample Rel',
+    'catalog number' => 'EX001',
+    'part of the UPC' => '40000000',
+]);
+
+test('the release list can be narrowed to one artist', function () {
+    $label = Label::factory()->create();
+    $artist = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
+    Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'artist_id' => $artist->id]);
+    Release::factory()->create(['label_id' => $label->id, 'name' => 'Sample Album']);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('releases.index', ['artist' => $artist->id]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('releases.data', 1)
+            ->where('releases.data.0.name', 'Example Release')
+            ->where('releases.data.0.artist', 'Example Artist')
+            ->where('filters.artist', $artist->id));
+});
+
+test('the release list can be narrowed to releases without a contract', function () {
+    $label = Label::factory()->create();
+    $contract = Contract::factory()->create(['label_id' => $label->id]);
+    Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'contract_id' => $contract->id]);
+    Release::factory()->create(['label_id' => $label->id, 'name' => 'Sample Album']);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('releases.index', ['without_contract' => 1]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('releases.data', 1)
+            ->where('releases.data.0.name', 'Sample Album')
+            ->where('releases.data.0.contract', null)
+            ->where('filters.without_contract', true));
+});
+
+test('the release list sums income only and puts releases without a catalog number last', function () {
+    $label = Label::factory()->create();
+    Release::factory()->create(['label_id' => $label->id, 'name' => 'Uncatalogued', 'catalog_number' => null]);
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'catalog_number' => 'EX001', 'released_on' => '2026-02-06']);
+    Track::factory()->count(2)->create(['label_id' => $label->id, 'release_id' => $release->id]);
+    Transaction::factory()->count(2)->create(['label_id' => $label->id, 'release_id' => $release->id, 'total' => '12.50']);
+    Transaction::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'type' => 'expense', 'total' => '-40']);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('releases.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('releases/index')
+            ->has('releases.data', 2)
+            ->where('releases.data.0.name', 'Example Release')
+            ->where('releases.data.0.released_on', '2026-02-06')
+            ->where('releases.data.0.tracks_count', 2)
+            ->where('releases.data.0.income', fn (string $income) => bccomp($income, '25', 4) === 0)
+            ->where('releases.data.1.name', 'Uncatalogued')
+            ->where('releases.data.1.income', '0'));
+});
+
+test('a release is created with its tracks and normalised identifiers', function () {
+    $label = Label::factory()->create();
+    $artist = Artist::factory()->create(['label_id' => $label->id]);
+    $contract = Contract::factory()->create(['label_id' => $label->id]);
+    $trackContract = Contract::factory()->create(['label_id' => $label->id]);
+
+    $response = $this->actingAs(labelAdmin($label))->post(route('releases.store'), [
+        'name' => 'Example Release',
+        'artist_id' => $artist->id,
+        'contract_id' => $contract->id,
+        'catalog_number' => 'EX001',
+        'upc' => '4-000000-000017',
+        'released_on' => '2026-02-06',
+        'accounts_mechanicals' => true,
+        'mechanicals_rate' => '9.1',
+        'reserves_rate' => '25',
+        'notes' => 'First pressing.',
+        'tracks' => [
+            ['name' => 'Example Track One', 'isrc' => 'zz-tst-26-00001', 'track_number' => 1, 'duration' => 215, 'artist_id' => $artist->id],
+            ['name' => 'Example Track Two', 'isrc' => 'ZZTST2600002', 'track_number' => 2, 'contract_id' => $trackContract->id],
+        ],
+    ]);
+
+    $release = Release::query()->sole();
+    $response->assertSessionHasNoErrors()->assertRedirect(route('releases.show', $release));
+
+    $this->assertDatabaseHas('releases', [
+        'id' => $release->id,
+        'label_id' => $label->id,
+        'name' => 'Example Release',
+        'artist_id' => $artist->id,
+        'contract_id' => $contract->id,
+        'catalog_number' => 'EX001',
+        'upc' => '4000000000017',
+        'accounts_mechanicals' => true,
+        'notes' => 'First pressing.',
+    ]);
+    expect($release->released_on->toDateString())->toBe('2026-02-06');
+    $this->assertDatabaseCount('tracks', 2);
+    $this->assertDatabaseHas('tracks', ['release_id' => $release->id, 'label_id' => $label->id, 'name' => 'Example Track One', 'isrc' => 'ZZTST2600001', 'track_number' => 1, 'duration' => 215, 'artist_id' => $artist->id, 'contract_id' => null]);
+    $this->assertDatabaseHas('tracks', ['release_id' => $release->id, 'label_id' => $label->id, 'name' => 'Example Track Two', 'isrc' => 'ZZTST2600002', 'track_number' => 2, 'artist_id' => null, 'contract_id' => $trackContract->id]);
+});
+
+test('every created release gets an additionals item carrying its identifiers', function () {
+    $label = Label::factory()->create();
+
+    $this->actingAs(labelAdmin($label))
+        ->post(route('releases.store'), ['name' => 'Example Release', 'catalog_number' => 'EX001', 'upc' => '4000000000017'])
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseCount('items', 1);
+    $this->assertDatabaseHas('items', [
+        'label_id' => $label->id,
+        'release_id' => Release::query()->sole()->id,
+        'name' => '[Additionals]',
+        'is_additionals' => true,
+        'catalog_number' => 'EX001',
+        'upc' => '4000000000017',
+    ]);
+});
+
+test('empty selections and rates on the release form are stored as null', function () {
+    $label = Label::factory()->create();
+
+    $this->actingAs(labelAdmin($label))
+        ->post(route('releases.store'), ['name' => 'Example Release', 'artist_id' => '', 'contract_id' => '', 'released_on' => '', 'mechanicals_rate' => '', 'ppd_rate' => '', 'reserves_rate' => ''])
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('releases', ['name' => 'Example Release', 'artist_id' => null, 'contract_id' => null, 'released_on' => null, 'mechanicals_rate' => null, 'ppd_rate' => null, 'reserves_rate' => null]);
+});
+
+test('a release and each of its tracks need a name', function () {
+    $label = Label::factory()->create();
+
+    $this->actingAs(labelAdmin($label))
+        ->post(route('releases.store'), ['name' => '', 'tracks' => [['name' => '', 'isrc' => 'ZZTST2600001']]])
+        ->assertSessionHasErrors([
+            'name' => 'The name field is required.',
+            'tracks.0.name' => 'The track name field is required.',
+        ]);
+
+    $this->assertDatabaseCount('releases', 0);
+    $this->assertDatabaseCount('tracks', 0);
+});
+
+test('a release is rejected when a value is out of range', function (array $input, string $field) {
+    $label = Label::factory()->create();
+
+    $this->actingAs(labelAdmin($label))
+        ->post(route('releases.store'), ['name' => 'Example Release', ...$input])
+        ->assertSessionHasErrors($field);
+
+    $this->assertDatabaseCount('releases', 0);
+})->with([
+    'reserves rate above 100' => [['reserves_rate' => '100.5'], 'reserves_rate'],
+    'negative reserves rate' => [['reserves_rate' => '-1'], 'reserves_rate'],
+    'negative mechanicals rate' => [['mechanicals_rate' => '-0.01'], 'mechanicals_rate'],
+    'negative PPD rate' => [['ppd_rate' => '-0.01'], 'ppd_rate'],
+    'release date that is no date' => [['released_on' => 'soon'], 'released_on'],
+    'track number zero' => [['tracks' => [['name' => 'Example Track', 'track_number' => 0]]], 'tracks.0.track_number'],
+    'track number above 999' => [['tracks' => [['name' => 'Example Track', 'track_number' => 1000]]], 'tracks.0.track_number'],
+    'negative track duration' => [['tracks' => [['name' => 'Example Track', 'duration' => -1]]], 'tracks.0.duration'],
+    'ISRC longer than 16 characters' => [['tracks' => [['name' => 'Example Track', 'isrc' => 'ZZ-TST-26-00001-X']]], 'tracks.0.isrc'],
+]);
+
+test('a release cannot reference records of another label', function (string $field, Closure $input) {
+    $label = Label::factory()->create();
+
+    $this->actingAs(labelAdmin($label))
+        ->post(route('releases.store'), ['name' => 'Example Release', ...$input()])
+        ->assertSessionHasErrors($field);
+
+    $this->assertDatabaseMissing('releases', ['name' => 'Example Release']);
+})->with([
+    'artist' => ['artist_id', fn () => ['artist_id' => Artist::factory()->create()->id]],
+    'track artist' => ['tracks.0.artist_id', fn () => ['tracks' => [['name' => 'Example Track', 'artist_id' => Artist::factory()->create()->id]]]],
+    'track contract' => ['tracks.0.contract_id', fn () => ['tracks' => [['name' => 'Example Track', 'contract_id' => Contract::factory()->create()->id]]]],
+    'track id' => ['tracks.0.id', fn () => ['tracks' => [['name' => 'Example Track', 'id' => Track::factory()->create()->id]]]],
+]);
+
+test('the release page totals income and expenses and breaks income down by track and retailer', function () {
+    $label = Label::factory()->create();
+    $artist = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
+    $contract = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Deal']);
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'artist_id' => $artist->id, 'contract_id' => $contract->id]);
+    $second = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track Two', 'track_number' => 2]);
+    $first = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track One', 'track_number' => 1]);
+    $shared = ['label_id' => $label->id, 'release_id' => $release->id];
+    Transaction::factory()->create([...$shared, 'track_id' => $first->id, 'total' => '6', 'quantity' => 3, 'retailer' => 'Example Stream']);
+    Transaction::factory()->create([...$shared, 'track_id' => $first->id, 'total' => '4', 'quantity' => 2, 'retailer' => 'Example Stream']);
+    Transaction::factory()->create([...$shared, 'total' => '20', 'quantity' => 1, 'retailer' => 'Example Store']);
+    Transaction::factory()->create([...$shared, 'type' => 'expense', 'total' => '-15', 'retailer' => 'Example Pressing Plant']);
+    Transaction::factory()->create(['label_id' => $label->id, 'total' => '99']);
+    $equals = fn (string $expected) => fn (string $actual) => bccomp($actual, $expected, 4) === 0;
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('releases.show', $release->id))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('releases/show')
+            ->where('release.name', 'Example Release')
+            ->where('release.artist', 'Example Artist')
+            ->where('release.contract', ['id' => $contract->id, 'name' => 'Example Deal'])
+            ->has('release.tracks', 2)
+            ->where('release.tracks.0.name', 'Example Track One')
+            ->where('release.tracks.0.income', $equals('10'))
+            ->where('release.tracks.0.quantity', $equals('5'))
+            ->where('release.tracks.1.id', $second->id)
+            ->where('release.tracks.1.income', '0')
+            ->has('release.items', 1)
+            ->where('release.items.0.is_additionals', true)
+            ->where('totals.income', $equals('30'))
+            ->where('totals.expense', $equals('-15'))
+            ->where('totals.transactions', 4)
+            ->where('totals.release_level_income', $equals('20'))
+            ->has('retailers', 2)
+            ->where('retailers.0.retailer', 'Example Store')
+            ->where('retailers.0.total', $equals('20'))
+            ->where('retailers.1.retailer', 'Example Stream')
+            ->where('retailers.1.total', $equals('10'))
+            ->where('retailers.1.quantity', $equals('5')));
+});
+
+test('the release form lists the tracks in track order', function () {
+    $label = Label::factory()->create();
+    $release = Release::factory()->create(['label_id' => $label->id, 'released_on' => '2026-02-06']);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track Two', 'track_number' => 2]);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track One', 'track_number' => 1]);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('releases.edit', $release->id))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('releases/form')
+            ->where('release.id', $release->id)
+            ->where('release.released_on', '2026-02-06')
+            ->where('release.tracks.0.name', 'Example Track One')
+            ->where('release.tracks.1.name', 'Example Track Two'));
+});
+
+test('updating a release changes existing tracks, adds new ones and removes the missing ones', function () {
+    $label = Label::factory()->create();
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'upc' => '4000000000017']);
+    $kept = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track One', 'isrc' => 'ZZTST2600001']);
+    $removed = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track Two']);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('releases.update', $release->id), [
+            'name' => 'Example Release (Deluxe)',
+            'upc' => '4 000000 000024',
+            'tracks' => [
+                ['id' => $kept->id, 'name' => 'Example Track One (Remaster)', 'isrc' => 'zz-tst-26-00009', 'track_number' => 1],
+                ['name' => 'Example Bonus Track', 'isrc' => 'ZZTST2600003', 'track_number' => 2],
+            ],
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('releases.show', $release));
+
+    $this->assertDatabaseHas('releases', ['id' => $release->id, 'name' => 'Example Release (Deluxe)', 'upc' => '4000000000024']);
+    $this->assertDatabaseCount('tracks', 2);
+    $this->assertDatabaseHas('tracks', ['id' => $kept->id, 'name' => 'Example Track One (Remaster)', 'isrc' => 'ZZTST2600009', 'track_number' => 1]);
+    $this->assertDatabaseHas('tracks', ['release_id' => $release->id, 'label_id' => $label->id, 'name' => 'Example Bonus Track', 'isrc' => 'ZZTST2600003', 'track_number' => 2]);
+    $this->assertModelMissing($removed);
+    $this->assertDatabaseCount('items', 1);
+});
+
+test('updating a release without a track list leaves its tracks alone', function () {
+    $label = Label::factory()->create();
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track']);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('releases.update', $release->id), ['name' => 'Renamed Release'])
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('releases', ['id' => $release->id, 'name' => 'Renamed Release']);
+    $this->assertDatabaseHas('tracks', ['id' => $track->id, 'name' => 'Example Track']);
+});
+
+test('updating a release with an empty track list removes all its tracks', function () {
+    $label = Label::factory()->create();
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    $otherRelease = Release::factory()->create(['label_id' => $label->id]);
+    Track::factory()->count(2)->create(['label_id' => $label->id, 'release_id' => $release->id]);
+    $untouched = Track::factory()->create(['label_id' => $label->id, 'release_id' => $otherRelease->id]);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('releases.update', $release->id), ['name' => $release->name, 'tracks' => []])
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseCount('tracks', 1);
+    $this->assertModelExists($untouched);
+});
+
+test('deleting a release removes its tracks and items but keeps its transactions unassigned', function () {
+    $label = Label::factory()->create();
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id]);
+    $transaction = Transaction::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'track_id' => $track->id, 'total' => '10']);
+
+    $this->actingAs(labelAdmin($label))
+        ->delete(route('releases.destroy', $release->id))
+        ->assertRedirect(route('releases.index'));
+
+    $this->assertModelMissing($release);
+    $this->assertModelMissing($track);
+    $this->assertDatabaseCount('items', 0);
+    $this->assertDatabaseHas('transactions', ['id' => $transaction->id, 'release_id' => null, 'track_id' => null, 'item_id' => null]);
+});

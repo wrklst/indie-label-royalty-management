@@ -2,12 +2,23 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Database\Factories\ContractSplitFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $contract_id
+ * @property int $payee_id
+ * @property int|null $ledger_id
+ * @property int|null $territory_id
+ * @property numeric-string $split_amount
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ */
 #[Fillable(['contract_id', 'payee_id', 'ledger_id', 'territory_id', 'split_amount'])]
 class ContractSplit extends Model
 {

@@ -23,6 +23,49 @@ use Illuminate\Support\Facades\DB;
  * - Ledger balance = previous balance + payee share + transfers − payouts.
  *   A negative ledger is unrecouped and carries forward; only positive
  *   ledgers are payable, and ledgers never offset one another.
+ *
+ * @phpstan-type PayeeSummary array{
+ *     payee_id: int,
+ *     payee_name: string,
+ *     totals: array<string, string>,
+ *     ledgers: list<array<string, mixed>>,
+ *     income_rows: list<array<string, mixed>>,
+ *     expense_rows: list<array<string, mixed>>,
+ *     transfer_rows: array<int, array<string, mixed>>,
+ *     payout_rows: list<array<string, mixed>>
+ * }
+ * @phpstan-type ActivityRow array{
+ *     contract_id: int|null,
+ *     release_id: int|null,
+ *     track_id: int|null,
+ *     type: string,
+ *     format: string|null,
+ *     category: string|null,
+ *     region: string|null,
+ *     is_prev: int|string,
+ *     total: int|float|string|null,
+ *     quantity: int|float|string|null
+ * }
+ * @phpstan-type TransferRow array{
+ *     id: int,
+ *     payee_id: int,
+ *     ledger_id: int|null,
+ *     release_id: int|null,
+ *     paid_timestamp: string,
+ *     converted_total: int|float|string,
+ *     category: string|null,
+ *     memo: string|null,
+ *     contract_id: int|null
+ * }
+ * @phpstan-type PayoutRow array{
+ *     payout_id: int,
+ *     payee_id: int,
+ *     period_id: int|string,
+ *     paid_on: string,
+ *     memo: string|null,
+ *     ledger_id: int|null,
+ *     amount: int|float|string
+ * }
  */
 class RoyaltyCalculator
 {
@@ -36,7 +79,7 @@ class RoyaltyCalculator
      *     currency: string,
      *     totals: array<string, string>,
      *     audit: array<string, mixed>,
-     *     payees: list<array<string, mixed>>
+     *     payees: list<PayeeSummary>
      * }
      */
     public function forPeriod(Period $period, ?int $onlyPayeeId = null): array
@@ -52,25 +95,25 @@ class RoyaltyCalculator
         $totals = array_fill_keys(['income', 'expense', 'payee_share'], Decimal::add('0', '0'));
 
         foreach ($this->activity($labelId, $start, $end, $usesTerritories) as $row) {
-            $amount = Decimal::parse($row->total) ?? '0';
-            $isPrevious = (bool) $row->is_prev;
-            $isIncome = $row->type === 'income';
+            $amount = Decimal::parse($row['total']) ?? '0';
+            $isPrevious = (bool) $row['is_prev'];
+            $isIncome = $row['type'] === 'income';
 
             if (! $isPrevious) {
                 $totals[$isIncome ? 'income' : 'expense'] = Decimal::add($totals[$isIncome ? 'income' : 'expense'], $amount);
             }
 
-            foreach ($splits[$row->contract_id] ?? [] as $split) {
-                if ($split['countries'] !== null && ! in_array($row->region, $split['countries'], true)) {
+            foreach ($splits[$row['contract_id']] ?? [] as $split) {
+                if ($split['countries'] !== null && ! in_array($row['region'], $split['countries'], true)) {
                     continue;
                 }
 
                 $share = Decimal::mul($amount, $split['fraction']);
                 $ledger = &$this->ledger($payees, $split['payee_id'], $split['ledger_id']);
-                $lineKey = implode('|', [$row->release_id, $row->track_id, $row->contract_id]);
+                $lineKey = implode('|', [$row['release_id'], $row['track_id'], $row['contract_id']]);
 
                 $ledger['lines'][$lineKey] ??= [
-                    'release_id' => $row->release_id, 'track_id' => $row->track_id, 'contract_id' => $row->contract_id,
+                    'release_id' => $row['release_id'], 'track_id' => $row['track_id'], 'contract_id' => $row['contract_id'],
                     'split' => $split['fraction'], 'income' => '0', 'expense' => '0', 'payee_share' => '0', 'previous_balance' => '0',
                 ];
                 $line = &$ledger['lines'][$lineKey];
@@ -86,14 +129,14 @@ class RoyaltyCalculator
                 $line['payee_share'] = Decimal::add($line['payee_share'], $share);
                 $totals['payee_share'] = Decimal::add($totals['payee_share'], $share);
 
-                $detailKey = implode('|', [$lineKey, $row->format, $row->category]);
+                $detailKey = implode('|', [$lineKey, $row['format'], $row['category']]);
                 $details = &$payees[$split['payee_id']][$isIncome ? 'income_rows' : 'expense_rows'];
                 $details[$detailKey] ??= [
-                    'release_id' => $row->release_id, 'track_id' => $row->track_id, 'contract_id' => $row->contract_id,
-                    'format' => $row->format, 'category' => $row->category, 'split' => $split['fraction'],
+                    'release_id' => $row['release_id'], 'track_id' => $row['track_id'], 'contract_id' => $row['contract_id'],
+                    'format' => $row['format'], 'category' => $row['category'], 'split' => $split['fraction'],
                     'quantity' => '0', 'amount' => '0', 'payee_share' => '0',
                 ];
-                $details[$detailKey]['quantity'] = Decimal::add($details[$detailKey]['quantity'], Decimal::parse($row->quantity) ?? '0');
+                $details[$detailKey]['quantity'] = Decimal::add($details[$detailKey]['quantity'], Decimal::parse($row['quantity']) ?? '0');
                 $details[$detailKey]['amount'] = Decimal::add($details[$detailKey]['amount'], $amount);
                 $details[$detailKey]['payee_share'] = Decimal::add($details[$detailKey]['payee_share'], $share);
 
@@ -102,23 +145,23 @@ class RoyaltyCalculator
         }
 
         foreach ($this->transfers($labelId, $end) as $transfer) {
-            $amount = Decimal::parse($transfer->converted_total) ?? '0';
-            $ledgerId = $transfer->ledger_id;
+            $amount = Decimal::parse($transfer['converted_total']) ?? '0';
+            $ledgerId = $transfer['ledger_id'];
 
             if ($ledgerId === null) {
-                $viaSplit = collect($splits[$transfer->contract_id] ?? [])->firstWhere('payee_id', $transfer->payee_id);
+                $viaSplit = collect($splits[$transfer['contract_id']] ?? [])->firstWhere('payee_id', $transfer['payee_id']);
                 $ledgerId = $viaSplit['ledger_id'] ?? null;
             }
 
-            $ledger = &$this->ledger($payees, $transfer->payee_id, $ledgerId);
+            $ledger = &$this->ledger($payees, $transfer['payee_id'], $ledgerId);
 
-            if ($transfer->paid_timestamp < $start) {
+            if ($transfer['paid_timestamp'] < $start) {
                 $ledger['previous_transfers'] = Decimal::add($ledger['previous_transfers'], $amount);
             } else {
                 $ledger['transfers'] = Decimal::add($ledger['transfers'], $amount);
-                $payees[$transfer->payee_id]['transfer_rows'][] = [
-                    'id' => $transfer->id, 'date' => $transfer->paid_timestamp, 'release_id' => $transfer->release_id,
-                    'ledger_id' => $ledgerId, 'category' => $transfer->category, 'memo' => $transfer->memo, 'amount' => $amount,
+                $payees[$transfer['payee_id']]['transfer_rows'][] = [
+                    'id' => $transfer['id'], 'date' => $transfer['paid_timestamp'], 'release_id' => $transfer['release_id'],
+                    'ledger_id' => $ledgerId, 'category' => $transfer['category'], 'memo' => $transfer['memo'], 'amount' => $amount,
                 ];
             }
 
@@ -126,16 +169,16 @@ class RoyaltyCalculator
         }
 
         foreach ($this->payouts($labelId, $period) as $payout) {
-            $amount = Decimal::parse($payout->amount) ?? '0';
-            $ledger = &$this->ledger($payees, $payout->payee_id, $payout->ledger_id);
+            $amount = Decimal::parse($payout['amount']) ?? '0';
+            $ledger = &$this->ledger($payees, $payout['payee_id'], $payout['ledger_id']);
 
-            if ((int) $payout->period_id === $period->id) {
+            if ((int) $payout['period_id'] === $period->id) {
                 $ledger['payouts'] = Decimal::add($ledger['payouts'], $amount);
-                $payees[$payout->payee_id]['payout_rows'][$payout->payout_id] ??= [
-                    'id' => $payout->payout_id, 'date' => $payout->paid_on, 'memo' => $payout->memo, 'amount' => '0',
+                $payees[$payout['payee_id']]['payout_rows'][$payout['payout_id']] ??= [
+                    'id' => $payout['payout_id'], 'date' => $payout['paid_on'], 'memo' => $payout['memo'], 'amount' => '0',
                 ];
-                $payees[$payout->payee_id]['payout_rows'][$payout->payout_id]['amount'] = Decimal::add(
-                    $payees[$payout->payee_id]['payout_rows'][$payout->payout_id]['amount'], $amount,
+                $payees[$payout['payee_id']]['payout_rows'][$payout['payout_id']]['amount'] = Decimal::add(
+                    $payees[$payout['payee_id']]['payout_rows'][$payout['payout_id']]['amount'], $amount,
                 );
             } else {
                 $ledger['previous_payouts'] = Decimal::add($ledger['previous_payouts'], $amount);
@@ -202,7 +245,7 @@ class RoyaltyCalculator
     /**
      * @param  array<string, mixed>  $payee
      * @param  array<string, array<int, string>>  $names
-     * @return array<string, mixed>
+     * @return PayeeSummary
      */
     private function summarise(int $payeeId, array $payee, array $names): array
     {
@@ -335,13 +378,13 @@ class RoyaltyCalculator
      * Income and expenses up to the period end, grouped as far as the
      * statement needs and flagged as before or inside the period.
      *
-     * @return iterable<object>
+     * @return iterable<ActivityRow>
      */
     private function activity(int $labelId, string $start, string $end, bool $withRegion): iterable
     {
         $region = $withRegion ? 't.region' : 'NULL';
 
-        return $this->base($labelId)
+        $rows = $this->base($labelId)
             ->whereIn('t.type', ['income', 'expense'])
             ->where('t.paid_timestamp', '<=', $end)
             ->whereNotNull('t.converted_total')
@@ -352,14 +395,29 @@ class RoyaltyCalculator
             )
             ->groupByRaw('1, 2, 3, 4, 5, 6, 7, 8')
             ->cursor();
+
+        foreach ($rows as $row) {
+            yield [
+                'contract_id' => $row->contract_id,
+                'release_id' => $row->release_id,
+                'track_id' => $row->track_id,
+                'type' => $row->type,
+                'format' => $row->format,
+                'category' => $row->category,
+                'region' => $row->region,
+                'is_prev' => $row->is_prev,
+                'total' => $row->total,
+                'quantity' => $row->quantity,
+            ];
+        }
     }
 
     /**
-     * @return iterable<object>
+     * @return iterable<TransferRow>
      */
     private function transfers(int $labelId, string $end): iterable
     {
-        return $this->base($labelId)
+        $rows = $this->base($labelId)
             ->where('t.type', 'transfer')
             ->whereNotNull('t.payee_id')
             ->whereNotNull('t.converted_total')
@@ -367,16 +425,30 @@ class RoyaltyCalculator
             ->orderBy('t.paid_timestamp')
             ->selectRaw('t.id, t.payee_id, t.ledger_id, t.release_id, t.paid_timestamp, t.converted_total, t.category, t.memo, '.self::RESOLVED_CONTRACT.' as contract_id')
             ->get();
+
+        foreach ($rows as $row) {
+            yield [
+                'id' => $row->id,
+                'payee_id' => $row->payee_id,
+                'ledger_id' => $row->ledger_id,
+                'release_id' => $row->release_id,
+                'paid_timestamp' => $row->paid_timestamp,
+                'converted_total' => $row->converted_total,
+                'category' => $row->category,
+                'memo' => $row->memo,
+                'contract_id' => $row->contract_id,
+            ];
+        }
     }
 
     /**
      * Payouts belong to the period they settle, not the day they were paid.
      *
-     * @return iterable<object>
+     * @return iterable<PayoutRow>
      */
     private function payouts(int $labelId, Period $period): iterable
     {
-        return DB::table('payout_allocations as a')
+        $rows = DB::table('payout_allocations as a')
             ->join('payouts as p', 'p.id', '=', 'a.payout_id')
             ->join('periods as pp', 'pp.id', '=', 'p.period_id')
             ->where('p.label_id', $labelId)
@@ -385,6 +457,18 @@ class RoyaltyCalculator
                 ->orWhere('pp.ends_on', '<', $period->starts_on->toDateString()))
             ->orderBy('p.paid_on')
             ->get(['p.id as payout_id', 'p.payee_id', 'p.period_id', 'p.paid_on', 'p.memo', 'a.ledger_id', 'a.amount']);
+
+        foreach ($rows as $row) {
+            yield [
+                'payout_id' => $row->payout_id,
+                'payee_id' => $row->payee_id,
+                'period_id' => $row->period_id,
+                'paid_on' => $row->paid_on,
+                'memo' => $row->memo,
+                'ledger_id' => $row->ledger_id,
+                'amount' => $row->amount,
+            ];
+        }
     }
 
     /**

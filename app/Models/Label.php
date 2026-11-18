@@ -2,12 +2,29 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Database\Factories\LabelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $slug
+ * @property string $currency
+ * @property string|null $contact_email
+ * @property string|null $logo_path
+ * @property bool $accounts_mechanicals
+ * @property bool $accounts_ppd
+ * @property bool $accounts_reserves
+ * @property array<string, mixed>|null $importer_settings
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ * @property-read Pivot&object{role: string, payee_id: int|null} $pivot Membership of the user when loaded through User::labels().
+ */
 #[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings'])]
 class Label extends Model
 {

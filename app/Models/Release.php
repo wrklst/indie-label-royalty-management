@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToLabel;
+use Carbon\CarbonImmutable;
 use Database\Factories\ReleaseFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,6 +11,26 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int $label_id
+ * @property int|null $artist_id
+ * @property int|null $contract_id
+ * @property string $name
+ * @property string|null $catalog_number
+ * @property string|null $upc
+ * @property string|null $image_path
+ * @property CarbonImmutable|null $released_on
+ * @property string|null $spotify_id
+ * @property string|null $discogs_id
+ * @property bool $accounts_mechanicals
+ * @property string|float|int|null $mechanicals_rate
+ * @property string|float|int|null $ppd_rate
+ * @property string|float|int|null $reserves_rate
+ * @property string|null $notes
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ */
 #[Fillable(['label_id', 'artist_id', 'contract_id', 'name', 'catalog_number', 'upc', 'image_path', 'released_on', 'spotify_id', 'discogs_id', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'reserves_rate', 'notes'])]
 class Release extends Model
 {
@@ -29,6 +50,25 @@ class Release extends Model
                 'name' => '[Additionals]',
                 'catalog_number' => $release->catalog_number,
                 'upc' => $release->upc,
+            ]);
+        });
+
+        static::updated(function (Release $release): void {
+            if ($release->wasChanged(['catalog_number', 'upc'])) {
+                $release->items()->where('is_additionals', true)->update([
+                    'catalog_number' => $release->catalog_number,
+                    'upc' => $release->upc,
+                ]);
+            }
+        });
+
+        // Items that carry transactions stay behind as unassigned items so
+        // their income can be given to another release; empty ones go.
+        static::deleting(function (Release $release): void {
+            $release->items()->doesntHave('transactions')->delete();
+            $release->items()->where('is_additionals', true)->update([
+                'is_additionals' => false,
+                'name' => "[Additionals] {$release->name}",
             ]);
         });
     }

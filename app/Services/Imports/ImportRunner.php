@@ -90,32 +90,6 @@ class ImportRunner
         $total = '0';
         $now = now();
 
-        $flush = function () use (&$buffer, &$stats, &$total, $label, $skipDuplicates): void {
-            if ($buffer === []) {
-                return;
-            }
-
-            if ($skipDuplicates) {
-                $existing = DB::table('transactions')
-                    ->where('label_id', $label->id)
-                    ->whereIn('fingerprint', array_column($buffer, 'fingerprint'))
-                    ->pluck('fingerprint')->flip();
-
-                $stats['duplicates'] += count(array_filter($buffer, fn (array $row): bool => $existing->has($row['fingerprint'])));
-                $buffer = array_values(array_filter($buffer, fn (array $row): bool => ! $existing->has($row['fingerprint'])));
-            }
-
-            foreach ($buffer as $row) {
-                $total = Decimal::add($total, $row['converted_total'] ?? '0');
-                $stats['unconverted'] += $row['converted_total'] === null ? 1 : 0;
-                $stats['unassigned'] += $row['release_id'] === null && $row['type'] !== TransactionType::Transfer->value ? 1 : 0;
-            }
-
-            $stats['transactions'] += count($buffer);
-            DB::table('transactions')->insert($buffer);
-            $buffer = [];
-        };
-
         $seen = [];
 
         // Lines that name their release go first, so lines carrying only an
@@ -218,11 +192,11 @@ class ImportRunner
             ];
 
             if (count($buffer) >= self::CHUNK) {
-                $flush();
+                $this->flush($buffer, $stats, $total, $label, $skipDuplicates);
             }
         }
 
-        $flush();
+        $this->flush($buffer, $stats, $total, $label, $skipDuplicates);
 
         $import->update([
             'status' => ImportStatus::Imported,
@@ -241,6 +215,40 @@ class ImportRunner
                 'unconverted' => $stats['unconverted'],
             ],
         ]);
+    }
+
+    /**
+     * Store the buffered transactions, leaving out lines that were imported
+     * before, and empty the buffer.
+     *
+     * @param  list<array<string, mixed>>  $buffer
+     * @param  array{rows: int, transactions: int, duplicates: int, errors: int, skipped: int, unconverted: int, unassigned: int}  $stats
+     */
+    private function flush(array &$buffer, array &$stats, string &$total, Label $label, bool $skipDuplicates): void
+    {
+        if ($buffer === []) {
+            return;
+        }
+
+        if ($skipDuplicates) {
+            $existing = DB::table('transactions')
+                ->where('label_id', $label->id)
+                ->whereIn('fingerprint', array_column($buffer, 'fingerprint'))
+                ->pluck('fingerprint')->flip();
+
+            $stats['duplicates'] += count(array_filter($buffer, fn (array $row): bool => $existing->has($row['fingerprint'])));
+            $buffer = array_values(array_filter($buffer, fn (array $row): bool => ! $existing->has($row['fingerprint'])));
+        }
+
+        foreach ($buffer as $row) {
+            $total = Decimal::add($total, $row['converted_total'] ?? '0');
+            $stats['unconverted'] += $row['converted_total'] === null ? 1 : 0;
+            $stats['unassigned'] += $row['release_id'] === null && $row['type'] !== TransactionType::Transfer->value ? 1 : 0;
+        }
+
+        $stats['transactions'] += count($buffer);
+        DB::table('transactions')->insert($buffer);
+        $buffer = [];
     }
 
     /**

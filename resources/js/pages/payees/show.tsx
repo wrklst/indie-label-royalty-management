@@ -111,7 +111,7 @@ export default function ShowPayee({
                         url={PayeeController.destroy.url(payee.id)}
                         label="Delete"
                         title={`Delete ${payee.name}?`}
-                        description="The payee is removed from every contract. Payees with payouts or statements cannot be deleted."
+                        description="The payee is removed from every contract. Payees with transfers, payouts or statements cannot be deleted."
                     />
                 </>
             }

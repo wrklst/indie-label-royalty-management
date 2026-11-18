@@ -3,13 +3,24 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToLabel;
+use Carbon\CarbonImmutable;
 use Database\Factories\ContractFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
+/**
+ * @property int $id
+ * @property int $label_id
+ * @property string $name
+ * @property string|null $memo
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ * @property-read Pivot&object{weight: string|float|int} $pivot Link to the related contract when loaded through children() or parents().
+ */
 #[Fillable(['label_id', 'name', 'memo'])]
 class Contract extends Model
 {

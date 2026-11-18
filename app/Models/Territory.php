@@ -3,11 +3,20 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToLabel;
+use Carbon\CarbonImmutable;
 use Database\Factories\TerritoryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property int $label_id
+ * @property string $name
+ * @property list<string> $countries
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ */
 #[Fillable(['label_id', 'name', 'countries'])]
 class Territory extends Model
 {

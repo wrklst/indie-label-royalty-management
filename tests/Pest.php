@@ -1,13 +1,22 @@
 <?php
 
 use App\Enums\LabelRole;
+use App\Models\Artist;
+use App\Models\Contract;
+use App\Models\ContractSplit;
 use App\Models\DataImport;
 use App\Models\Label;
+use App\Models\Payee;
+use App\Models\Period;
+use App\Models\Release;
+use App\Models\Track;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Support\CurrentLabel;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Vite;
 use Tests\TestCase;
 
 /*
@@ -23,7 +32,11 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
-    ->in('Feature');
+    ->in('Feature', 'Browser');
+
+// Browser tests always run against the built assets, never a dev server
+// that happens to be running, so they behave the same locally and in CI.
+pest()->beforeEach(fn () => Vite::useHotFile(storage_path('framework/testing/no-vite-dev-server')))->in('Browser');
 
 /*
 |--------------------------------------------------------------------------
@@ -140,4 +153,31 @@ function xlsxFile(array $rows): string
     $zip->close();
 
     return $path;
+}
+
+/**
+ * A label with one release under a 50% contract, income paid in 2026 Q1
+ * and a period covering it: enough for every page to show real figures.
+ *
+ * @return array{label: Label, admin: User, payee: Payee, contract: Contract, release: Release, track: Track, period: Period}
+ */
+function royaltyScenario(): array
+{
+    $label = Label::factory()->create(['name' => 'Example Records']);
+    $admin = labelAdmin($label);
+    $payee = Payee::factory()->create(['label_id' => $label->id, 'name' => 'Example Payee']);
+    $contract = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Deal']);
+    ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $payee->id, 'split_amount' => '0.5']);
+    $artist = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
+    $release = Release::factory()->create(['label_id' => $label->id, 'artist_id' => $artist->id, 'contract_id' => $contract->id, 'name' => 'Example Release', 'catalog_number' => 'EX001']);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'artist_id' => $artist->id, 'name' => 'Example Track', 'isrc' => 'ZZTST2600001']);
+    $import = DataImport::factory()->create(['label_id' => $label->id, 'name' => 'Example statement', 'transactions_count' => 1, 'rows_count' => 1, 'total' => '100']);
+    Transaction::factory()->create([
+        'label_id' => $label->id, 'release_id' => $release->id, 'track_id' => $track->id, 'data_import_id' => $import->id,
+        'total' => '100', 'retailer' => 'Example Store', 'format' => 'Streaming/Other', 'region' => 'DE', 'quantity' => 250,
+        'timestamp' => '2026-01-31', 'paid_timestamp' => '2026-02-15',
+    ]);
+    $period = Period::factory()->create(['label_id' => $label->id, 'name' => '2026 Q1']);
+
+    return compact('label', 'admin', 'payee', 'contract', 'release', 'track', 'period');
 }

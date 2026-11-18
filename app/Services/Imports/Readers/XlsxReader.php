@@ -103,10 +103,11 @@ class XlsxReader extends TabularReader
             return [];
         }
 
-        $row = array_fill(0, max(array_keys($cells)) + 1, '');
+        $row = [];
+        $lastColumn = max(array_keys($cells));
 
-        foreach ($cells as $column => $value) {
-            $row[$column] = $value;
+        for ($column = 0; $column <= $lastColumn; $column++) {
+            $row[] = $cells[$column] ?? '';
         }
 
         return $row;

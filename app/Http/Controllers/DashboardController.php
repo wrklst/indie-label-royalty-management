@@ -7,7 +7,9 @@ use App\Models\Item;
 use App\Models\Release;
 use App\Models\Transaction;
 use App\Support\Decimal;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -29,11 +31,6 @@ class DashboardController extends Controller
 
         $byType = $range()->selectRaw('type, SUM(converted_total) as total, COUNT(*) as transactions')->groupBy('type')->get()->keyBy('type');
 
-        $breakdown = fn (string $column, int $limit = 12) => $income()
-            ->selectRaw("{$column} as label, SUM(converted_total) as total, SUM(quantity) as quantity")
-            ->groupBy($column)->orderByDesc('total')->limit($limit)->get()
-            ->map(fn ($row): array => ['label' => $row->label, 'total' => Decimal::parse($row->total) ?? '0', 'quantity' => Decimal::parse($row->quantity) ?? '0']);
-
         return Inertia::render('dashboard', [
             'filters' => ['from' => $from->toDateString(), 'to' => $to->toDateString(), 'date' => $dateColumn === 'paid_timestamp' ? 'paid' : 'sold'],
             'totals' => [
@@ -43,9 +40,9 @@ class DashboardController extends Controller
             ],
             'months' => $income()->selectRaw("{$month} as label, SUM(converted_total) as total")->groupByRaw('1')->orderByRaw('1')->get()
                 ->map(fn ($row): array => ['label' => $row->label, 'total' => Decimal::parse($row->total) ?? '0']),
-            'retailers' => $breakdown('retailer'),
-            'formats' => $breakdown('format'),
-            'regions' => $breakdown('region', 15),
+            'retailers' => $this->breakdown($income(), 'retailer'),
+            'formats' => $this->breakdown($income(), 'format'),
+            'regions' => $this->breakdown($income(), 'region', 15),
             'releases' => $income()->join('releases', 'releases.id', '=', 'transactions.release_id')
                 ->selectRaw('releases.id, releases.name as label, SUM(transactions.converted_total) as total, SUM(transactions.quantity) as quantity')
                 ->groupBy('releases.id', 'releases.name')->orderByDesc('total')->limit(12)->get()
@@ -58,5 +55,19 @@ class DashboardController extends Controller
             ],
             'hasData' => Transaction::query()->exists(),
         ]);
+    }
+
+    /**
+     * Income totals grouped by one transaction column, largest first.
+     *
+     * @param  literal-string  $column
+     * @return Collection<int, array{label: mixed, total: string, quantity: string}>
+     */
+    private function breakdown(Builder $income, string $column, int $limit = 12): Collection
+    {
+        return $income
+            ->selectRaw("{$column} as label, SUM(converted_total) as total, SUM(quantity) as quantity")
+            ->groupBy($column)->orderByDesc('total')->limit($limit)->get()
+            ->map(fn ($row): array => ['label' => $row->label, 'total' => Decimal::parse($row->total) ?? '0', 'quantity' => Decimal::parse($row->quantity) ?? '0']);
     }
 }

@@ -145,7 +145,7 @@ class TransactionController extends Controller
         $label = $currentLabel->get();
 
         if (! empty($attributes['track_id'])) {
-            $attributes['release_id'] = Track::query()->findOrFail($attributes['track_id'])->release_id;
+            $attributes['release_id'] = Track::query()->whereKey($attributes['track_id'])->firstOrFail()->release_id;
         }
 
         $attributes['item_id'] = empty($attributes['release_id']) ? null : Item::query()

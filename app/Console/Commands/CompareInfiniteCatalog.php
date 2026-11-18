@@ -37,7 +37,7 @@ class CompareInfiniteCatalog extends Command
         }
 
         $currentLabel->set($label);
-        $summaries = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
+        $summaries = $this->summaries($path);
         $payouts = Payout::query()->with('period:id,ends_on')->get();
 
         foreach (collect($summaries)->sortBy('period.start') as $theirs) {
@@ -94,6 +94,16 @@ class CompareInfiniteCatalog extends Command
         }
 
         return collect($this->results)->sum('differing') === 0 ? self::SUCCESS : self::FAILURE;
+    }
+
+    /**
+     * The period summaries exported from Infinite Catalog.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function summaries(string $path): array
+    {
+        return json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
     }
 
     /**

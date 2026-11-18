@@ -58,28 +58,41 @@ class ItemController extends Controller
      */
     public function update(ItemRequest $request, Item $item): RedirectResponse
     {
+        abort_if($item->is_additionals, 403, 'The [Additionals] item belongs to its release and cannot be reassigned.');
+
         $attributes = $request->validated();
 
         if (! empty($attributes['track_id'])) {
-            $attributes['release_id'] = Track::query()->findOrFail($attributes['track_id'])->release_id;
+            $attributes['release_id'] = Track::query()->whereKey($attributes['track_id'])->firstOrFail()->release_id;
+        } elseif (array_key_exists('release_id', $attributes) && $attributes['release_id'] !== $item->release_id) {
+            // A track belongs to one release, so it cannot follow the item to another.
+            $attributes['track_id'] = null;
         }
 
-        DB::transaction(function () use ($item, $attributes): void {
+        $moved = DB::transaction(function () use ($item, $attributes): int {
             $item->update($attributes);
 
-            Transaction::query()->where('item_id', $item->id)->update([
+            if (! $item->wasChanged(['release_id', 'track_id'])) {
+                return 0;
+            }
+
+            return Transaction::query()->where('item_id', $item->id)->update([
                 'release_id' => $item->release_id,
                 'track_id' => $item->track_id,
             ]);
         });
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Item saved and :count transactions updated.', ['count' => $item->transactions()->count()])]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $moved > 0
+            ? __('Item saved and :count transactions moved with it.', ['count' => $moved])
+            : __('Item saved.')]);
 
         return back();
     }
 
     public function destroy(Item $item): RedirectResponse
     {
+        abort_if($item->is_additionals, 403, 'The [Additionals] item belongs to its release and cannot be deleted.');
+
         if ($item->transactions()->exists()) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('This item has transactions. Delete or reassign them first.')]);
 

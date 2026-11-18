@@ -30,6 +30,11 @@ class CsvReader extends TabularReader
         $this->delimiter = $this->detectDelimiter($contents);
 
         $stream = fopen('php://temp', 'r+');
+
+        if ($stream === false) {
+            throw new ImportException('The file could not be read.');
+        }
+
         fwrite($stream, $contents);
         $this->stream = $stream;
     }

@@ -95,8 +95,10 @@ class PayeeController extends Controller
 
     public function destroy(Payee $payee): RedirectResponse
     {
-        if ($payee->payouts()->exists() || $payee->statements()->exists()) {
-            Inertia::flash('toast', ['type' => 'error', 'message' => __('This payee has payouts or statements and cannot be deleted.')]);
+        $hasTransfers = Transaction::query()->where('payee_id', $payee->id)->exists();
+
+        if ($hasTransfers || $payee->payouts()->exists() || $payee->statements()->exists()) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('This payee has transfers, payouts or statements and cannot be deleted.')]);
 
             return back();
         }

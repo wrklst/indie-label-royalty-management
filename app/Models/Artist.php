@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToLabel;
+use Carbon\CarbonImmutable;
 use Database\Factories\ArtistFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,6 +11,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int $label_id
+ * @property int|null $alias_of_id
+ * @property string $name
+ * @property string|null $image_path
+ * @property string|null $spotify_id
+ * @property string|null $discogs_search_name
+ * @property string|null $notes
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ */
 #[Fillable(['label_id', 'alias_of_id', 'name', 'image_path', 'spotify_id', 'discogs_search_name', 'notes'])]
 class Artist extends Model
 {

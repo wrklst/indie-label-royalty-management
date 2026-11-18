@@ -109,7 +109,9 @@ class ContractController extends Controller
 
     private function sync(Contract $contract, ContractRequest $request): void
     {
-        $contract->splits()->delete();
+        if ($request->has('splits')) {
+            $contract->splits()->delete();
+        }
 
         foreach ($request->validated('splits', []) as $split) {
             $contract->splits()->create([
@@ -120,9 +122,17 @@ class ContractController extends Controller
             ]);
         }
 
-        $contract->children()->sync(collect($request->validated('children', []))
-            ->mapWithKeys(fn (array $child): array => [$child['contract_id'] => ['weight' => $child['weight']]])
-            ->all());
+        if (! $request->has('children')) {
+            return;
+        }
+
+        $children = [];
+
+        foreach ($request->validated('children', []) as $child) {
+            $children[$child['contract_id']] = ['weight' => $child['weight']];
+        }
+
+        $contract->children()->sync($children);
     }
 
     /**

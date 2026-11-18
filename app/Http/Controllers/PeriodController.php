@@ -134,7 +134,7 @@ class PeriodController extends Controller
     {
         $payouts->record(
             $period,
-            Payee::query()->findOrFail($request->validated('payee_id')),
+            Payee::query()->whereKey($request->validated('payee_id'))->firstOrFail(),
             (string) $request->validated('total'),
             $request->validated('paid_on'),
             $request->validated('memo'),

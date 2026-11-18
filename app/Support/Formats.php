@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Facades\Config;
+
 /**
  * Lookup helpers for the configured transaction formats.
  */
@@ -12,7 +14,7 @@ class Formats
      */
     public static function all(): array
     {
-        return array_merge(...array_values(config('royalties.formats')));
+        return array_merge(...array_values(self::groups()));
     }
 
     /**
@@ -42,12 +44,22 @@ class Formats
             return null;
         }
 
-        foreach (config('royalties.formats') as $group => $formats) {
+        foreach (self::groups() as $group => $formats) {
             if (in_array($format, $formats, true)) {
                 return $group;
             }
         }
 
         return null;
+    }
+
+    /**
+     * The configured formats, keyed by the group they belong to.
+     *
+     * @return array<string, list<string>>
+     */
+    private static function groups(): array
+    {
+        return Config::array('royalties.formats');
     }
 }
