@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LabelSettingsRequest;
 use App\Http\Requests\TerritoryRequest;
 use App\Models\Territory;
+use App\Models\Transaction;
 use App\Support\CurrentLabel;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -29,12 +31,20 @@ class LabelSettingsController extends Controller
 
     public function update(LabelSettingsRequest $request, CurrentLabel $currentLabel): RedirectResponse
     {
-        $currentLabel->get()->update([
+        $label = $currentLabel->get();
+
+        if ($request->validated('currency') !== $label->currency && Transaction::query()->exists()) {
+            throw ValidationException::withMessages([
+                'currency' => "The label already has transactions in {$label->currency}. Changing the accounting currency would not convert them.",
+            ]);
+        }
+
+        $label->update([
             ...$request->safe()->only(['name', 'currency', 'contact_email', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves']),
-            'importer_settings' => ['bandcamp' => [
+            'importer_settings' => array_replace_recursive($label->importer_settings ?? [], ['bandcamp' => [
                 'disable_fee' => $request->boolean('bandcamp_disable_fee'),
                 'exclude_physical' => $request->boolean('bandcamp_exclude_physical'),
-            ]],
+            ]]),
         ]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Label settings saved.')]);

@@ -11,10 +11,16 @@ class TerritoryRequest extends LabelFormRequest
      */
     protected function prepareForValidation(): void
     {
-        if (is_string($this->input('countries'))) {
+        $countries = $this->input('countries');
+
+        if (is_string($countries)) {
+            $countries = preg_split('/[\s,;]+/', $countries) ?: [];
+        }
+
+        if (is_array($countries)) {
             $this->merge(['countries' => array_values(array_unique(array_filter(array_map(
-                fn (string $code): string => strtoupper(trim($code)),
-                preg_split('/[\s,;]+/', $this->input('countries')) ?: [],
+                fn (mixed $code): mixed => is_string($code) ? strtoupper(trim($code)) : $code,
+                $countries,
             ))))]);
         }
     }
@@ -29,7 +35,17 @@ class TerritoryRequest extends LabelFormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'countries' => ['required', 'array', 'min:1'],
-            'countries.*' => ['string', 'size:2', 'alpha'],
+            'countries.*' => ['string', 'size:2', 'alpha:ascii'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'countries.*' => '":input" is not a two-letter country code such as DE.',
         ];
     }
 }

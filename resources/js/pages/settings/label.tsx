@@ -225,7 +225,10 @@ export default function LabelSettings({ settings, territories }: Props) {
                                 label="Countries"
                                 htmlFor="countries"
                                 error={
-                                    errors.countries ?? errors['countries.0']
+                                    errors.countries ??
+                                    Object.entries(errors).find(([key]) =>
+                                        key.startsWith('countries.'),
+                                    )?.[1]
                                 }
                                 required
                                 hint="Two-letter country codes separated by spaces or commas."

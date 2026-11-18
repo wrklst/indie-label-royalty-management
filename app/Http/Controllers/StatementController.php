@@ -6,6 +6,7 @@ use App\Models\Statement;
 use App\Support\Decimal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
@@ -52,7 +53,21 @@ class StatementController extends Controller
      */
     public function publish(Statement $statement): RedirectResponse
     {
-        $statement->update(['published_at' => $statement->published_at ? null : now()]);
+        abort_if($statement->archived, 422, 'An archived revision cannot be published.');
+
+        DB::transaction(function () use ($statement): void {
+            $statement->update(['published_at' => $statement->published_at ? null : now()]);
+
+            // The payee sees one statement per period: publishing a revision retires the ones before it.
+            if ($statement->published_at !== null) {
+                Statement::query()
+                    ->where('period_id', $statement->period_id)
+                    ->where('payee_id', $statement->payee_id)
+                    ->whereKeyNot($statement->id)
+                    ->where('archived', false)
+                    ->update(['archived' => true]);
+            }
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $statement->published_at ? __('Statement published to the payee.') : __('Statement unpublished.')]);
 
@@ -88,7 +103,9 @@ class StatementController extends Controller
                 throw new RuntimeException('The download stream could not be opened.');
             }
 
-            $put = fn (array $row) => fputcsv($stream, $row, ',', '"', '');
+            // Text starting with =, +, - or @ would run as a formula in a spreadsheet.
+            $safe = fn (mixed $cell): mixed => is_string($cell) && ! is_numeric($cell) && preg_match('/^[=+\-@\t\r]/', $cell) ? "'".$cell : $cell;
+            $put = fn (array $row) => fputcsv($stream, array_map($safe, $row), ',', '"', '');
 
             $put(['Statement', $data['payee_name'] ?? '']);
             $put(['Period', $data['period']['name'] ?? '', $data['period']['starts_on'] ?? '', $data['period']['ends_on'] ?? '']);

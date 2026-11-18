@@ -42,7 +42,7 @@ class TeamController extends Controller
     {
         $label = $currentLabel->get();
         $email = Str::lower($request->validated('email'));
-        $user = User::query()->where('email', $email)->first();
+        $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
 
         if ($user && $label->users()->whereKey($user->id)->exists()) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('This person already has access to the label.')]);
@@ -88,6 +88,8 @@ class TeamController extends Controller
 
     public function destroy(User $user, CurrentLabel $currentLabel): RedirectResponse
     {
+        abort_unless($currentLabel->get()->users()->whereKey($user->id)->exists(), 404);
+
         if ($this->isLastAdmin($user, $currentLabel)) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('A label needs at least one admin.')]);
 

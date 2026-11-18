@@ -26,11 +26,16 @@ class LabelController extends Controller
             'currency' => ['required', 'string', 'size:3', 'alpha'],
         ]);
 
-        $slug = Str::slug($validated['name']) ?: 'label';
+        $base = Str::slug($validated['name']) ?: 'label';
+        $slug = $base;
+
+        while (Label::query()->where('slug', $slug)->exists()) {
+            $slug = $base.'-'.Str::lower(Str::random(5));
+        }
 
         $label = Label::query()->create([
             'name' => $validated['name'],
-            'slug' => Label::query()->where('slug', $slug)->exists() ? $slug.'-'.Str::lower(Str::random(5)) : $slug,
+            'slug' => $slug,
             'currency' => strtoupper($validated['currency']),
             'contact_email' => $request->user()->email,
         ]);

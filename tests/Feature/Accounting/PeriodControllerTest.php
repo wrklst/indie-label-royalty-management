@@ -50,7 +50,7 @@ test('the period list shows the newest period first with its payouts and current
             ->where('periods.0.closed', true)
             ->where('periods.0.payouts_count', 0)
             ->where('periods.0.statements_count', 0)
-            ->where('periods.0.paid', '0')
+            ->where('periods.0.paid', '0.000000000000000')
             ->where('periods.1.id', $first->id)
             ->where('periods.1.starts_on', '2026-01-01')
             ->where('periods.1.ends_on', '2026-03-31')
@@ -235,7 +235,7 @@ test('a period with payouts cannot be deleted', function () {
         ->from(route('periods.show', $period))
         ->delete(route('periods.destroy', $period))
         ->assertRedirect(route('periods.show', $period))
-        ->assertInertiaFlash('toast', ['type' => 'error', 'message' => 'This period has payouts and cannot be deleted.']);
+        ->assertInertiaFlash('toast', ['type' => 'error', 'message' => 'This period has payouts or published statements and cannot be deleted.']);
 
     $this->assertModelExists($period);
     $this->assertModelExists($payout);
@@ -360,7 +360,7 @@ test('no statement is generated for a payee without activity or of another label
     'payee of another label' => [false],
 ]);
 
-test('generating a statement again keeps the revision published', function () {
+test('a revision of a published statement is a draft and the published one stays with the payee until then', function () {
     $label = Label::factory()->create();
     $period = Period::factory()->create(['label_id' => $label->id]);
     $payee = payeeEarningHalf($label, 'Example Artist', '100');
@@ -370,8 +370,42 @@ test('generating a statement again keeps the revision published', function () {
         ->post(route('periods.statements', $period), ['payee_id' => $payee->id])
         ->assertRedirect();
 
+    $this->assertDatabaseHas('statements', ['id' => $published->id, 'archived' => false, 'published_at' => '2026-04-05 10:00:00']);
+    $this->assertDatabaseHas('statements', ['revision_of_id' => $published->id, 'archived' => false, 'published_at' => null, 'payable' => 50]);
+
+    $revision = Statement::query()->withoutGlobalScopes()->where('revision_of_id', $published->id)->sole();
+    $this->post(route('statements.publish', $revision->id))->assertRedirect();
+
     $this->assertDatabaseHas('statements', ['id' => $published->id, 'archived' => true]);
-    $this->assertDatabaseHas('statements', ['revision_of_id' => $published->id, 'archived' => false, 'published_at' => '2026-04-05 10:00:00', 'payable' => 50]);
+    expect($revision->refresh()->published_at)->not->toBeNull();
+});
+
+test('the next period is suggested without overlapping the latest one', function (string $today, ?array $latest, array $expected) {
+    $label = Label::factory()->create();
+
+    if ($latest !== null) {
+        Period::factory()->create(['label_id' => $label->id, 'starts_on' => $latest[0], 'ends_on' => $latest[1]]);
+    }
+
+    $this->travelTo($today);
+
+    $this->actingAs(labelAdmin($label))->get(route('periods.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('suggestion', $expected));
+})->with([
+    'the last full quarter on the last day of a year' => ['2026-12-31', null, ['name' => '2026 Q3', 'starts_on' => '2026-07-01', 'ends_on' => '2026-09-30']],
+    'the rest of the quarter after a period ending mid-quarter' => ['2026-08-01', ['2026-04-01', '2026-05-15'], ['name' => '2026 Q2', 'starts_on' => '2026-05-16', 'ends_on' => '2026-06-30']],
+    'the following quarter after a full quarter' => ['2026-08-01', ['2026-01-01', '2026-03-31'], ['name' => '2026 Q2', 'starts_on' => '2026-04-01', 'ends_on' => '2026-06-30']],
+]);
+
+test('a period with a published statement cannot be deleted', function () {
+    $label = Label::factory()->create();
+    $period = Period::factory()->create(['label_id' => $label->id]);
+    Statement::factory()->create(['label_id' => $label->id, 'period_id' => $period->id, 'published_at' => now()]);
+
+    $this->actingAs(labelAdmin($label))->delete(route('periods.destroy', $period->id));
+
+    $this->assertDatabaseHas('periods', ['id' => $period->id]);
+    $this->assertDatabaseCount('statements', 1);
 });
 
 test('a payee cannot create periods or generate statements', function () {

@@ -10,6 +10,7 @@ use App\Models\Statement;
 use App\Services\Royalties\PayoutService;
 use App\Services\Royalties\RoyaltyCalculator;
 use App\Services\Royalties\StatementGenerator;
+use App\Support\Decimal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -30,7 +31,7 @@ class PeriodController extends Controller
                     ...$period->only(['id', 'name', 'payouts_count', 'statements_count']),
                     'starts_on' => $period->starts_on->toDateString(),
                     'ends_on' => $period->ends_on->toDateString(),
-                    'paid' => (string) ($period->paid ?? '0'),
+                    'paid' => Decimal::parse($period->getAttribute('paid')) ?? Decimal::add('0', '0'),
                     'closed' => $period->closed_at !== null,
                 ]),
             'suggestion' => $this->suggestion(),
@@ -85,8 +86,8 @@ class PeriodController extends Controller
 
     public function destroy(Period $period): RedirectResponse
     {
-        if ($period->payouts()->exists()) {
-            Inertia::flash('toast', ['type' => 'error', 'message' => __('This period has payouts and cannot be deleted.')]);
+        if ($period->payouts()->exists() || $period->statements()->whereNotNull('published_at')->exists()) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('This period has payouts or published statements and cannot be deleted.')]);
 
             return back();
         }
@@ -162,14 +163,15 @@ class PeriodController extends Controller
     }
 
     /**
-     * Propose the quarter after the latest period, or the last full quarter.
+     * Propose the time after the latest period up to the end of that
+     * quarter, or the last full quarter when there is no period yet.
      *
      * @return array{name: string, starts_on: string, ends_on: string}
      */
     private function suggestion(): array
     {
         $latest = Period::query()->orderByDesc('ends_on')->first();
-        $start = $latest ? $latest->ends_on->addDay()->startOfQuarter() : now()->subQuarter()->startOfQuarter();
+        $start = $latest ? $latest->ends_on->addDay() : now()->startOfQuarter()->subDay()->startOfQuarter();
 
         return [
             'name' => $start->year.' Q'.$start->quarter,

@@ -8,6 +8,7 @@ use App\Models\DataImport;
 use App\Models\Item;
 use App\Models\Track;
 use App\Models\Transaction;
+use App\Services\Imports\Identifiers;
 use App\Support\CurrentLabel;
 use App\Support\Decimal;
 use App\Support\Formats;
@@ -22,6 +23,15 @@ class TransactionController extends Controller
 {
     public function index(Request $request): Response
     {
+        $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'type' => ['nullable', 'string'],
+            'retailer' => ['nullable', 'string', 'max:255'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+            'date' => ['nullable', 'string'],
+        ]);
+
         $query = $this->filtered($request);
 
         $summary = (clone $query)->toBase()
@@ -61,7 +71,7 @@ class TransactionController extends Controller
     {
         return Inertia::render('transactions/form', [
             'transaction' => null,
-            'defaults' => ['type' => $request->string('type', 'income')->value(), 'release_id' => $request->integer('release') ?: null, 'payee_id' => $request->integer('payee') ?: null],
+            'defaults' => ['type' => (TransactionType::tryFrom((string) $request->query('type')) ?? TransactionType::Income)->value, 'release_id' => $request->integer('release') ?: null, 'payee_id' => $request->integer('payee') ?: null],
             ...$this->options(),
         ]);
     }
@@ -95,7 +105,7 @@ class TransactionController extends Controller
 
     public function update(TransactionRequest $request, Transaction $transaction, CurrentLabel $currentLabel): RedirectResponse
     {
-        $transaction->update($this->attributes($request, $currentLabel));
+        $transaction->update($this->attributes($request, $currentLabel, $transaction));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Transaction saved.')]);
 
@@ -127,19 +137,25 @@ class TransactionController extends Controller
             ->when($request->date('to'), fn ($query, $to) => $query->where($dateColumn, '<=', $to->toDateString()))
             ->when($request->boolean('unassigned'), fn ($query) => $query->whereNull('release_id')->where('type', '<>', 'transfer'))
             ->when($request->boolean('unconverted'), fn ($query) => $query->whereNull('converted_total'))
-            ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
-                ->where('memo', 'like', "%{$search}%")
-                ->orWhere('retailer', 'like', "%{$search}%")
-                ->orWhere('category', 'like', "%{$search}%")
-                ->orWhere('external_id', $search)
-                ->orWhereHas('track', fn ($query) => $query->where('name', 'like', "%{$search}%")->orWhere('isrc', $search))
-                ->orWhereHas('release', fn ($query) => $query->where('name', 'like', "%{$search}%")->orWhere('catalog_number', 'like', "%{$search}%"))));
+            ->when($request->string('search')->trim()->value(), function ($query, string $search) {
+                // Typed text is matched literally: % and _ are not wildcards.
+                $like = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%';
+                $isrc = Identifiers::isrc($search);
+
+                return $query->where(fn ($query) => $query
+                    ->whereRaw("memo LIKE ? ESCAPE '!'", [$like])
+                    ->orWhereRaw("retailer LIKE ? ESCAPE '!'", [$like])
+                    ->orWhereRaw("category LIKE ? ESCAPE '!'", [$like])
+                    ->orWhere('external_id', $search)
+                    ->orWhereHas('track', fn ($query) => $query->whereRaw("name LIKE ? ESCAPE '!'", [$like])->when($isrc, fn ($query) => $query->orWhere('isrc', $isrc)))
+                    ->orWhereHas('release', fn ($query) => $query->where(fn ($query) => $query->whereRaw("name LIKE ? ESCAPE '!'", [$like])->orWhereRaw("catalog_number LIKE ? ESCAPE '!'", [$like]))));
+            });
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function attributes(TransactionRequest $request, CurrentLabel $currentLabel): array
+    private function attributes(TransactionRequest $request, CurrentLabel $currentLabel, ?Transaction $transaction = null): array
     {
         $attributes = $request->validated();
         $label = $currentLabel->get();
@@ -148,21 +164,34 @@ class TransactionController extends Controller
             $attributes['release_id'] = Track::query()->whereKey($attributes['track_id'])->firstOrFail()->release_id;
         }
 
-        $attributes['item_id'] = empty($attributes['release_id']) ? null : Item::query()
-            ->where('release_id', $attributes['release_id'])
-            ->where('is_additionals', true)
-            ->value('id');
+        // An imported transaction keeps the item it was booked on; a new one,
+        // or one moved to another release or track, goes on "[Additionals]".
+        $releaseId = $attributes['release_id'] ?? null;
+        $trackId = $attributes['track_id'] ?? null;
+
+        if ($transaction === null || $transaction->release_id !== $releaseId || $transaction->track_id !== $trackId) {
+            $attributes['item_id'] = $releaseId === null ? null : Item::query()
+                ->where('release_id', $releaseId)
+                ->where('is_additionals', true)
+                ->value('id');
+        }
 
         $rate = $attributes['currency'] === $label->currency ? '1' : Decimal::parse($attributes['conversion_rate'] ?? null);
         $total = Decimal::parse($attributes['total']);
+
+        if (array_key_exists('format', $attributes)) {
+            $attributes['format'] = Formats::canonical($attributes['format']);
+        }
+
+        if (isset($attributes['region'])) {
+            $attributes['region'] = strtoupper($attributes['region']);
+        }
 
         return [
             ...$attributes,
             'total' => $total,
             'conversion_rate' => $rate,
             'converted_total' => $rate === null ? null : Decimal::mul($total, $rate),
-            'format' => Formats::canonical($attributes['format'] ?? null),
-            'region' => isset($attributes['region']) ? strtoupper($attributes['region']) : null,
         ];
     }
 

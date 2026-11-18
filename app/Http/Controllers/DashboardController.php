@@ -18,6 +18,8 @@ class DashboardController extends Controller
 {
     public function __invoke(Request $request): Response
     {
+        $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
+
         $dateColumn = $request->input('date') === 'paid' ? 'paid_timestamp' : 'timestamp';
         $to = $request->date('to') ?? now()->endOfMonth();
         $from = $request->date('from') ?? $to->subMonths(11)->startOfMonth();

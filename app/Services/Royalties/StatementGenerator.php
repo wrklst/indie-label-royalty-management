@@ -16,8 +16,10 @@ class StatementGenerator
      * Freeze the current figures of a period into one statement per payee.
      *
      * A statement is a snapshot: later corrections never change it. When a
-     * payee already has a statement for the period, the old one is archived
-     * and the new one is stored as its revision.
+     * payee already has a statement for the period, the new one is stored
+     * as its revision and always starts as a draft. A draft it replaces is
+     * archived; a published one stays visible to the payee until the
+     * revision is published.
      *
      * @param  list<int>|null  $payeeIds  Limit to these payees, or null for everyone with activity.
      * @return Collection<int, Statement>
@@ -45,7 +47,11 @@ class StatementGenerator
                     ->latest('id')
                     ->first();
 
-                $previous?->update(['archived' => true]);
+                // A draft is replaced outright. A published statement stays
+                // with the payee until its revision has been reviewed and published.
+                if ($previous?->published_at === null) {
+                    $previous?->update(['archived' => true]);
+                }
 
                 $statements->push(Statement::query()->create([
                     'label_id' => $period->label_id,
@@ -53,7 +59,6 @@ class StatementGenerator
                     'period_id' => $period->id,
                     'revision_of_id' => $previous?->id,
                     'name' => "{$payee['payee_name']} – {$period->name}",
-                    'published_at' => $previous?->published_at,
                     'balance' => $payee['totals']['balance'],
                     'payable' => $payee['totals']['outstanding'],
                     'data' => [
