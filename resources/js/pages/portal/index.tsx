@@ -1,15 +1,16 @@
 import { Link, setLayoutProps } from '@inertiajs/react';
 import { Amount } from '@/components/amount';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import {
     Table,
     TableBody,
     TableCell,
-    TableHead,
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTableSort } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
 import { index, show } from '@/routes/portal';
 
@@ -49,7 +50,30 @@ type Props = {
     statements: Statement[];
 };
 
+const LEDGER_COLUMNS = {
+    name: (row: Overview['ledgers'][number]) => row.name,
+    balance: (row: Overview['ledgers'][number]) => row.balance,
+};
+
+const PAYOUT_COLUMNS = {
+    paid_on: (row: Payout) => row.paid_on,
+    period: (row: Payout) => row.period,
+    memo: (row: Payout) => row.memo,
+    total: (row: Payout) => row.total,
+};
+
+const STATEMENT_COLUMNS = {
+    period: (row: Statement) => row.period ?? row.name,
+    published_at: (row: Statement) => row.published_at,
+    balance: (row: Statement) => row.balance,
+    payable: (row: Statement) => row.payable,
+};
+
 function OverviewSection({ overview }: { overview: Overview }) {
+    const { rows: ledgerRows, sorter } = useTableSort(
+        overview.ledgers,
+        LEDGER_COLUMNS,
+    );
     const currency = overview.currency ?? undefined;
 
     return (
@@ -103,14 +127,21 @@ function OverviewSection({ overview }: { overview: Overview }) {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Ledger</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead column="name" sorter={sorter}>
+                                    Ledger
+                                </SortableHead>
+                                <SortableHead
+                                    column="balance"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Balance
-                                </TableHead>
+                                </SortableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {overview.ledgers.map((ledger, index) => (
+                            {ledgerRows.map((ledger, index) => (
                                 <TableRow key={`${index}-${ledger.name}`}>
                                     <TableCell>
                                         <span className="flex items-center gap-2">
@@ -139,6 +170,8 @@ function OverviewSection({ overview }: { overview: Overview }) {
 }
 
 function PayoutsSection({ payouts }: { payouts: Payout[] }) {
+    const { rows, sorter } = useTableSort(payouts, PAYOUT_COLUMNS);
+
     return (
         <Panel
             flush={payouts.length > 0}
@@ -153,14 +186,31 @@ function PayoutsSection({ payouts }: { payouts: Payout[] }) {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Paid on</TableHead>
-                            <TableHead>For period</TableHead>
-                            <TableHead>Memo</TableHead>
-                            <TableHead className="text-right">Amount</TableHead>
+                            <SortableHead
+                                column="paid_on"
+                                sorter={sorter}
+                                first="desc"
+                            >
+                                Paid on
+                            </SortableHead>
+                            <SortableHead column="period" sorter={sorter}>
+                                For period
+                            </SortableHead>
+                            <SortableHead column="memo" sorter={sorter}>
+                                Memo
+                            </SortableHead>
+                            <SortableHead
+                                column="total"
+                                sorter={sorter}
+                                first="desc"
+                                className="text-right"
+                            >
+                                Amount
+                            </SortableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {payouts.map((payout) => (
+                        {rows.map((payout) => (
                             <TableRow key={payout.id}>
                                 <TableCell>{date(payout.paid_on)}</TableCell>
                                 <TableCell className="text-muted-foreground">
@@ -182,18 +232,42 @@ function PayoutsSection({ payouts }: { payouts: Payout[] }) {
 }
 
 function StatementsTable({ statements }: { statements: Statement[] }) {
+    const { rows, sorter } = useTableSort(statements, STATEMENT_COLUMNS);
+
     return (
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead>Period</TableHead>
-                    <TableHead>Published</TableHead>
-                    <TableHead className="text-right">Balance</TableHead>
-                    <TableHead className="text-right">Payable</TableHead>
+                    <SortableHead column="period" sorter={sorter}>
+                        Period
+                    </SortableHead>
+                    <SortableHead
+                        column="published_at"
+                        sorter={sorter}
+                        first="desc"
+                    >
+                        Published
+                    </SortableHead>
+                    <SortableHead
+                        column="balance"
+                        sorter={sorter}
+                        first="desc"
+                        className="text-right"
+                    >
+                        Balance
+                    </SortableHead>
+                    <SortableHead
+                        column="payable"
+                        sorter={sorter}
+                        first="desc"
+                        className="text-right"
+                    >
+                        Payable
+                    </SortableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {statements.map((statement) => (
+                {rows.map((statement) => (
                     <TableRow key={statement.id}>
                         <TableCell>
                             <Link

@@ -4,6 +4,7 @@ import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -13,6 +14,9 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
 import { show as showPayee } from '@/routes/payees';
 import { index } from '@/routes/payouts';
@@ -32,7 +36,16 @@ type Payout = {
     ledgers: { name: string; amount: string }[];
 };
 
-export default function Payouts({ payouts }: { payouts: Paginated<Payout> }) {
+export default function Payouts({
+    payouts,
+    filters,
+}: {
+    payouts: Paginated<Payout>;
+    filters: { sort: string | null; direction: SortDirection | null };
+}) {
+    const { apply } = useFilters(index.url(), filters);
+    const sorter = serverSorter(filters, apply);
+
     return (
         <Page
             title="Payouts"
@@ -53,15 +66,34 @@ export default function Payouts({ payouts }: { payouts: Paginated<Payout> }) {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Paid on</TableHead>
-                                <TableHead>Payee</TableHead>
-                                <TableHead>Period</TableHead>
+                                <SortableHead
+                                    column="paid_on"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Paid on
+                                </SortableHead>
+                                <SortableHead column="payee" sorter={sorter}>
+                                    Payee
+                                </SortableHead>
+                                <SortableHead column="period" sorter={sorter}>
+                                    Period
+                                </SortableHead>
                                 <TableHead>Booked to</TableHead>
-                                <TableHead>Memo</TableHead>
-                                <TableHead>Recorded by</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead column="memo" sorter={sorter}>
+                                    Memo
+                                </SortableHead>
+                                <SortableHead column="user" sorter={sorter}>
+                                    Recorded by
+                                </SortableHead>
+                                <SortableHead
+                                    column="total"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Amount
-                                </TableHead>
+                                </SortableHead>
                                 <TableHead className="w-12" />
                             </TableRow>
                         </TableHeader>

@@ -6,6 +6,7 @@ import { DeleteButton } from '@/components/delete-button';
 import { Field } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { Page, Panel, Stat } from '@/components/page';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTableSort } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
 import { index as catalog } from '@/routes/catalog';
 import { create as createImport } from '@/routes/data-imports';
@@ -73,6 +75,17 @@ const today = () => new Date().toISOString().slice(0, 10);
 const cents = (value: string) =>
     (Math.floor(Number(value) * 100 + 1e-6) / 100).toFixed(2);
 
+const PAYEE_COLUMNS = {
+    payee: (row: PayeeRow) => row.payee_name,
+    previous_payable: (row: PayeeRow) => row.totals.previous_payable,
+    payee_share: (row: PayeeRow) => row.totals.payee_share,
+    transfers: (row: PayeeRow) => row.totals.transfers,
+    total_payable: (row: PayeeRow) => row.totals.total_payable,
+    total_paid: (row: PayeeRow) => row.totals.total_paid,
+    outstanding: (row: PayeeRow) => row.totals.outstanding,
+    statement: (row: PayeeRow) => row.statement?.created_at,
+};
+
 export default function ShowPeriod({
     period,
     currency,
@@ -80,6 +93,7 @@ export default function ShowPeriod({
     audit,
     payees,
 }: Props) {
+    const { rows: payeeRows, sorter } = useTableSort(payees, PAYEE_COLUMNS);
     const range = { from: period.starts_on, to: period.ends_on, date: 'paid' };
     const issues =
         audit.unassigned + audit.missing_contract + audit.unconverted;
@@ -358,31 +372,69 @@ export default function ShowPeriod({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Payee</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead column="payee" sorter={sorter}>
+                                    Payee
+                                </SortableHead>
+                                <SortableHead
+                                    column="previous_payable"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Carried over
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="payee_share"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Share
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="transfers"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Transfers
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="total_payable"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Payable
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="total_paid"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Paid
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="outstanding"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Still to pay
-                                </TableHead>
-                                <TableHead>Statement</TableHead>
+                                </SortableHead>
+                                <SortableHead
+                                    column="statement"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Statement
+                                </SortableHead>
                                 <TableHead className="w-28" />
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {payees.map((row) => (
+                            {payeeRows.map((row) => (
                                 <TableRow key={row.payee_id}>
                                     <TableCell>
                                         <Link

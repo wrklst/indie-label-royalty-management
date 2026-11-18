@@ -4,6 +4,7 @@ import { Amount } from '@/components/amount';
 import { CheckField, SelectInput } from '@/components/field';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
 import { edit as editContract } from '@/routes/contracts';
 import { create as createImport } from '@/routes/data-imports';
@@ -44,6 +47,8 @@ type Filters = {
     artist: number | null;
     without_contract: boolean;
     status: string | null;
+    sort: string | null;
+    direction: SortDirection | null;
 };
 
 export default function Releases({
@@ -56,6 +61,7 @@ export default function Releases({
     artistOptions: Option[];
 }) {
     const { apply } = useFilters(index.url(), filters);
+    const sorter = serverSorter(filters, apply);
     const filtered =
         filters.search !== '' ||
         filters.artist !== null ||
@@ -153,18 +159,47 @@ export default function Releases({
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-12" />
-                                <TableHead>Cat. no.</TableHead>
-                                <TableHead>Release</TableHead>
-                                <TableHead>Artist</TableHead>
-                                <TableHead>UPC / EAN</TableHead>
-                                <TableHead>Released</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead
+                                    column="catalog_number"
+                                    sorter={sorter}
+                                >
+                                    Cat. no.
+                                </SortableHead>
+                                <SortableHead column="name" sorter={sorter}>
+                                    Release
+                                </SortableHead>
+                                <SortableHead column="artist" sorter={sorter}>
+                                    Artist
+                                </SortableHead>
+                                <SortableHead column="upc" sorter={sorter}>
+                                    UPC / EAN
+                                </SortableHead>
+                                <SortableHead
+                                    column="released_on"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Released
+                                </SortableHead>
+                                <SortableHead
+                                    column="tracks_count"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Tracks
-                                </TableHead>
-                                <TableHead>Contract</TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead column="contract" sorter={sorter}>
+                                    Contract
+                                </SortableHead>
+                                <SortableHead
+                                    column="income"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Income to date
-                                </TableHead>
+                                </SortableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>

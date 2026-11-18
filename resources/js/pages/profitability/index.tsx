@@ -1,8 +1,10 @@
 import { Link } from '@inertiajs/react';
+import { useMemo } from 'react';
 import { Download } from 'lucide-react';
 import { Amount } from '@/components/amount';
 import { SelectInput } from '@/components/field';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
+import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -10,11 +12,11 @@ import {
     TableBody,
     TableCell,
     TableFooter,
-    TableHead,
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
 import { useFilters } from '@/hooks/use-filters';
+import { useTableSort } from '@/hooks/use-table-sort';
 import { percent } from '@/lib/format';
 import { download, index } from '@/routes/profitability';
 import { show as showRelease } from '@/routes/releases';
@@ -55,31 +57,56 @@ type Props = {
     artistOptions: Option[];
 };
 
-const COLUMNS: { label: string; hint: string }[] = [
-    { label: 'Income', hint: 'Everything the release brought in.' },
+const COLUMNS: { key: keyof Figures; label: string; hint: string }[] = [
     {
+        key: 'income',
+        label: 'Income',
+        hint: 'Everything the release brought in.',
+    },
+    {
+        key: 'expense',
         label: 'Recoupable expenses',
         hint: 'Costs deducted before the split, so payees carry their share.',
     },
-    { label: 'Net', hint: 'Income plus recoupable expenses.' },
+    { key: 'net', label: 'Net', hint: 'Income plus recoupable expenses.' },
     {
+        key: 'payee_share',
         label: 'Payee share',
         hint: 'What payees earn from the net under the contracts that apply.',
     },
     {
+        key: 'label_costs',
         label: 'Label costs',
         hint: 'One-time payments and other costs the label bears alone.',
     },
     {
+        key: 'label_result',
         label: 'Label result',
         hint: 'Net minus payee share, less the label costs.',
     },
-    { label: 'Margin', hint: 'Label result as a share of income.' },
     {
+        key: 'margin',
+        label: 'Margin',
+        hint: 'Label result as a share of income.',
+    },
+    {
+        key: 'advances',
         label: 'Advances given',
         hint: 'Prepaid royalties, not a cost: not part of the label result.',
     },
 ];
+
+const SORT_COLUMNS = {
+    release: (row: Row) => row.release_name,
+    income: (row: Row) => row.income,
+    expense: (row: Row) => row.expense,
+    net: (row: Row) => row.net,
+    payee_share: (row: Row) => row.payee_share,
+    label_costs: (row: Row) => row.label_costs,
+    label_result: (row: Row) => row.label_result,
+    margin: (row: Row) => row.margin,
+    advances: (row: Row) => row.advances,
+};
 
 function FigureCells({
     figures,
@@ -129,6 +156,17 @@ export default function Profitability({
     const { apply } = useFilters(index.url(), filters);
     const filtered =
         filters.from !== null || filters.to !== null || filters.artist !== null;
+    // "Not assigned to a release" and "Label overheads" stay below the
+    // releases however those are sorted.
+    const releaseRows = useMemo(
+        () => rows.filter((row) => row.release_id !== null),
+        [rows],
+    );
+    const otherRows = rows.filter((row) => row.release_id === null);
+    const { rows: sortedRows, sorter } = useTableSort(
+        releaseRows,
+        SORT_COLUMNS,
+    );
     const query = Object.fromEntries(
         Object.entries(filters).filter(([, value]) => value !== null),
     );
@@ -282,20 +320,25 @@ export default function Profitability({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Release</TableHead>
+                                <SortableHead column="release" sorter={sorter}>
+                                    Release
+                                </SortableHead>
                                 {COLUMNS.map((column) => (
-                                    <TableHead
-                                        key={column.label}
+                                    <SortableHead
+                                        key={column.key}
+                                        column={column.key}
+                                        sorter={sorter}
+                                        first="desc"
                                         title={column.hint}
                                         className="text-right"
                                     >
                                         {column.label}
-                                    </TableHead>
+                                    </SortableHead>
                                 ))}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {rows.map((row) => (
+                            {[...sortedRows, ...otherRows].map((row) => (
                                 <TableRow
                                     key={row.release_id ?? row.release_name}
                                 >

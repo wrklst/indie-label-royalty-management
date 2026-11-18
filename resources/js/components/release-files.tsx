@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import ReleaseFileController from '@/actions/App/Http/Controllers/ReleaseFileController';
 import { DeleteButton } from '@/components/delete-button';
 import { SelectInput } from '@/components/field';
+import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -13,6 +14,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTableSort } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
 import { show } from '@/routes/release-files';
 import type { Option } from '@/types';
@@ -46,6 +48,14 @@ function fileSize(bytes: number): string {
  * The private files of a release: upload, say what each one is, attach
  * audio to tracks, download and delete.
  */
+const FILE_COLUMNS = {
+    original_name: (row: ReleaseFile) => row.original_name,
+    kind: (row: ReleaseFile) => row.kind,
+    track: (row: ReleaseFile) => row.track,
+    size: (row: ReleaseFile) => row.size,
+    uploaded_at: (row: ReleaseFile) => row.uploaded_at,
+};
+
 export function ReleaseFiles({
     releaseId,
     files,
@@ -59,6 +69,7 @@ export function ReleaseFiles({
     kinds: { value: string; label: string }[];
     maxMegabytes: number;
 }) {
+    const { rows: fileRows, sorter } = useTableSort(files, FILE_COLUMNS);
     const input = useRef<HTMLInputElement | null>(null);
     const [kind, setKind] = useState('');
     const [queue, setQueue] = useState<{ name: string; progress: number }[]>(
@@ -219,16 +230,38 @@ export function ReleaseFiles({
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>File</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Track</TableHead>
-                            <TableHead className="text-right">Size</TableHead>
-                            <TableHead>Uploaded</TableHead>
+                            <SortableHead
+                                column="original_name"
+                                sorter={sorter}
+                            >
+                                File
+                            </SortableHead>
+                            <SortableHead column="kind" sorter={sorter}>
+                                Type
+                            </SortableHead>
+                            <SortableHead column="track" sorter={sorter}>
+                                Track
+                            </SortableHead>
+                            <SortableHead
+                                column="size"
+                                sorter={sorter}
+                                first="desc"
+                                className="text-right"
+                            >
+                                Size
+                            </SortableHead>
+                            <SortableHead
+                                column="uploaded_at"
+                                sorter={sorter}
+                                first="desc"
+                            >
+                                Uploaded
+                            </SortableHead>
                             <TableHead className="w-24" />
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {files.map((file) => (
+                        {fileRows.map((file) => (
                             <TableRow key={file.id}>
                                 <TableCell className="max-w-xs">
                                     {file.inline ? (

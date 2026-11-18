@@ -6,6 +6,7 @@ import { Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,8 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { index } from '@/routes/artists';
 import { index as releases } from '@/routes/releases';
 import type { Option, Paginated } from '@/types';
@@ -112,10 +115,15 @@ export default function Artists({
     artistOptions,
 }: {
     artists: Paginated<Artist>;
-    filters: { search: string };
+    filters: {
+        search: string;
+        sort: string | null;
+        direction: SortDirection | null;
+    };
     artistOptions: Option[];
 }) {
     const { apply } = useFilters(index.url(), filters);
+    const sorter = serverSorter(filters, apply);
 
     return (
         <Page
@@ -167,14 +175,28 @@ export default function Artists({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead column="name" sorter={sorter}>
+                                    Name
+                                </SortableHead>
+                                <SortableHead
+                                    column="releases_count"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Releases
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="tracks_count"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Tracks
-                                </TableHead>
-                                <TableHead>Notes</TableHead>
+                                </SortableHead>
+                                <SortableHead column="notes" sorter={sorter}>
+                                    Notes
+                                </SortableHead>
                                 <TableHead className="w-20" />
                             </TableRow>
                         </TableHeader>

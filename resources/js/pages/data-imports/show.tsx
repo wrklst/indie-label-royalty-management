@@ -3,6 +3,7 @@ import DataImportController from '@/actions/App/Http/Controllers/DataImportContr
 import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
 import { Page, Panel, Stat } from '@/components/page';
+import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -12,6 +13,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTableSort } from '@/hooks/use-table-sort';
 import { date, month, quantity } from '@/lib/format';
 import { index as catalog } from '@/routes/catalog';
 import { create, index } from '@/routes/data-imports';
@@ -57,6 +59,13 @@ type Props = {
     byMonth: Row[];
 };
 
+const BREAKDOWN_COLUMNS = {
+    label: (row: Row) => row.label,
+    transactions: (row: Row) => row.transactions,
+    quantity: (row: Row) => row.quantity,
+    total: (row: Row) => row.total,
+};
+
 function Breakdown({
     title,
     rows,
@@ -66,25 +75,48 @@ function Breakdown({
     rows: Row[];
     format?: (label: string) => string;
 }) {
+    const { rows: sortedRows, sorter } = useTableSort(rows, BREAKDOWN_COLUMNS);
+
     return (
         <Panel title={title} flush>
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>
+                        <SortableHead column="label" sorter={sorter}>
                             {title
                                 .replace('By ', '')
                                 .replace(/^./, (letter) =>
                                     letter.toUpperCase(),
                                 )}
-                        </TableHead>
-                        <TableHead className="text-right">Lines</TableHead>
-                        <TableHead className="text-right">Units</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        </SortableHead>
+                        <SortableHead
+                            column="transactions"
+                            sorter={sorter}
+                            first="desc"
+                            className="text-right"
+                        >
+                            Lines
+                        </SortableHead>
+                        <SortableHead
+                            column="quantity"
+                            sorter={sorter}
+                            first="desc"
+                            className="text-right"
+                        >
+                            Units
+                        </SortableHead>
+                        <SortableHead
+                            column="total"
+                            sorter={sorter}
+                            first="desc"
+                            className="text-right"
+                        >
+                            Total
+                        </SortableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {rows.map((row) => (
+                    {sortedRows.map((row) => (
                         <TableRow key={row.label}>
                             <TableCell>
                                 {format ? format(row.label) : row.label}

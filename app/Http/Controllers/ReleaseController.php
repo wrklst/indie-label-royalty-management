@@ -8,6 +8,7 @@ use App\Enums\ReleaseStatus;
 use App\Enums\ReleaseType;
 use App\Http\Requests\ReleaseRequest;
 use App\Models\Artist;
+use App\Models\Contract;
 use App\Models\Release;
 use App\Models\ReleaseFile;
 use App\Models\Track;
@@ -15,6 +16,8 @@ use App\Models\Transaction;
 use App\Services\Imports\Identifiers;
 use App\Services\Releases\ArtistCredits;
 use App\Support\Options;
+use App\Support\Sorting;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -26,6 +29,17 @@ class ReleaseController extends Controller
 {
     public function index(Request $request): Response
     {
+        $sorting = Sorting::for($request, [
+            'catalog_number' => Sorting::nullsLast('catalog_number'),
+            'name' => 'name',
+            'artist' => Sorting::related(Artist::class, 'artist_id'),
+            'upc' => Sorting::nullsLast('upc'),
+            'released_on' => Sorting::nullsLast('released_on'),
+            'tracks_count' => 'tracks_count',
+            'contract' => Sorting::related(Contract::class, 'contract_id'),
+            'income' => Sorting::sum('income'),
+        ], fn (Builder $query) => $query->orderByRaw('catalog_number IS NULL')->orderBy('catalog_number')->orderBy('name'));
+
         $releases = Release::query()
             ->with(['artist:id,name', 'artists:id,name', 'contract:id,name', 'cover:id,release_id'])
             ->withCount('tracks')
@@ -37,7 +51,7 @@ class ReleaseController extends Controller
             ->when($request->integer('artist'), fn ($query, int $artist) => $query->where('artist_id', $artist))
             ->when($request->boolean('without_contract'), fn ($query) => $query->whereNull('contract_id'))
             ->when(ReleaseStatus::tryFrom((string) $request->query('status')), fn ($query, ReleaseStatus $status) => $query->where('status', $status))
-            ->orderByRaw('catalog_number IS NULL')->orderBy('catalog_number')->orderBy('name')
+            ->tap($sorting)
             ->paginate(50)
             ->withQueryString()
             ->through(fn (Release $release): array => [
@@ -58,6 +72,7 @@ class ReleaseController extends Controller
                 'artist' => $request->integer('artist') ?: null,
                 'without_contract' => $request->boolean('without_contract'),
                 'status' => ReleaseStatus::tryFrom((string) $request->query('status'))?->value,
+                ...$sorting->toArray(),
             ],
             'artistOptions' => Options::artists(),
         ]);

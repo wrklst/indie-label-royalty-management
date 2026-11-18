@@ -10,6 +10,8 @@ use App\Models\Period;
 use App\Models\Statement;
 use App\Models\Transaction;
 use App\Services\Royalties\RoyaltyCalculator;
+use App\Support\Sorting;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,17 +21,25 @@ class PayeeController extends Controller
 {
     public function index(Request $request): Response
     {
+        $sorting = Sorting::for($request, [
+            'name' => 'name',
+            'email' => Sorting::nullsLast('email'),
+            'splits_count' => 'splits_count',
+            'statements_count' => 'statements_count',
+            'payouts_count' => 'payouts_count',
+        ], fn (Builder $query) => $query->orderBy('name'));
+
         $payees = Payee::query()
             ->withCount(['splits', 'payouts', 'statements'])
             ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
-            ->orderBy('name')
+            ->tap($sorting)
             ->paginate(50)
             ->withQueryString()
             ->through(fn (Payee $payee): array => $payee->only(['id', 'name', 'email', 'tags', 'notes', 'splits_count', 'payouts_count', 'statements_count']));
 
         return Inertia::render('payees/index', [
             'payees' => $payees,
-            'filters' => ['search' => $request->string('search')->value()],
+            'filters' => ['search' => $request->string('search')->value(), ...$sorting->toArray()],
         ]);
     }
 

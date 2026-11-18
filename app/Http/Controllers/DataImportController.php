@@ -13,7 +13,10 @@ use App\Services\Imports\ImportException;
 use App\Services\Imports\ImportRunner;
 use App\Services\Imports\Readers\ReaderFactory;
 use App\Support\CurrentLabel;
+use App\Support\Sorting;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,15 +25,27 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DataImportController extends Controller
 {
-    public function index(ImporterRegistry $importers): Response
+    public function index(Request $request, ImporterRegistry $importers): Response
     {
+        $sorting = Sorting::for($request, [
+            'name' => 'name',
+            'importer' => 'importer',
+            'status' => 'status',
+            'default_paid_timestamp' => Sorting::nullsLast('default_paid_timestamp'),
+            'transactions_count' => 'transactions_count',
+            'duplicates_count' => 'duplicates_count',
+            'total' => 'total',
+            'created_at' => 'created_at',
+        ], fn (Builder $query) => $query->latest('id'));
+
         $names = collect($importers->describe())->pluck('name', 'key');
 
         return Inertia::render('data-imports/index', [
             'imports' => DataImport::query()
                 ->with('user:id,name')
-                ->latest('id')
+                ->tap($sorting)
                 ->paginate(50)
+                ->withQueryString()
                 ->through(fn (DataImport $import): array => [
                     ...$import->only(['id', 'name', 'importer', 'original_filename', 'rows_count', 'transactions_count', 'duplicates_count', 'errors_count', 'needs_cleanup', 'total', 'tags']),
                     'importer_name' => $names[$import->importer] ?? $import->importer,
@@ -39,6 +54,7 @@ class DataImportController extends Controller
                     'created_at' => $import->created_at->toDateTimeString(),
                     'user' => $import->user?->name,
                 ]),
+            'filters' => $sorting->toArray(),
         ]);
     }
 

@@ -6,22 +6,33 @@ use App\Http\Requests\ContractRequest;
 use App\Models\Contract;
 use App\Support\Decimal;
 use App\Support\Options;
+use App\Support\Sorting;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use SortDirection;
 
 class ContractController extends Controller
 {
     public function index(Request $request): Response
     {
+        $sorting = Sorting::for($request, [
+            'name' => 'name',
+            'usage' => fn (Builder $query, SortDirection $direction) => $query
+                ->orderBy('releases_count', $direction)
+                ->orderBy('tracks_count', $direction)
+                ->orderBy('items_count', $direction),
+        ], fn (Builder $query) => $query->orderBy('name'));
+
         $contracts = Contract::query()
             ->with(['splits.payee:id,name', 'splits.ledger:id,name'])
             ->withCount(['releases', 'tracks', 'items', 'children', 'parents'])
             ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
             ->when($request->boolean('unused'), fn ($query) => $query->doesntHave('releases')->doesntHave('tracks')->doesntHave('items')->doesntHave('parents'))
-            ->orderBy('name')
+            ->tap($sorting)
             ->paginate(50)
             ->withQueryString()
             ->through(fn (Contract $contract): array => [
@@ -35,7 +46,7 @@ class ContractController extends Controller
 
         return Inertia::render('contracts/index', [
             'contracts' => $contracts,
-            'filters' => ['search' => $request->string('search')->value(), 'unused' => $request->boolean('unused')],
+            'filters' => ['search' => $request->string('search')->value(), 'unused' => $request->boolean('unused'), ...$sorting->toArray()],
         ]);
     }
 

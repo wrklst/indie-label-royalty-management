@@ -4,6 +4,7 @@ import { DeleteButton } from '@/components/delete-button';
 import { Field } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel } from '@/components/page';
+import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,6 +15,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTableSort } from '@/hooks/use-table-sort';
 import { index } from '@/routes/ledgers';
 
 type Ledger = {
@@ -45,7 +47,15 @@ function NameField({
     );
 }
 
+const SORT_COLUMNS = {
+    name: (row: Ledger) => row.name,
+    payees: (row: Ledger) => row.payees.join(', '),
+    contracts: (row: Ledger) => row.contracts.join(', '),
+};
+
 export default function Ledgers({ ledgers }: { ledgers: Ledger[] }) {
+    const { rows, sorter } = useTableSort(ledgers, SORT_COLUMNS);
+
     return (
         <Page
             title="Ledgers"
@@ -76,14 +86,23 @@ export default function Ledgers({ ledgers }: { ledgers: Ledger[] }) {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Payees</TableHead>
-                                <TableHead>Used in contracts</TableHead>
+                                <SortableHead column="name" sorter={sorter}>
+                                    Name
+                                </SortableHead>
+                                <SortableHead column="payees" sorter={sorter}>
+                                    Payees
+                                </SortableHead>
+                                <SortableHead
+                                    column="contracts"
+                                    sorter={sorter}
+                                >
+                                    Used in contracts
+                                </SortableHead>
                                 <TableHead className="w-20" />
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {ledgers.map((ledger) => (
+                            {rows.map((ledger) => (
                                 <TableRow key={ledger.id}>
                                     <TableCell className="font-medium">
                                         {ledger.name}

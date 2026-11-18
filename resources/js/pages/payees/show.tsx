@@ -5,16 +5,17 @@ import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
 import { FormDialog } from '@/components/form-dialog';
 import { Page, Panel, Stat } from '@/components/page';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Table,
     TableBody,
     TableCell,
-    TableHead,
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTableSort } from '@/hooks/use-table-sort';
 import { date, percent } from '@/lib/format';
 import { edit as editContract } from '@/routes/contracts';
 import { index } from '@/routes/payees';
@@ -30,7 +31,7 @@ type Props = {
     period: { id: number; name: string } | null;
     summary: {
         totals: PayeeTotals;
-        ledgers: Omit<StatementLedger, 'releases'>[];
+        ledgers: LedgerRow[];
     } | null;
     splits: {
         id: number;
@@ -68,6 +69,36 @@ type Props = {
     }[];
 };
 
+type LedgerRow = Omit<StatementLedger, 'releases'>;
+
+const NO_LEDGERS: LedgerRow[] = [];
+
+const LEDGER_COLUMNS = {
+    ledger_name: (row: LedgerRow) => row.ledger_name,
+    previous_balance: (row: LedgerRow) => row.previous_balance,
+    payee_share: (row: LedgerRow) => row.payee_share,
+    transfers: (row: LedgerRow) => row.transfers,
+    payouts: (row: LedgerRow) => row.payouts,
+    balance: (row: LedgerRow) => row.balance,
+};
+
+const SPLIT_COLUMNS = {
+    contract: (row: Props['splits'][number]) => row.contract,
+    split_amount: (row: Props['splits'][number]) => row.split_amount,
+    ledger: (row: Props['splits'][number]) => row.ledger ?? 'Primary',
+    territory: (row: Props['splits'][number]) => row.territory ?? 'World',
+    used_by: (row: Props['splits'][number]) => row.used_by.join(', '),
+};
+
+const TRANSFER_COLUMNS = {
+    paid_timestamp: (row: Props['transfers'][number]) => row.paid_timestamp,
+    category: (row: Props['transfers'][number]) => row.category,
+    release: (row: Props['transfers'][number]) => row.release,
+    ledger: (row: Props['transfers'][number]) => row.ledger ?? 'From contract',
+    memo: (row: Props['transfers'][number]) => row.memo,
+    amount: (row: Props['transfers'][number]) => row.converted_total,
+};
+
 export default function ShowPayee({
     payee,
     period,
@@ -77,6 +108,19 @@ export default function ShowPayee({
     statements,
     transfers,
 }: Props) {
+    const { rows: ledgerRows, sorter: ledgerSorter } = useTableSort(
+        summary?.ledgers ?? NO_LEDGERS,
+        LEDGER_COLUMNS,
+    );
+    const { rows: splitRows, sorter: splitSorter } = useTableSort(
+        splits,
+        SPLIT_COLUMNS,
+    );
+    const { rows: transferRows, sorter: transferSorter } = useTableSort(
+        transfers,
+        TRANSFER_COLUMNS,
+    );
+
     return (
         <Page
             title={payee.name}
@@ -156,26 +200,56 @@ export default function ShowPayee({
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Ledger</TableHead>
-                                    <TableHead className="text-right">
+                                    <SortableHead
+                                        column="ledger_name"
+                                        sorter={ledgerSorter}
+                                    >
+                                        Ledger
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="previous_balance"
+                                        sorter={ledgerSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
                                         Previous balance
-                                    </TableHead>
-                                    <TableHead className="text-right">
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="payee_share"
+                                        sorter={ledgerSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
                                         Share
-                                    </TableHead>
-                                    <TableHead className="text-right">
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="transfers"
+                                        sorter={ledgerSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
                                         Transfers
-                                    </TableHead>
-                                    <TableHead className="text-right">
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="payouts"
+                                        sorter={ledgerSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
                                         Payouts
-                                    </TableHead>
-                                    <TableHead className="text-right">
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="balance"
+                                        sorter={ledgerSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
                                         Balance
-                                    </TableHead>
+                                    </SortableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {summary.ledgers.map((ledger) => (
+                                {ledgerRows.map((ledger) => (
                                     <TableRow key={ledger.ledger_id ?? 0}>
                                         <TableCell className="font-medium">
                                             {ledger.ledger_name}
@@ -235,17 +309,42 @@ export default function ShowPayee({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Contract</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead
+                                    column="contract"
+                                    sorter={splitSorter}
+                                >
+                                    Contract
+                                </SortableHead>
+                                <SortableHead
+                                    column="split_amount"
+                                    sorter={splitSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Split
-                                </TableHead>
-                                <TableHead>Ledger</TableHead>
-                                <TableHead>Territory</TableHead>
-                                <TableHead>Applies to</TableHead>
+                                </SortableHead>
+                                <SortableHead
+                                    column="ledger"
+                                    sorter={splitSorter}
+                                >
+                                    Ledger
+                                </SortableHead>
+                                <SortableHead
+                                    column="territory"
+                                    sorter={splitSorter}
+                                >
+                                    Territory
+                                </SortableHead>
+                                <SortableHead
+                                    column="used_by"
+                                    sorter={splitSorter}
+                                >
+                                    Applies to
+                                </SortableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {splits.map((split) => (
+                            {splitRows.map((split) => (
                                 <TableRow key={split.id}>
                                     <TableCell>
                                         <Link
@@ -361,18 +460,49 @@ export default function ShowPayee({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Paid</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead>Release</TableHead>
-                                <TableHead>Ledger</TableHead>
-                                <TableHead>Memo</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead
+                                    column="paid_timestamp"
+                                    sorter={transferSorter}
+                                    first="desc"
+                                >
+                                    Paid
+                                </SortableHead>
+                                <SortableHead
+                                    column="category"
+                                    sorter={transferSorter}
+                                >
+                                    Category
+                                </SortableHead>
+                                <SortableHead
+                                    column="release"
+                                    sorter={transferSorter}
+                                >
+                                    Release
+                                </SortableHead>
+                                <SortableHead
+                                    column="ledger"
+                                    sorter={transferSorter}
+                                >
+                                    Ledger
+                                </SortableHead>
+                                <SortableHead
+                                    column="memo"
+                                    sorter={transferSorter}
+                                >
+                                    Memo
+                                </SortableHead>
+                                <SortableHead
+                                    column="amount"
+                                    sorter={transferSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Amount
-                                </TableHead>
+                                </SortableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {transfers.map((transfer) => (
+                            {transferRows.map((transfer) => (
                                 <TableRow key={transfer.id}>
                                     <TableCell>
                                         {date(transfer.paid_timestamp)}

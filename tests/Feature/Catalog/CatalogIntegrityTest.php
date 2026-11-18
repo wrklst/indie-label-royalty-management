@@ -212,3 +212,25 @@ test('a payee who received transfers cannot be deleted', function () {
 
     $this->assertDatabaseHas('payees', ['id' => $payee->id]);
 });
+
+test('a upc or ean can only belong to one release of a label', function (string $entered) {
+    $existing = Release::factory()->create(['label_id' => $this->label->id, 'name' => 'Example Release', 'upc' => '0700000000011']);
+    $other = Release::factory()->create(['label_id' => $this->label->id, 'upc' => null]);
+
+    $this->post(route('releases.store'), ['name' => 'Second Release', 'upc' => $entered])
+        ->assertSessionHasErrors(['upc' => 'This UPC / EAN already belongs to the release "Example Release". A code identifies one release.']);
+    $this->put(route('releases.update', $other->id), ['name' => $other->name, 'upc' => $entered])->assertSessionHasErrors('upc');
+
+    $this->put(route('releases.update', $existing->id), ['name' => 'Renamed', 'upc' => $entered])->assertSessionHasNoErrors();
+    $this->assertDatabaseCount('releases', 2);
+})->with(['the same code' => '0700000000011', 'its 12 digit form' => '700000000011', 'written with spaces' => '0 700000 000011']);
+
+test('another label may use the same upc and several releases may have none', function () {
+    Release::factory()->create(['label_id' => Label::factory(), 'upc' => '0700000000011']);
+
+    $this->post(route('releases.store'), ['name' => 'Ours', 'upc' => '0700000000011'])->assertSessionHasNoErrors();
+    $this->post(route('releases.store'), ['name' => 'No code yet'])->assertSessionHasNoErrors();
+    $this->post(route('releases.store'), ['name' => 'No code either'])->assertSessionHasNoErrors();
+
+    $this->assertDatabaseCount('releases', 4);
+});

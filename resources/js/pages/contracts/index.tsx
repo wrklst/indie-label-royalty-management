@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import { CheckField } from '@/components/field';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { percent } from '@/lib/format';
 import { create, edit, index } from '@/routes/contracts';
 import type { Paginated } from '@/types';
@@ -40,9 +43,15 @@ export default function Contracts({
     filters,
 }: {
     contracts: Paginated<Contract>;
-    filters: { search: string; unused: boolean };
+    filters: {
+        search: string;
+        unused: boolean;
+        sort: string | null;
+        direction: SortDirection | null;
+    };
 }) {
     const { apply } = useFilters(index.url(), filters);
+    const sorter = serverSorter(filters, apply);
 
     return (
         <Page
@@ -101,12 +110,20 @@ export default function Contracts({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Contract</TableHead>
+                                <SortableHead column="name" sorter={sorter}>
+                                    Contract
+                                </SortableHead>
                                 <TableHead>Splits</TableHead>
                                 <TableHead className="text-right">
                                     Label keeps
                                 </TableHead>
-                                <TableHead>Used by</TableHead>
+                                <SortableHead
+                                    column="usage"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Used by
+                                </SortableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>

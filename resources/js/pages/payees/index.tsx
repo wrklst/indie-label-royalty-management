@@ -5,6 +5,7 @@ import { Field } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,8 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { index, show } from '@/routes/payees';
 import type { Paginated } from '@/types';
 
@@ -92,9 +95,14 @@ export default function Payees({
     filters,
 }: {
     payees: Paginated<Payee>;
-    filters: { search: string };
+    filters: {
+        search: string;
+        sort: string | null;
+        direction: SortDirection | null;
+    };
 }) {
     const { apply } = useFilters(index.url(), filters);
+    const sorter = serverSorter(filters, apply);
 
     return (
         <Page
@@ -144,17 +152,36 @@ export default function Payees({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead column="name" sorter={sorter}>
+                                    Name
+                                </SortableHead>
+                                <SortableHead column="email" sorter={sorter}>
+                                    Email
+                                </SortableHead>
+                                <SortableHead
+                                    column="splits_count"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Splits
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="statements_count"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Statements
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="payouts_count"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Payouts
-                                </TableHead>
+                                </SortableHead>
                                 <TableHead className="w-12" />
                             </TableRow>
                         </TableHeader>

@@ -6,6 +6,7 @@ import { Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { show as showRelease } from '@/routes/releases';
 import { index } from '@/routes/tracks';
 import type { Option, Paginated } from '@/types';
@@ -39,7 +42,12 @@ type Track = {
 
 type Props = {
     tracks: Paginated<Track>;
-    filters: { search: string; release: number | null };
+    filters: {
+        search: string;
+        release: number | null;
+        sort: string | null;
+        direction: SortDirection | null;
+    };
     artistOptions: Option[];
     contractOptions: Option[];
     releaseOptions: Option[];
@@ -53,6 +61,7 @@ export default function Tracks({
     releaseOptions,
 }: Props) {
     const { apply } = useFilters(index.url(), filters);
+    const sorter = serverSorter(filters, apply);
     const filtered = filters.search !== '' || filters.release !== null;
 
     return (
@@ -100,11 +109,21 @@ export default function Tracks({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Title</TableHead>
-                                <TableHead>Artist</TableHead>
-                                <TableHead>Release</TableHead>
-                                <TableHead>ISRC</TableHead>
-                                <TableHead>Contract</TableHead>
+                                <SortableHead column="name" sorter={sorter}>
+                                    Title
+                                </SortableHead>
+                                <SortableHead column="artist" sorter={sorter}>
+                                    Artist
+                                </SortableHead>
+                                <SortableHead column="release" sorter={sorter}>
+                                    Release
+                                </SortableHead>
+                                <SortableHead column="isrc" sorter={sorter}>
+                                    ISRC
+                                </SortableHead>
+                                <SortableHead column="contract" sorter={sorter}>
+                                    Contract
+                                </SortableHead>
                                 <TableHead className="w-20" />
                             </TableRow>
                         </TableHeader>

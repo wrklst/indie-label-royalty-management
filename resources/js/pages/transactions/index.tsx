@@ -6,6 +6,7 @@ import { DeleteButton } from '@/components/delete-button';
 import { CheckField, SelectInput } from '@/components/field';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { date, quantity } from '@/lib/format';
 import { create, edit, index } from '@/routes/transactions';
 import type { Option, Paginated } from '@/types';
@@ -53,6 +56,8 @@ type Filters = {
     date?: string;
     unassigned?: string;
     unconverted?: string;
+    sort?: string | null;
+    direction?: SortDirection | null;
 };
 
 type Props = {
@@ -75,8 +80,14 @@ export default function Transactions({
     importOptions,
 }: Props) {
     const { apply } = useFilters(index.url(), filters);
-    const filtered = Object.values(filters).some(
-        (value) => value !== undefined && value !== null && value !== '',
+    const sorter = serverSorter(filters, apply);
+    const filtered = Object.entries(filters).some(
+        ([key, value]) =>
+            key !== 'sort' &&
+            key !== 'direction' &&
+            value !== undefined &&
+            value !== null &&
+            value !== '',
     );
 
     return (
@@ -268,19 +279,51 @@ export default function Transactions({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Sold</TableHead>
-                                <TableHead>Paid</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Release / track</TableHead>
-                                <TableHead>Retailer</TableHead>
-                                <TableHead>Format / category</TableHead>
-                                <TableHead>Region</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead
+                                    column="timestamp"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Sold
+                                </SortableHead>
+                                <SortableHead
+                                    column="paid_timestamp"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Paid
+                                </SortableHead>
+                                <SortableHead column="type" sorter={sorter}>
+                                    Type
+                                </SortableHead>
+                                <SortableHead column="release" sorter={sorter}>
+                                    Release / track
+                                </SortableHead>
+                                <SortableHead column="retailer" sorter={sorter}>
+                                    Retailer
+                                </SortableHead>
+                                <SortableHead column="format" sorter={sorter}>
+                                    Format / category
+                                </SortableHead>
+                                <SortableHead column="region" sorter={sorter}>
+                                    Region
+                                </SortableHead>
+                                <SortableHead
+                                    column="quantity"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Units
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="converted_total"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Amount
-                                </TableHead>
+                                </SortableHead>
                                 <TableHead className="w-20" />
                             </TableRow>
                         </TableHeader>

@@ -3,16 +3,19 @@ import { Upload } from 'lucide-react';
 import { Amount } from '@/components/amount';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Table,
     TableBody,
     TableCell,
-    TableHead,
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
 import { create, index, show } from '@/routes/data-imports';
 import type { Paginated } from '@/types';
@@ -61,9 +64,14 @@ export function ImportStatusBadge({
 
 export default function DataImports({
     imports,
+    filters,
 }: {
     imports: Paginated<DataImport>;
+    filters: { sort: string | null; direction: SortDirection | null };
 }) {
+    const { apply } = useFilters(index.url(), filters);
+    const sorter = serverSorter(filters, apply);
+
     return (
         <Page
             title="Data imports"
@@ -92,20 +100,53 @@ export default function DataImports({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Import</TableHead>
-                                <TableHead>Source</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Paid date</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead column="name" sorter={sorter}>
+                                    Import
+                                </SortableHead>
+                                <SortableHead column="importer" sorter={sorter}>
+                                    Source
+                                </SortableHead>
+                                <SortableHead column="status" sorter={sorter}>
+                                    Status
+                                </SortableHead>
+                                <SortableHead
+                                    column="default_paid_timestamp"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Paid date
+                                </SortableHead>
+                                <SortableHead
+                                    column="transactions_count"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Transactions
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="duplicates_count"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Skipped duplicates
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="total"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Total
-                                </TableHead>
-                                <TableHead>Uploaded</TableHead>
+                                </SortableHead>
+                                <SortableHead
+                                    column="created_at"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Uploaded
+                                </SortableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>

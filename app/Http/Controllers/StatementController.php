@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Payee;
+use App\Models\Period;
 use App\Models\Statement;
 use App\Support\Decimal;
+use App\Support\Sorting;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,12 +20,20 @@ class StatementController extends Controller
 {
     public function index(Request $request): Response
     {
+        $sorting = Sorting::for($request, [
+            'payee' => Sorting::related(Payee::class, 'payee_id'),
+            'period' => Sorting::related(Period::class, 'period_id'),
+            'created_at' => 'created_at',
+            'balance' => 'balance',
+            'payable' => 'payable',
+        ], fn (Builder $query) => $query->latest('id'));
+
         return Inertia::render('statements/index', [
             'statements' => Statement::query()
                 ->with(['payee:id,name', 'period:id,name'])
                 ->when(! $request->boolean('archived'), fn ($query) => $query->where('archived', false))
                 ->when($request->integer('period'), fn ($query, int $period) => $query->where('period_id', $period))
-                ->latest('id')
+                ->tap($sorting)
                 ->paginate(50)
                 ->withQueryString()
                 ->through(fn (Statement $statement): array => [
@@ -31,7 +43,7 @@ class StatementController extends Controller
                     'published' => $statement->published_at !== null,
                     'created_at' => $statement->created_at->toDateTimeString(),
                 ]),
-            'filters' => ['archived' => $request->boolean('archived'), 'period' => $request->integer('period') ?: null],
+            'filters' => ['archived' => $request->boolean('archived'), 'period' => $request->integer('period') ?: null, ...$sorting->toArray()],
         ]);
     }
 

@@ -8,6 +8,8 @@ use App\Enums\ReleaseType;
 use App\Models\Release;
 use App\Rules\Isrc;
 use App\Rules\Upc;
+use App\Services\Imports\Identifiers;
+use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
 
@@ -56,7 +58,19 @@ class ReleaseRequest extends LabelFormRequest
             'artist_id' => ['nullable', 'integer', $this->inLabel('artists')],
             'contract_id' => ['nullable', 'integer', $this->inLabel('contracts')],
             'catalog_number' => ['nullable', 'string', 'max:255'],
-            'upc' => ['nullable', 'string', 'max:32', new Upc],
+            'upc' => ['nullable', 'string', 'max:32', new Upc, function (string $attribute, mixed $value, Closure $fail) use ($release): void {
+                // A 12 digit UPC and its 13 digit EAN form are the same code.
+                $key = Identifiers::upcKey(is_string($value) ? $value : null);
+                $taken = $key === null ? null : Release::query()
+                    ->whereNotNull('upc')
+                    ->whereKeyNot($release instanceof Release ? $release->id : 0)
+                    ->get(['id', 'name', 'upc'])
+                    ->first(fn (Release $other): bool => Identifiers::upcKey($other->upc) === $key);
+
+                if ($taken !== null) {
+                    $fail("This UPC / EAN already belongs to the release \"{$taken->name}\". A code identifies one release.");
+                }
+            }],
             'released_on' => ['nullable', 'date'],
             'spotify_id' => ['nullable', 'string', 'max:255'],
             'discogs_id' => ['nullable', 'string', 'max:255'],

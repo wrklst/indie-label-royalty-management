@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ArtistRequest;
 use App\Models\Artist;
 use App\Support\Options;
+use App\Support\Sorting;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,11 +16,18 @@ class ArtistController extends Controller
 {
     public function index(Request $request): Response
     {
+        $sorting = Sorting::for($request, [
+            'name' => 'name',
+            'releases_count' => 'releases_count',
+            'tracks_count' => 'tracks_count',
+            'notes' => Sorting::nullsLast('notes'),
+        ], fn (Builder $query) => $query->orderBy('name'));
+
         $artists = Artist::query()
             ->with('aliasOf:id,name')
             ->withCount(['releases', 'tracks', 'aliases'])
             ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
-            ->orderBy('name')
+            ->tap($sorting)
             ->paginate(50)
             ->withQueryString()
             ->through(fn (Artist $artist): array => [
@@ -28,7 +37,7 @@ class ArtistController extends Controller
 
         return Inertia::render('artists/index', [
             'artists' => $artists,
-            'filters' => ['search' => $request->string('search')->value()],
+            'filters' => ['search' => $request->string('search')->value(), ...$sorting->toArray()],
             'artistOptions' => Options::artists(),
         ]);
     }

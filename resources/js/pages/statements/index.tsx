@@ -3,6 +3,7 @@ import { Amount } from '@/components/amount';
 import { CheckField } from '@/components/field';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,6 +15,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
 import { index as periods } from '@/routes/periods';
 import { index, show } from '@/routes/statements';
@@ -37,9 +40,15 @@ export default function Statements({
     filters,
 }: {
     statements: Paginated<Statement>;
-    filters: { archived: boolean; period: number | null };
+    filters: {
+        archived: boolean;
+        period: number | null;
+        sort: string | null;
+        direction: SortDirection | null;
+    };
 }) {
     const { apply } = useFilters(index.url(), filters);
+    const sorter = serverSorter(filters, apply);
 
     return (
         <Page
@@ -67,16 +76,36 @@ export default function Statements({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Payee</TableHead>
-                                <TableHead>Period</TableHead>
+                                <SortableHead column="payee" sorter={sorter}>
+                                    Payee
+                                </SortableHead>
+                                <SortableHead column="period" sorter={sorter}>
+                                    Period
+                                </SortableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead>Generated</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead
+                                    column="created_at"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Generated
+                                </SortableHead>
+                                <SortableHead
+                                    column="balance"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Balance
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="payable"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Payable
-                                </TableHead>
+                                </SortableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>

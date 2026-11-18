@@ -7,6 +7,7 @@ import { DeleteButton } from '@/components/delete-button';
 import { Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTableSort } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
 import { index } from '@/routes/label-costs';
 
@@ -171,6 +173,22 @@ function AmountFields({
     );
 }
 
+const RECURRING_COLUMNS = {
+    name: (row: Recurring) => row.name,
+    category: (row: Recurring) => row.category,
+    amount: (row: Recurring) => row.amount,
+    starts_on: (row: Recurring) => row.starts_on,
+    next_due_on: (row: Recurring) => row.next_due_on,
+    occurrences_booked: (row: Recurring) => row.occurrences_booked,
+};
+
+const COST_COLUMNS = {
+    paid_on: (row: Cost) => row.paid_on,
+    name: (row: Cost) => row.source ?? row.memo,
+    category: (row: Cost) => row.category,
+    amount: (row: Cost) => row.converted_total,
+};
+
 export default function LabelCosts({
     currency,
     categories,
@@ -179,6 +197,14 @@ export default function LabelCosts({
     recurring,
     costs,
 }: Props) {
+    const { rows: recurringRows, sorter: recurringSorter } = useTableSort(
+        recurring,
+        RECURRING_COLUMNS,
+    );
+    const { rows: costRows, sorter: costSorter } = useTableSort(
+        costs,
+        COST_COLUMNS,
+    );
     const yearly = recurring
         .filter(
             (cost) => cost.next_due_on !== null && cost.currency === currency,
@@ -347,21 +373,52 @@ export default function LabelCosts({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Cost</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead
+                                    column="name"
+                                    sorter={recurringSorter}
+                                >
+                                    Cost
+                                </SortableHead>
+                                <SortableHead
+                                    column="category"
+                                    sorter={recurringSorter}
+                                >
+                                    Category
+                                </SortableHead>
+                                <SortableHead
+                                    column="amount"
+                                    sorter={recurringSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Amount
-                                </TableHead>
-                                <TableHead>Since</TableHead>
-                                <TableHead>Next payment</TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="starts_on"
+                                    sorter={recurringSorter}
+                                    first="desc"
+                                >
+                                    Since
+                                </SortableHead>
+                                <SortableHead
+                                    column="next_due_on"
+                                    sorter={recurringSorter}
+                                >
+                                    Next payment
+                                </SortableHead>
+                                <SortableHead
+                                    column="occurrences_booked"
+                                    sorter={recurringSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Booked
-                                </TableHead>
+                                </SortableHead>
                                 <TableHead className="w-20" />
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {recurring.map((cost) => (
+                            {recurringRows.map((cost) => (
                                 <TableRow key={cost.id}>
                                     <TableCell className="font-medium">
                                         {cost.name}
@@ -481,17 +538,35 @@ export default function LabelCosts({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Paid</TableHead>
-                                <TableHead>Cost</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead
+                                    column="paid_on"
+                                    sorter={costSorter}
+                                    first="desc"
+                                >
+                                    Paid
+                                </SortableHead>
+                                <SortableHead column="name" sorter={costSorter}>
+                                    Cost
+                                </SortableHead>
+                                <SortableHead
+                                    column="category"
+                                    sorter={costSorter}
+                                >
+                                    Category
+                                </SortableHead>
+                                <SortableHead
+                                    column="amount"
+                                    sorter={costSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Amount
-                                </TableHead>
+                                </SortableHead>
                                 <TableHead className="w-20" />
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {costs.map((cost) => (
+                            {costRows.map((cost) => (
                                 <TableRow key={cost.id}>
                                     <TableCell className="whitespace-nowrap">
                                         {date(cost.paid_on)}

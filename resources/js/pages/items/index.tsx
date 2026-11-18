@@ -8,6 +8,7 @@ import { CheckField, Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { index } from '@/routes/items';
 import { show as showRelease } from '@/routes/releases';
 import type { Option, Paginated, TrackOption } from '@/types';
@@ -46,7 +49,13 @@ type Item = {
 
 type Props = {
     items: Paginated<Item>;
-    filters: { search: string; unassigned: boolean; release: number | null };
+    filters: {
+        search: string;
+        unassigned: boolean;
+        release: number | null;
+        sort: string | null;
+        direction: SortDirection | null;
+    };
     unassignedCount: number;
     releaseOptions: Option[];
     trackOptions: TrackOption[];
@@ -148,6 +157,7 @@ export default function Items({
     contractOptions,
 }: Props) {
     const { apply } = useFilters(index.url(), filters);
+    const sorter = serverSorter(filters, apply);
     const filtered =
         filters.search !== '' || filters.unassigned || filters.release !== null;
 
@@ -227,17 +237,40 @@ export default function Items({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Item</TableHead>
-                                <TableHead>Format group</TableHead>
-                                <TableHead>Release</TableHead>
-                                <TableHead>ISRC / UPC</TableHead>
-                                <TableHead>Contract override</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead column="name" sorter={sorter}>
+                                    Item
+                                </SortableHead>
+                                <SortableHead
+                                    column="format_group"
+                                    sorter={sorter}
+                                >
+                                    Format group
+                                </SortableHead>
+                                <SortableHead column="release" sorter={sorter}>
+                                    Release
+                                </SortableHead>
+                                <SortableHead column="isrc" sorter={sorter}>
+                                    ISRC / UPC
+                                </SortableHead>
+                                <SortableHead column="contract" sorter={sorter}>
+                                    Contract override
+                                </SortableHead>
+                                <SortableHead
+                                    column="transactions_count"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Transactions
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="total"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Total
-                                </TableHead>
+                                </SortableHead>
                                 <TableHead className="w-20" />
                             </TableRow>
                         </TableHeader>

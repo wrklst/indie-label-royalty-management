@@ -100,7 +100,7 @@ test('the transaction list and its totals follow the filter', function (array $q
             ->where('transactions.data', fn ($rows) => collect($rows)->pluck('memo')->sort()->values()->all() === $memos)
             ->where('summary.transactions', count($memos))
             ->where('summary.total', $total)
-            ->where('filters', $query));
+            ->where('filters', [...$query, 'sort' => null, 'direction' => null]));
 })->with([
     'type' => [['type' => 'expense'], ['Bravo'], '-40.000000000000000'],
     'release' => [['release' => ':release'], ['Alpha', 'Bravo'], '60.000000000000000'],

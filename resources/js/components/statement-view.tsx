@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Amount } from '@/components/amount';
 import { Panel, Stat } from '@/components/page';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import {
     Table,
@@ -11,9 +12,14 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTableSort } from '@/hooks/use-table-sort';
 import { date, percent, quantity } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { StatementData, StatementLedger } from '@/types';
+import type {
+    StatementData,
+    StatementDetailRow,
+    StatementLedger,
+} from '@/types';
 
 function LedgerTable({
     ledger,
@@ -201,6 +207,47 @@ function ReleaseRows({
     );
 }
 
+type Movement = {
+    key: string;
+    date: string;
+    type: string;
+    ledger: string | null;
+    release: string | null;
+    memo: string | null;
+    amount: string | number;
+};
+
+const LEDGER_COLUMNS = {
+    ledger_name: (row: StatementLedger) => row.ledger_name,
+    previous_balance: (row: StatementLedger) => row.previous_balance,
+    income: (row: StatementLedger) => row.income,
+    expense: (row: StatementLedger) => row.expense,
+    payee_share: (row: StatementLedger) => row.payee_share,
+    transfers: (row: StatementLedger) => row.transfers,
+    payouts: (row: StatementLedger) => row.payouts,
+    balance: (row: StatementLedger) => row.balance,
+};
+
+const DETAIL_COLUMNS = {
+    release: (row: StatementDetailRow) => row.release_name,
+    track: (row: StatementDetailRow) => row.track_name ?? 'Whole release',
+    format: (row: StatementDetailRow) => row.format ?? row.category,
+    category: (row: StatementDetailRow) => row.category,
+    quantity: (row: StatementDetailRow) => row.quantity,
+    amount: (row: StatementDetailRow) => row.amount,
+    split: (row: StatementDetailRow) => row.split,
+    payee_share: (row: StatementDetailRow) => row.payee_share,
+};
+
+const MOVEMENT_COLUMNS = {
+    date: (row: Movement) => row.date,
+    type: (row: Movement) => row.type,
+    ledger: (row: Movement) => row.ledger,
+    release: (row: Movement) => row.release,
+    memo: (row: Movement) => row.memo,
+    amount: (row: Movement) => row.amount,
+};
+
 /**
  * A payee's figures for one period: summary, one tab per ledger, and the
  * income, expense and transfer detail behind them.
@@ -220,6 +267,46 @@ export function StatementView({ data }: { data: StatementData }) {
         },
     ];
     const [tab, setTab] = useState('summary');
+    const { rows: ledgerRows, sorter: ledgerSorter } = useTableSort(
+        data.ledgers,
+        LEDGER_COLUMNS,
+    );
+    const { rows: incomeRows, sorter: incomeSorter } = useTableSort(
+        data.income_rows,
+        DETAIL_COLUMNS,
+    );
+    const { rows: expenseRows, sorter: expenseSorter } = useTableSort(
+        data.expense_rows,
+        DETAIL_COLUMNS,
+    );
+    // Transfers and payouts share one table, payouts shown as money out.
+    const movements = useMemo<Movement[]>(
+        () => [
+            ...data.transfer_rows.map((row) => ({
+                key: `transfer-${row.id}`,
+                date: row.date,
+                type: row.category ?? 'Transfer',
+                ledger: row.ledger_name,
+                release: row.release_name,
+                memo: row.memo,
+                amount: row.amount,
+            })),
+            ...data.payout_rows.map((row) => ({
+                key: `payout-${row.id}`,
+                date: row.date,
+                type: 'Payout',
+                ledger: null,
+                release: null,
+                memo: row.memo,
+                amount: -Number(row.amount),
+            })),
+        ],
+        [data.transfer_rows, data.payout_rows],
+    );
+    const { rows: movementRows, sorter: movementSorter } = useTableSort(
+        movements,
+        MOVEMENT_COLUMNS,
+    );
     const currency = data.currency;
     const totals = data.totals;
     const ledger = data.ledgers.find(
@@ -319,32 +406,72 @@ export function StatementView({ data }: { data: StatementData }) {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Ledger</TableHead>
-                                    <TableHead className="text-right">
+                                    <SortableHead
+                                        column="ledger_name"
+                                        sorter={ledgerSorter}
+                                    >
+                                        Ledger
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="previous_balance"
+                                        sorter={ledgerSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
                                         Brought forward
-                                    </TableHead>
-                                    <TableHead className="text-right">
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="income"
+                                        sorter={ledgerSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
                                         Income
-                                    </TableHead>
-                                    <TableHead className="text-right">
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="expense"
+                                        sorter={ledgerSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
                                         Expenses
-                                    </TableHead>
-                                    <TableHead className="text-right">
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="payee_share"
+                                        sorter={ledgerSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
                                         Share
-                                    </TableHead>
-                                    <TableHead className="text-right">
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="transfers"
+                                        sorter={ledgerSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
                                         Transfers
-                                    </TableHead>
-                                    <TableHead className="text-right">
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="payouts"
+                                        sorter={ledgerSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
                                         Paid out
-                                    </TableHead>
-                                    <TableHead className="text-right">
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="balance"
+                                        sorter={ledgerSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
                                         Balance
-                                    </TableHead>
+                                    </SortableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {data.ledgers.map((row) => (
+                                {ledgerRows.map((row) => (
                                     <TableRow
                                         key={row.ledger_id ?? 0}
                                         className="cursor-pointer"
@@ -426,21 +553,56 @@ export function StatementView({ data }: { data: StatementData }) {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Release</TableHead>
-                                <TableHead>Track</TableHead>
-                                <TableHead>Format</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead
+                                    column="release"
+                                    sorter={incomeSorter}
+                                >
+                                    Release
+                                </SortableHead>
+                                <SortableHead
+                                    column="track"
+                                    sorter={incomeSorter}
+                                >
+                                    Track
+                                </SortableHead>
+                                <SortableHead
+                                    column="format"
+                                    sorter={incomeSorter}
+                                >
+                                    Format
+                                </SortableHead>
+                                <SortableHead
+                                    column="quantity"
+                                    sorter={incomeSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Units
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="amount"
+                                    sorter={incomeSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Income
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="split"
+                                    sorter={incomeSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Split
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="payee_share"
+                                    sorter={incomeSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Share
-                                </TableHead>
+                                </SortableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -454,7 +616,7 @@ export function StatementView({ data }: { data: StatementData }) {
                                     </TableCell>
                                 </TableRow>
                             )}
-                            {data.income_rows.map((row, position) => (
+                            {incomeRows.map((row, position) => (
                                 <TableRow key={position}>
                                     <TableCell>{row.release_name}</TableCell>
                                     <TableCell>
@@ -499,18 +661,48 @@ export function StatementView({ data }: { data: StatementData }) {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Release</TableHead>
-                                <TableHead>Track</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead
+                                    column="release"
+                                    sorter={expenseSorter}
+                                >
+                                    Release
+                                </SortableHead>
+                                <SortableHead
+                                    column="track"
+                                    sorter={expenseSorter}
+                                >
+                                    Track
+                                </SortableHead>
+                                <SortableHead
+                                    column="category"
+                                    sorter={expenseSorter}
+                                >
+                                    Category
+                                </SortableHead>
+                                <SortableHead
+                                    column="amount"
+                                    sorter={expenseSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Amount
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="split"
+                                    sorter={expenseSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Split
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="payee_share"
+                                    sorter={expenseSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Your part
-                                </TableHead>
+                                </SortableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -524,7 +716,7 @@ export function StatementView({ data }: { data: StatementData }) {
                                     </TableCell>
                                 </TableRow>
                             )}
-                            {data.expense_rows.map((row, position) => (
+                            {expenseRows.map((row, position) => (
                                 <TableRow key={position}>
                                     <TableCell>{row.release_name}</TableCell>
                                     <TableCell>
@@ -564,14 +756,45 @@ export function StatementView({ data }: { data: StatementData }) {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Ledger</TableHead>
-                                <TableHead>Release</TableHead>
-                                <TableHead>Memo</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead
+                                    column="date"
+                                    sorter={movementSorter}
+                                    first="desc"
+                                >
+                                    Date
+                                </SortableHead>
+                                <SortableHead
+                                    column="type"
+                                    sorter={movementSorter}
+                                >
+                                    Type
+                                </SortableHead>
+                                <SortableHead
+                                    column="ledger"
+                                    sorter={movementSorter}
+                                >
+                                    Ledger
+                                </SortableHead>
+                                <SortableHead
+                                    column="release"
+                                    sorter={movementSorter}
+                                >
+                                    Release
+                                </SortableHead>
+                                <SortableHead
+                                    column="memo"
+                                    sorter={movementSorter}
+                                >
+                                    Memo
+                                </SortableHead>
+                                <SortableHead
+                                    column="amount"
+                                    sorter={movementSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Amount
-                                </TableHead>
+                                </SortableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -587,39 +810,18 @@ export function StatementView({ data }: { data: StatementData }) {
                                     </TableCell>
                                 </TableRow>
                             )}
-                            {data.transfer_rows.map((row) => (
-                                <TableRow key={`transfer-${row.id}`}>
+                            {movementRows.map((row) => (
+                                <TableRow key={row.key}>
                                     <TableCell>{date(row.date)}</TableCell>
-                                    <TableCell>
-                                        {row.category ?? 'Transfer'}
-                                    </TableCell>
-                                    <TableCell>{row.ledger_name}</TableCell>
-                                    <TableCell>
-                                        {row.release_name ?? '–'}
-                                    </TableCell>
+                                    <TableCell>{row.type}</TableCell>
+                                    <TableCell>{row.ledger ?? '–'}</TableCell>
+                                    <TableCell>{row.release ?? '–'}</TableCell>
                                     <TableCell className="text-muted-foreground">
                                         {row.memo}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Amount
                                             value={row.amount}
-                                            currency={currency}
-                                        />
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                            {data.payout_rows.map((row) => (
-                                <TableRow key={`payout-${row.id}`}>
-                                    <TableCell>{date(row.date)}</TableCell>
-                                    <TableCell>Payout</TableCell>
-                                    <TableCell>–</TableCell>
-                                    <TableCell>–</TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {row.memo}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Amount
-                                            value={-Number(row.amount)}
                                             currency={currency}
                                         />
                                     </TableCell>

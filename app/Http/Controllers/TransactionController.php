@@ -6,6 +6,7 @@ use App\Enums\TransactionType;
 use App\Http\Requests\TransactionRequest;
 use App\Models\DataImport;
 use App\Models\Item;
+use App\Models\Release;
 use App\Models\Track;
 use App\Models\Transaction;
 use App\Services\Imports\Identifiers;
@@ -13,6 +14,7 @@ use App\Support\CurrentLabel;
 use App\Support\Decimal;
 use App\Support\Formats;
 use App\Support\Options;
+use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,9 +40,21 @@ class TransactionController extends Controller
             ->selectRaw('COUNT(*) as transactions, SUM(converted_total) as total, SUM(quantity) as quantity')
             ->first();
 
+        $sorting = Sorting::for($request, [
+            'timestamp' => 'timestamp',
+            'paid_timestamp' => 'paid_timestamp',
+            'type' => 'type',
+            'release' => Sorting::related(Release::class, 'release_id'),
+            'retailer' => Sorting::nullsLast('retailer'),
+            'format' => Sorting::nullsLast('format'),
+            'region' => Sorting::nullsLast('region'),
+            'quantity' => 'quantity',
+            'converted_total' => Sorting::nullsLast('converted_total'),
+        ], fn (Builder $query) => $query->orderByDesc('timestamp')->orderByDesc('id'));
+
         $transactions = $query
             ->with(['release:id,name,catalog_number', 'track:id,name', 'payee:id,name'])
-            ->orderByDesc('timestamp')->orderByDesc('id')
+            ->tap($sorting)
             ->paginate(100)
             ->withQueryString()
             ->through(fn (Transaction $transaction): array => [
@@ -60,7 +74,7 @@ class TransactionController extends Controller
                 'total' => Decimal::parse($summary->total ?? 0) ?? '0',
                 'quantity' => Decimal::parse($summary->quantity ?? 0) ?? '0',
             ],
-            'filters' => $request->only(['search', 'type', 'release', 'retailer', 'import', 'from', 'to', 'date', 'unassigned', 'unconverted']),
+            'filters' => [...$request->only(['search', 'type', 'release', 'retailer', 'import', 'from', 'to', 'date', 'unassigned', 'unconverted']), ...$sorting->toArray()],
             'releaseOptions' => Options::releases(),
             'retailerOptions' => Transaction::query()->whereNotNull('retailer')->distinct()->orderBy('retailer')->pluck('retailer'),
             'importOptions' => DataImport::query()->latest('id')->limit(100)->get(['id', 'name'])->map->only(['id', 'name']),

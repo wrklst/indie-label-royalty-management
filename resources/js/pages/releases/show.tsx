@@ -9,6 +9,7 @@ import { FormDialog } from '@/components/form-dialog';
 import { Page, Panel, Stat } from '@/components/page';
 import { ReleaseFiles } from '@/components/release-files';
 import type { ReleaseFile } from '@/components/release-files';
+import { SortableHead } from '@/components/sortable-head';
 import { TrackPlayer } from '@/components/track-player';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { useTableSort } from '@/hooks/use-table-sort';
 import { country, date, duration, quantity } from '@/lib/format';
 import { edit as editContract } from '@/routes/contracts';
 import { show as showFile } from '@/routes/release-files';
@@ -405,6 +407,17 @@ function Detail({
     );
 }
 
+const TRACK_COLUMNS = {
+    track_number: (row: Track) => row.track_number,
+    name: (row: Track) => row.name,
+    artist: (row: Track) => row.artist,
+    isrc: (row: Track) => row.isrc,
+    duration: (row: Track) => row.duration,
+    contract: (row: Track) => row.contract?.name,
+    quantity: (row: Track) => row.quantity,
+    income: (row: Track) => row.income,
+};
+
 export default function ShowRelease({
     release,
     totals,
@@ -414,6 +427,10 @@ export default function ShowRelease({
     fileKinds,
     maxUploadMegabytes,
 }: Props) {
+    const { rows: trackRows, sorter } = useTableSort(
+        release.tracks,
+        TRACK_COLUMNS,
+    );
     const title = release.version
         ? `${release.name} (${release.version})`
         : release.name;
@@ -554,24 +571,54 @@ export default function ShowRelease({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-10">#</TableHead>
-                                <TableHead>Title</TableHead>
-                                <TableHead>Artist</TableHead>
-                                <TableHead>ISRC</TableHead>
-                                <TableHead>Length</TableHead>
+                                <SortableHead
+                                    column="track_number"
+                                    sorter={sorter}
+                                    className="w-10"
+                                >
+                                    #
+                                </SortableHead>
+                                <SortableHead column="name" sorter={sorter}>
+                                    Title
+                                </SortableHead>
+                                <SortableHead column="artist" sorter={sorter}>
+                                    Artist
+                                </SortableHead>
+                                <SortableHead column="isrc" sorter={sorter}>
+                                    ISRC
+                                </SortableHead>
+                                <SortableHead
+                                    column="duration"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Length
+                                </SortableHead>
                                 <TableHead>Listen</TableHead>
-                                <TableHead>Contract</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead column="contract" sorter={sorter}>
+                                    Contract
+                                </SortableHead>
+                                <SortableHead
+                                    column="quantity"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Units
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="income"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Income
-                                </TableHead>
+                                </SortableHead>
                                 <TableHead className="w-10" />
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {release.tracks.map((track) => (
+                            {trackRows.map((track) => (
                                 <TableRow key={track.id}>
                                     <TableCell className="text-muted-foreground tabular-nums">
                                         {track.track_number ?? '–'}

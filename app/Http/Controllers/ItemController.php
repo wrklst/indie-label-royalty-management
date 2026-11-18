@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ItemRequest;
+use App\Models\Contract;
 use App\Models\Item;
+use App\Models\Release;
 use App\Models\Track;
 use App\Models\Transaction;
 use App\Support\Options;
+use App\Support\Sorting;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +21,16 @@ class ItemController extends Controller
 {
     public function index(Request $request): Response
     {
+        $sorting = Sorting::for($request, [
+            'name' => 'name',
+            'format_group' => Sorting::nullsLast('format_group'),
+            'release' => Sorting::related(Release::class, 'release_id'),
+            'isrc' => Sorting::nullsLast('isrc'),
+            'contract' => Sorting::related(Contract::class, 'contract_id'),
+            'transactions_count' => 'transactions_count',
+            'total' => Sorting::sum('total'),
+        ], fn (Builder $query) => $query->orderByRaw('release_id IS NOT NULL')->orderBy('name'));
+
         $items = Item::query()
             ->with(['release:id,name,catalog_number', 'track:id,name', 'contract:id,name'])
             ->withCount('transactions')
@@ -28,7 +42,7 @@ class ItemController extends Controller
                 ->orWhere('catalog_number', 'like', "%{$search}%")))
             ->when($request->boolean('unassigned'), fn ($query) => $query->whereNull('release_id'))
             ->when($request->integer('release'), fn ($query, int $release) => $query->where('release_id', $release))
-            ->orderByRaw('release_id IS NOT NULL')->orderBy('name')
+            ->tap($sorting)
             ->paginate(50)
             ->withQueryString()
             ->through(fn (Item $item): array => [
@@ -45,6 +59,7 @@ class ItemController extends Controller
                 'search' => $request->string('search')->value(),
                 'unassigned' => $request->boolean('unassigned'),
                 'release' => $request->integer('release') ?: null,
+                ...$sorting->toArray(),
             ],
             'unassignedCount' => Item::query()->whereNull('release_id')->count(),
             'releaseOptions' => Options::releases(),

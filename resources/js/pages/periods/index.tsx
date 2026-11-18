@@ -5,16 +5,17 @@ import { Amount } from '@/components/amount';
 import { Field } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel } from '@/components/page';
+import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
     TableCell,
-    TableHead,
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTableSort } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
 import { index, show } from '@/routes/periods';
 
@@ -83,6 +84,15 @@ export function PeriodFields({
     );
 }
 
+const SORT_COLUMNS = {
+    name: (row: Period) => row.name,
+    starts_on: (row: Period) => row.starts_on,
+    ends_on: (row: Period) => row.ends_on,
+    statements_count: (row: Period) => row.statements_count,
+    payouts_count: (row: Period) => row.payouts_count,
+    paid: (row: Period) => row.paid,
+};
+
 export default function Periods({
     periods,
     suggestion,
@@ -90,6 +100,7 @@ export default function Periods({
     periods: Period[];
     suggestion: { name: string; starts_on: string; ends_on: string };
 }) {
+    const { rows, sorter } = useTableSort(periods, SORT_COLUMNS);
     const newPeriod = (
         <FormDialog
             title="New period"
@@ -123,22 +134,51 @@ export default function Periods({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Period</TableHead>
-                                <TableHead>From</TableHead>
-                                <TableHead>To</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead column="name" sorter={sorter}>
+                                    Period
+                                </SortableHead>
+                                <SortableHead
+                                    column="starts_on"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    From
+                                </SortableHead>
+                                <SortableHead
+                                    column="ends_on"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    To
+                                </SortableHead>
+                                <SortableHead
+                                    column="statements_count"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Statements
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="payouts_count"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Payouts
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="paid"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Paid out
-                                </TableHead>
+                                </SortableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {periods.map((period) => (
+                            {rows.map((period) => (
                                 <TableRow key={period.id}>
                                     <TableCell>
                                         <Link
