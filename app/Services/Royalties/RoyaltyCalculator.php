@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\DB;
  *   then track, then release. Without a contract the label keeps it all.
  * - Net = income + expenses (costs are stored negative). The payee share
  *   is net × split and is booked on the ledger named by the split.
+ * - An expense that is not recoupable is borne by the label alone: it is
+ *   left out of the net that is split and only lowers what the label keeps.
  * - Ledger balance = previous balance + payee share + transfers − payouts.
  *   A negative ledger is unrecouped and carries forward; only positive
  *   ledgers are payable, and ledgers never offset one another.
@@ -74,6 +76,10 @@ class RoyaltyCalculator
     public function __construct(private readonly SplitResolver $splitResolver) {}
 
     /**
+     * The totals describe the royalty base: income, expense and net leave
+     * out expenses that are not recoupable. Those are summed in label_costs
+     * (negative), and label_share = net − payee_share + label_costs.
+     *
      * @return array{
      *     period: array{id: int, name: string, starts_on: string, ends_on: string},
      *     currency: string,
@@ -210,6 +216,7 @@ class RoyaltyCalculator
         usort($result, fn (array $a, array $b): int => strcasecmp($a['payee_name'], $b['payee_name']));
 
         $net = Decimal::add($totals['income'], $totals['expense']);
+        $labelCosts = $this->labelCosts($labelId, $start, $end);
 
         return [
             'period' => ['id' => $period->id, 'name' => $period->name, 'starts_on' => $start, 'ends_on' => $end],
@@ -219,7 +226,8 @@ class RoyaltyCalculator
                 'expense' => $totals['expense'],
                 'net' => $net,
                 'payee_share' => $totals['payee_share'],
-                'label_share' => Decimal::sub($net, $totals['payee_share']),
+                'label_costs' => $labelCosts,
+                'label_share' => Decimal::add(Decimal::sub($net, $totals['payee_share']), $labelCosts),
                 ...$grand,
             ],
             'audit' => $this->audit($labelId, $start, $end, $names),
@@ -375,8 +383,8 @@ class RoyaltyCalculator
     }
 
     /**
-     * Income and expenses up to the period end, grouped as far as the
-     * statement needs and flagged as before or inside the period.
+     * Income and recoupable expenses up to the period end, grouped as far
+     * as the statement needs and flagged as before or inside the period.
      *
      * @return iterable<ActivityRow>
      */
@@ -385,7 +393,9 @@ class RoyaltyCalculator
         $region = $withRegion ? 't.region' : 'NULL';
 
         $rows = $this->base($labelId)
-            ->whereIn('t.type', ['income', 'expense'])
+            ->where(fn (Builder $query) => $query
+                ->where('t.type', 'income')
+                ->orWhere(fn (Builder $query) => $query->where('t.type', 'expense')->where('t.recoupable', true)))
             ->where('t.paid_timestamp', '<=', $end)
             ->whereNotNull('t.converted_total')
             ->selectRaw(
@@ -410,6 +420,24 @@ class RoyaltyCalculator
                 'quantity' => $row->quantity,
             ];
         }
+    }
+
+    /**
+     * Expenses paid in the period that the label bears alone.
+     *
+     * @return numeric-string
+     */
+    private function labelCosts(int $labelId, string $start, string $end): string
+    {
+        $total = DB::table('transactions')
+            ->where('label_id', $labelId)
+            ->where('type', 'expense')
+            ->where('recoupable', false)
+            ->whereBetween('paid_timestamp', [$start, $end])
+            ->whereNotNull('converted_total')
+            ->sum('converted_total');
+
+        return Decimal::parse($total) ?? Decimal::add('0', '0');
     }
 
     /**

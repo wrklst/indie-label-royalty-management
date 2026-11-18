@@ -293,6 +293,7 @@ class ImportInfiniteCatalog extends Command
                 'memo' => $row['memo'] ? mb_substr($row['memo'], 0, 1000) : null,
                 'published' => $row['published'],
                 'billable' => $row['billable'],
+                'recoupable' => true,
                 'fingerprint' => sha1('infinite-catalog|'.$row['id']),
                 'raw_data' => json_encode(['infinite_catalog_id' => $row['id']]),
                 'created_at' => $now,

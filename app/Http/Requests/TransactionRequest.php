@@ -51,6 +51,7 @@ class TransactionRequest extends LabelFormRequest
             'memo' => ['nullable', 'string', 'max:1000'],
             'published' => ['boolean'],
             'billable' => ['boolean'],
+            'recoupable' => ['boolean'],
         ];
     }
 

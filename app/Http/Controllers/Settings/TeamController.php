@@ -7,10 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\MemberRequest;
 use App\Models\Payee;
 use App\Models\User;
+use App\Notifications\LabelInvitation;
 use App\Support\CurrentLabel;
 use App\Support\Options;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -35,8 +35,9 @@ class TeamController extends Controller
     }
 
     /**
-     * Add a person to the label. Someone without an account gets one and
-     * a password reset link to set their own password.
+     * Add a person to the label. Someone without an account gets one.
+     * Either way they are emailed an invitation that leads to signing in
+     * with a one-time code, so nothing in it can expire before it is read.
      */
     public function store(MemberRequest $request, CurrentLabel $currentLabel): RedirectResponse
     {
@@ -57,11 +58,10 @@ class TeamController extends Controller
                 'password' => Str::password(32),
             ]);
             $user->forceFill(['email_verified_at' => now()])->save();
-
-            Password::sendResetLink(['email' => $email]);
         }
 
         $label->users()->attach($user, $this->pivot($request));
+        $user->notify(new LabelInvitation($label));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __(':name was added to the label.', ['name' => $user->name])]);
 

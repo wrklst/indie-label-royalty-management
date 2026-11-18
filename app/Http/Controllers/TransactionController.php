@@ -44,7 +44,7 @@ class TransactionController extends Controller
             ->paginate(100)
             ->withQueryString()
             ->through(fn (Transaction $transaction): array => [
-                ...$transaction->only(['id', 'total', 'converted_total', 'currency', 'quantity', 'category', 'format', 'region', 'retailer', 'memo', 'published', 'data_import_id']),
+                ...$transaction->only(['id', 'total', 'converted_total', 'currency', 'quantity', 'category', 'format', 'region', 'retailer', 'memo', 'published', 'recoupable', 'data_import_id']),
                 'type' => $transaction->type->value,
                 'timestamp' => $transaction->timestamp->toDateString(),
                 'paid_timestamp' => $transaction->paid_timestamp->toDateString(),
@@ -71,7 +71,12 @@ class TransactionController extends Controller
     {
         return Inertia::render('transactions/form', [
             'transaction' => null,
-            'defaults' => ['type' => (TransactionType::tryFrom((string) $request->query('type')) ?? TransactionType::Income)->value, 'release_id' => $request->integer('release') ?: null, 'payee_id' => $request->integer('payee') ?: null],
+            'defaults' => [
+                'type' => (TransactionType::tryFrom((string) $request->query('type')) ?? TransactionType::Income)->value,
+                'release_id' => $request->integer('release') ?: null,
+                'payee_id' => $request->integer('payee') ?: null,
+                'recoupable' => $request->boolean('recoupable', true),
+            ],
             ...$this->options(),
         ]);
     }
@@ -93,7 +98,7 @@ class TransactionController extends Controller
     {
         return Inertia::render('transactions/form', [
             'transaction' => [
-                ...$transaction->only(['id', 'total', 'currency', 'conversion_rate', 'converted_total', 'quantity', 'price', 'release_id', 'track_id', 'contract_id', 'payee_id', 'ledger_id', 'category', 'format', 'usage_type', 'region', 'retailer', 'provider', 'external_id', 'source', 'memo', 'published', 'billable', 'raw_data', 'data_import_id']),
+                ...$transaction->only(['id', 'total', 'currency', 'conversion_rate', 'converted_total', 'quantity', 'price', 'release_id', 'track_id', 'contract_id', 'payee_id', 'ledger_id', 'category', 'format', 'usage_type', 'region', 'retailer', 'provider', 'external_id', 'source', 'memo', 'published', 'billable', 'recoupable', 'raw_data', 'data_import_id']),
                 'type' => $transaction->type->value,
                 'timestamp' => $transaction->timestamp->toDateString(),
                 'paid_timestamp' => $transaction->paid_timestamp->toDateString(),
@@ -187,8 +192,13 @@ class TransactionController extends Controller
             $attributes['region'] = strtoupper($attributes['region']);
         }
 
+        // Only an expense can be borne by the label alone.
+        $recoupable = $attributes['type'] !== TransactionType::Expense->value
+            || ($attributes['recoupable'] ?? $transaction->recoupable ?? true);
+
         return [
             ...$attributes,
+            'recoupable' => $recoupable,
             'total' => $total,
             'conversion_rate' => $rate,
             'converted_total' => $rate === null ? null : Decimal::mul($total, $rate),

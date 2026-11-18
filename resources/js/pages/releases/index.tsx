@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Plus } from 'lucide-react';
+import { FileSpreadsheet, Plus } from 'lucide-react';
 import { Amount } from '@/components/amount';
 import { CheckField, SelectInput } from '@/components/field';
 import { EmptyState, Page, Panel } from '@/components/page';
@@ -19,8 +19,10 @@ import { useFilters } from '@/hooks/use-filters';
 import { date } from '@/lib/format';
 import { edit as editContract } from '@/routes/contracts';
 import { create as createImport } from '@/routes/data-imports';
-import { create, index, show } from '@/routes/releases';
+import { show as showFile } from '@/routes/release-files';
+import { create, index, metadata, show } from '@/routes/releases';
 import type { Option, Paginated } from '@/types';
+import { ReleaseStatusBadge } from './show';
 
 type Release = {
     id: number;
@@ -32,12 +34,16 @@ type Release = {
     artist: string | null;
     contract: Option | null;
     income: string;
+    status: 'todo' | 'in_progress' | 'done';
+    release_type: string | null;
+    cover_file_id: number | null;
 };
 
 type Filters = {
     search: string;
     artist: number | null;
     without_contract: boolean;
+    status: string | null;
 };
 
 export default function Releases({
@@ -53,19 +59,28 @@ export default function Releases({
     const filtered =
         filters.search !== '' ||
         filters.artist !== null ||
-        filters.without_contract;
+        filters.without_contract ||
+        filters.status !== null;
 
     return (
         <Page
             title="Releases"
             description="Albums, EPs and singles. Releases are created from your imports, matched by UPC/EAN and catalog number."
             actions={
-                <Button asChild>
-                    <Link href={create()}>
-                        <Plus />
-                        New release
-                    </Link>
-                </Button>
+                <>
+                    <Button variant="outline" asChild>
+                        <a href={metadata.url()}>
+                            <FileSpreadsheet />
+                            Metadata CSV
+                        </a>
+                    </Button>
+                    <Button asChild>
+                        <Link href={create()}>
+                            <Plus />
+                            New release
+                        </Link>
+                    </Button>
+                </>
             }
         >
             <div className="flex flex-wrap items-center gap-3">
@@ -92,6 +107,19 @@ export default function Releases({
                     placeholder="All artists"
                     className="w-52"
                 />
+                <SelectInput
+                    aria-label="Status"
+                    value={filters.status ?? ''}
+                    onChange={(event) =>
+                        apply({ status: event.target.value || null })
+                    }
+                    placeholder="Any status"
+                    className="w-36"
+                >
+                    <option value="todo">To do</option>
+                    <option value="in_progress">In progress</option>
+                    <option value="done">Done</option>
+                </SelectInput>
                 <CheckField
                     label="Without contract"
                     checked={filters.without_contract}
@@ -124,6 +152,7 @@ export default function Releases({
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead className="w-12" />
                                 <TableHead>Cat. no.</TableHead>
                                 <TableHead>Release</TableHead>
                                 <TableHead>Artist</TableHead>
@@ -141,6 +170,20 @@ export default function Releases({
                         <TableBody>
                             {releases.data.map((release) => (
                                 <TableRow key={release.id}>
+                                    <TableCell>
+                                        <div className="size-9 overflow-hidden rounded border bg-muted">
+                                            {release.cover_file_id && (
+                                                <img
+                                                    src={showFile.url(
+                                                        release.cover_file_id,
+                                                    )}
+                                                    alt=""
+                                                    loading="lazy"
+                                                    className="size-full object-cover"
+                                                />
+                                            )}
+                                        </div>
+                                    </TableCell>
                                     <TableCell className="font-mono text-xs">
                                         {release.catalog_number ?? '–'}
                                     </TableCell>
@@ -151,6 +194,18 @@ export default function Releases({
                                         >
                                             {release.name}
                                         </Link>
+                                        <span className="ml-2 inline-flex gap-1 align-middle">
+                                            {release.status !== 'done' && (
+                                                <ReleaseStatusBadge
+                                                    status={release.status}
+                                                />
+                                            )}
+                                            {release.release_type && (
+                                                <Badge variant="outline">
+                                                    {release.release_type}
+                                                </Badge>
+                                            )}
+                                        </span>
                                     </TableCell>
                                     <TableCell>
                                         {release.artist ?? '–'}

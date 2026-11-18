@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\ReleaseFileKind;
+use App\Enums\ReleaseStatus;
+use App\Enums\ReleaseType;
 use App\Models\Concerns\BelongsToLabel;
 use Carbon\CarbonImmutable;
 use Database\Factories\ReleaseFactory;
@@ -9,7 +12,9 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property int $id
@@ -28,10 +33,27 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|float|int|null $ppd_rate
  * @property string|float|int|null $reserves_rate
  * @property string|null $notes
+ * @property ReleaseStatus $status
+ * @property ReleaseType|null $release_type
+ * @property string|null $version
+ * @property string|null $genre
+ * @property string|null $subgenre
+ * @property string|null $language
+ * @property string|null $explicit
+ * @property string|null $p_line
+ * @property string|null $c_line
+ * @property CarbonImmutable|null $original_released_on
+ * @property CarbonImmutable|null $preorder_on
+ * @property string|null $press_release
+ * @property string|null $key_facts
+ * @property string|null $todo
+ * @property string|null $files_url
+ * @property list<string>|null $blocked_services
+ * @property list<string>|null $blocked_territories
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['label_id', 'artist_id', 'contract_id', 'name', 'catalog_number', 'upc', 'image_path', 'released_on', 'spotify_id', 'discogs_id', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'reserves_rate', 'notes'])]
+#[Fillable(['label_id', 'artist_id', 'contract_id', 'name', 'catalog_number', 'upc', 'image_path', 'released_on', 'spotify_id', 'discogs_id', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'reserves_rate', 'notes', 'status', 'release_type', 'version', 'genre', 'subgenre', 'language', 'explicit', 'p_line', 'c_line', 'original_released_on', 'preorder_on', 'press_release', 'key_facts', 'todo', 'files_url', 'blocked_services', 'blocked_territories'])]
 class Release extends Model
 {
     /** @use HasFactory<ReleaseFactory> */
@@ -65,6 +87,9 @@ class Release extends Model
         // Items that carry transactions stay behind as unassigned items so
         // their income can be given to another release; empty ones go.
         static::deleting(function (Release $release): void {
+            // Stored files are removed one by one so each is deleted from disk.
+            $release->files()->get()->each->delete();
+
             $release->items()->doesntHave('transactions')->delete();
             $release->items()->where('is_additionals', true)->update([
                 'is_additionals' => false,
@@ -81,7 +106,41 @@ class Release extends Model
         return [
             'released_on' => 'date:Y-m-d',
             'accounts_mechanicals' => 'boolean',
+            'original_released_on' => 'date:Y-m-d',
+            'preorder_on' => 'date:Y-m-d',
+            'status' => ReleaseStatus::class,
+            'release_type' => ReleaseType::class,
+            'blocked_services' => 'array',
+            'blocked_territories' => 'array',
         ];
+    }
+
+    /**
+     * Every artist credited on the release, main artists first.
+     *
+     * @return BelongsToMany<Artist, $this>
+     */
+    public function artists(): BelongsToMany
+    {
+        return $this->belongsToMany(Artist::class)->withPivot(['role', 'position'])->withTimestamps()->orderByPivot('position');
+    }
+
+    /**
+     * @return HasMany<ReleaseFile, $this>
+     */
+    public function files(): HasMany
+    {
+        return $this->hasMany(ReleaseFile::class);
+    }
+
+    /**
+     * The newest file marked as cover.
+     *
+     * @return HasOne<ReleaseFile, $this>
+     */
+    public function cover(): HasOne
+    {
+        return $this->hasOne(ReleaseFile::class)->where('kind', ReleaseFileKind::Cover)->latestOfMany();
     }
 
     /**

@@ -42,12 +42,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $memo
  * @property bool $published
  * @property bool $billable
+ * @property bool $recoupable
  * @property string|null $fingerprint
  * @property array<string, mixed>|null $raw_data
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['label_id', 'data_import_id', 'release_id', 'track_id', 'item_id', 'contract_id', 'payee_id', 'ledger_id', 'type', 'timestamp', 'paid_timestamp', 'quantity', 'price', 'total', 'currency', 'conversion_rate', 'converted_total', 'category', 'format', 'usage_type', 'region', 'provider', 'retailer', 'external_id', 'source', 'importer_source', 'memo', 'published', 'billable', 'fingerprint', 'raw_data'])]
+#[Fillable(['label_id', 'data_import_id', 'release_id', 'track_id', 'item_id', 'contract_id', 'payee_id', 'ledger_id', 'type', 'timestamp', 'paid_timestamp', 'quantity', 'price', 'total', 'currency', 'conversion_rate', 'converted_total', 'category', 'format', 'usage_type', 'region', 'provider', 'retailer', 'external_id', 'source', 'importer_source', 'memo', 'published', 'billable', 'recoupable', 'fingerprint', 'raw_data'])]
 class Transaction extends Model
 {
     /** @use HasFactory<TransactionFactory> */
@@ -66,6 +67,7 @@ class Transaction extends Model
             'converted_total' => 'decimal:15',
             'published' => 'boolean',
             'billable' => 'boolean',
+            'recoupable' => 'boolean',
             'raw_data' => 'array',
         ];
     }

@@ -1,0 +1,360 @@
+import { Link } from '@inertiajs/react';
+import { Download } from 'lucide-react';
+import { Amount } from '@/components/amount';
+import { SelectInput } from '@/components/field';
+import { EmptyState, Page, Panel, Stat } from '@/components/page';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableFooter,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { useFilters } from '@/hooks/use-filters';
+import { percent } from '@/lib/format';
+import { download, index } from '@/routes/profitability';
+import { show as showRelease } from '@/routes/releases';
+import { index as transactions } from '@/routes/transactions';
+import type { Option } from '@/types';
+
+type Figures = {
+    income: string;
+    expense: string;
+    net: string;
+    payee_share: string;
+    label_costs: string;
+    label_result: string;
+    margin: string | null;
+    advances: string;
+};
+
+type Row = Figures & {
+    release_id: number | null;
+    release_name: string;
+    catalog_number: string | null;
+    artist_name: string | null;
+};
+
+type Filters = {
+    from: string | null;
+    to: string | null;
+    date: 'sold' | 'paid';
+    artist: number | null;
+};
+
+type Props = {
+    currency: string;
+    rows: Row[];
+    totals: Figures;
+    unconverted: number;
+    filters: Filters;
+    artistOptions: Option[];
+};
+
+const COLUMNS: { label: string; hint: string }[] = [
+    { label: 'Income', hint: 'Everything the release brought in.' },
+    {
+        label: 'Recoupable expenses',
+        hint: 'Costs deducted before the split, so payees carry their share.',
+    },
+    { label: 'Net', hint: 'Income plus recoupable expenses.' },
+    {
+        label: 'Payee share',
+        hint: 'What payees earn from the net under the contracts that apply.',
+    },
+    {
+        label: 'Label costs',
+        hint: 'One-time payments and other costs the label bears alone.',
+    },
+    {
+        label: 'Label result',
+        hint: 'Net minus payee share, less the label costs.',
+    },
+    { label: 'Margin', hint: 'Label result as a share of income.' },
+    {
+        label: 'Advances given',
+        hint: 'Prepaid royalties, not a cost: not part of the label result.',
+    },
+];
+
+function FigureCells({
+    figures,
+    currency,
+}: {
+    figures: Figures;
+    currency: string;
+}) {
+    return (
+        <>
+            <TableCell className="text-right">
+                <Amount value={figures.income} currency={currency} />
+            </TableCell>
+            <TableCell className="text-right">
+                <Amount value={figures.expense} currency={currency} />
+            </TableCell>
+            <TableCell className="text-right">
+                <Amount value={figures.net} currency={currency} />
+            </TableCell>
+            <TableCell className="text-right">
+                <Amount value={figures.payee_share} currency={currency} />
+            </TableCell>
+            <TableCell className="text-right">
+                <Amount value={figures.label_costs} currency={currency} />
+            </TableCell>
+            <TableCell className="text-right font-medium">
+                <Amount value={figures.label_result} currency={currency} />
+            </TableCell>
+            <TableCell className="text-right text-muted-foreground tabular-nums">
+                {percent(figures.margin)}
+            </TableCell>
+            <TableCell className="text-right">
+                <Amount value={figures.advances} currency={currency} muted />
+            </TableCell>
+        </>
+    );
+}
+
+export default function Profitability({
+    currency,
+    rows,
+    totals,
+    unconverted,
+    filters,
+    artistOptions,
+}: Props) {
+    const { apply } = useFilters(index.url(), filters);
+    const filtered =
+        filters.from !== null || filters.to !== null || filters.artist !== null;
+    const query = Object.fromEntries(
+        Object.entries(filters).filter(([, value]) => value !== null),
+    );
+
+    return (
+        <Page
+            title="Profitability"
+            description="What the label is left with per release: income, minus recoupable expenses, minus what payees earn, minus the costs the label bears alone such as one-time payments. Advances are prepaid royalties, not costs, so they are listed for information and are not part of the label result."
+            actions={
+                <Button variant="outline" asChild>
+                    <a href={download.url({ query })}>
+                        <Download />
+                        Download CSV
+                    </a>
+                </Button>
+            }
+        >
+            <div className="flex flex-wrap items-center gap-3">
+                <SelectInput
+                    aria-label="Date used"
+                    value={filters.date}
+                    onChange={(event) =>
+                        apply({ date: event.target.value as 'sold' | 'paid' })
+                    }
+                    className="w-40"
+                >
+                    <option value="sold">By sale date</option>
+                    <option value="paid">By paid date</option>
+                </SelectInput>
+                <Input
+                    aria-label="From"
+                    type="date"
+                    value={filters.from ?? ''}
+                    onChange={(event) => apply({ from: event.target.value })}
+                    className="w-40"
+                />
+                <span className="text-sm text-muted-foreground">to</span>
+                <Input
+                    aria-label="To"
+                    type="date"
+                    value={filters.to ?? ''}
+                    onChange={(event) => apply({ to: event.target.value })}
+                    className="w-40"
+                />
+                <SelectInput
+                    aria-label="Artist"
+                    value={filters.artist ?? ''}
+                    onChange={(event) =>
+                        apply({
+                            artist: event.target.value
+                                ? Number(event.target.value)
+                                : null,
+                        })
+                    }
+                    options={artistOptions}
+                    placeholder="All artists"
+                    className="w-52"
+                />
+                {filtered ? (
+                    <Button variant="ghost" size="sm" asChild>
+                        <Link href={index({ query: { date: filters.date } })}>
+                            All time, all artists
+                        </Link>
+                    </Button>
+                ) : (
+                    <span className="text-sm text-muted-foreground">
+                        All time
+                    </span>
+                )}
+            </div>
+
+            {unconverted > 0 && (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                    <Link
+                        href={transactions({ query: { unconverted: 1 } })}
+                        className="underline underline-offset-4"
+                    >
+                        {unconverted} transaction{unconverted === 1 ? '' : 's'}{' '}
+                        without a conversion rate
+                    </Link>{' '}
+                    {unconverted === 1 ? 'is' : 'are'} not counted here.
+                </div>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Stat
+                    label="Income"
+                    value={<Amount value={totals.income} currency={currency} />}
+                    hint={
+                        <>
+                            Recoupable expenses{' '}
+                            <Amount
+                                value={totals.expense}
+                                currency={currency}
+                            />
+                        </>
+                    }
+                />
+                <Stat
+                    label="Payee share"
+                    value={
+                        <Amount
+                            value={totals.payee_share}
+                            currency={currency}
+                        />
+                    }
+                    hint={
+                        <>
+                            of <Amount value={totals.net} currency={currency} />{' '}
+                            net
+                        </>
+                    }
+                />
+                <Stat
+                    label="Label costs"
+                    value={
+                        <Amount
+                            value={totals.label_costs}
+                            currency={currency}
+                        />
+                    }
+                    hint="Borne by the label alone"
+                />
+                <Stat
+                    label="Label result"
+                    value={
+                        <Amount
+                            value={totals.label_result}
+                            currency={currency}
+                        />
+                    }
+                    hint={
+                        totals.margin === null
+                            ? 'No income in this range'
+                            : `${percent(totals.margin)} of income`
+                    }
+                />
+            </div>
+
+            {rows.length === 0 ? (
+                <EmptyState
+                    title={
+                        filtered
+                            ? 'Nothing was booked in this range'
+                            : 'No transactions yet'
+                    }
+                    description="Income, expenses and one-time payments show up here once they are booked."
+                />
+            ) : (
+                <Panel flush>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Release</TableHead>
+                                {COLUMNS.map((column) => (
+                                    <TableHead
+                                        key={column.label}
+                                        title={column.hint}
+                                        className="text-right"
+                                    >
+                                        {column.label}
+                                    </TableHead>
+                                ))}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {rows.map((row) => (
+                                <TableRow key={row.release_id ?? 'unassigned'}>
+                                    <TableCell className="max-w-xs">
+                                        {row.release_id === null ? (
+                                            <span className="text-muted-foreground">
+                                                {row.release_name}
+                                            </span>
+                                        ) : (
+                                            <Link
+                                                href={showRelease(
+                                                    row.release_id,
+                                                )}
+                                                className="block truncate underline decoration-muted-foreground/40 underline-offset-4"
+                                            >
+                                                {row.release_name}
+                                            </Link>
+                                        )}
+                                        {(row.artist_name ||
+                                            row.catalog_number) && (
+                                            <span className="block truncate text-xs text-muted-foreground">
+                                                {[
+                                                    row.artist_name,
+                                                    row.catalog_number,
+                                                ]
+                                                    .filter(Boolean)
+                                                    .join(' · ')}
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                    <FigureCells
+                                        figures={row}
+                                        currency={currency}
+                                    />
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                        <TableFooter>
+                            <TableRow>
+                                <TableCell className="font-medium">
+                                    Total
+                                </TableCell>
+                                <FigureCells
+                                    figures={totals}
+                                    currency={currency}
+                                />
+                            </TableRow>
+                        </TableFooter>
+                    </Table>
+                    <p className="border-t px-4 py-3 text-xs text-muted-foreground">
+                        Label result = net − payee share + label costs (costs
+                        are negative). Advances given are royalties paid ahead;
+                        they are recouped from the payee share and are money the
+                        label has out until then, not a cost of the release.
+                    </p>
+                </Panel>
+            )}
+        </Page>
+    );
+}
+
+Profitability.layout = {
+    breadcrumbs: [{ title: 'Profitability', href: index() }],
+};

@@ -12,6 +12,7 @@ import {
     ListMusic,
     Mic2,
     Package,
+    TrendingUp,
     Upload,
     Users,
 } from 'lucide-react';
@@ -36,6 +37,7 @@ import { index as payees } from '@/routes/payees';
 import { index as payouts } from '@/routes/payouts';
 import { index as periods } from '@/routes/periods';
 import { index as portal } from '@/routes/portal';
+import { index as profitability } from '@/routes/profitability';
 import { index as releases } from '@/routes/releases';
 import { index as statements } from '@/routes/statements';
 import { index as tracks } from '@/routes/tracks';
@@ -58,6 +60,11 @@ const adminGroups: NavGroup[] = [
             { title: 'Periods', href: periods(), icon: CalendarRange },
             { title: 'Statements', href: statements(), icon: FileText },
             { title: 'Payouts', href: payouts(), icon: Banknote },
+            {
+                title: 'Profitability',
+                href: profitability(),
+                icon: TrendingUp,
+            },
         ],
     },
     {
@@ -78,7 +85,7 @@ const adminGroups: NavGroup[] = [
 const payeeGroups: NavGroup[] = [
     {
         title: 'Royalties',
-        items: [{ title: 'My statements', href: portal(), icon: FileText }],
+        items: [{ title: 'Overview', href: portal(), icon: FileText }],
     },
 ];
 

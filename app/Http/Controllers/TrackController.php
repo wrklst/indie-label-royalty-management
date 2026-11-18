@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\TrackRequest;
 use App\Models\Track;
 use App\Services\Imports\Identifiers;
+use App\Services\Releases\ArtistCredits;
 use App\Support\Options;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,7 +44,11 @@ class TrackController extends Controller
 
     public function update(TrackRequest $request, Track $track): RedirectResponse
     {
-        $attributes = $request->validated();
+        $attributes = $request->safe()->except('artists');
+
+        if ($request->has('artists')) {
+            ArtistCredits::sync($track, $request->validated('artists', []));
+        }
 
         if (array_key_exists('isrc', $attributes)) {
             $attributes['isrc'] = Identifiers::isrc($attributes['isrc']);

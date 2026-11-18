@@ -36,6 +36,7 @@ type Transaction = {
     region: string | null;
     retailer: string | null;
     memo: string | null;
+    recoupable: boolean;
     release: Option | null;
     track: string | null;
     payee: string | null;
@@ -81,9 +82,19 @@ export default function Transactions({
     return (
         <Page
             title="Transactions"
-            description="Every line of income, every expense and every transfer. Expenses are negative; a negative transfer was given to the payee."
+            description="Every line of income, every expense and every transfer. Expenses are negative; a negative transfer was given to the payee. A one-time payment is an expense the label bears alone."
             actions={
                 <>
+                    <Button variant="outline" asChild>
+                        <Link
+                            href={create({
+                                query: { type: 'expense', recoupable: 0 },
+                            })}
+                        >
+                            <Plus />
+                            One-time payment
+                        </Link>
+                    </Button>
                     <Button variant="outline" asChild>
                         <Link href={create({ query: { type: 'expense' } })}>
                             <Plus />
@@ -293,6 +304,16 @@ export default function Transactions({
                                         >
                                             {transaction.type}
                                         </Badge>
+                                        {transaction.type === 'expense' &&
+                                            !transaction.recoupable && (
+                                                <Badge
+                                                    variant="outline"
+                                                    className="ml-1"
+                                                    title="Borne by the label alone, not recouped from payees"
+                                                >
+                                                    label cost
+                                                </Badge>
+                                            )}
                                     </TableCell>
                                     <TableCell className="max-w-xs">
                                         {transaction.type === 'transfer' ? (

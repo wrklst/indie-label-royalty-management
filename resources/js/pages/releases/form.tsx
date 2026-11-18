@@ -1,6 +1,8 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
 import { Plus, X } from 'lucide-react';
 import ReleaseController from '@/actions/App/Http/Controllers/ReleaseController';
+import { ArtistCreditRows } from '@/components/artist-credit-rows';
+import type { ArtistCredit } from '@/components/artist-credit-rows';
 import { DeleteButton } from '@/components/delete-button';
 import { CheckField, Field, SelectInput } from '@/components/field';
 import InputError from '@/components/input-error';
@@ -37,6 +39,24 @@ type Release = {
     ppd_rate: string | null;
     reserves_rate: string | null;
     notes: string | null;
+    status: string;
+    release_type: string | null;
+    version: string | null;
+    genre: string | null;
+    subgenre: string | null;
+    language: string | null;
+    explicit: string | null;
+    p_line: string | null;
+    c_line: string | null;
+    original_released_on: string | null;
+    preorder_on: string | null;
+    press_release: string | null;
+    key_facts: string | null;
+    todo: string | null;
+    files_url: string | null;
+    blocked_services: string[];
+    blocked_territories: string[];
+    artists: ArtistCredit[];
     tracks: {
         id: number;
         name: string;
@@ -56,10 +76,14 @@ export default function ReleaseForm({
     release,
     artistOptions,
     contractOptions,
+    statusOptions,
+    typeOptions,
 }: {
     release: Release | null;
     artistOptions: Option[];
     contractOptions: Option[];
+    statusOptions: { value: string; label: string }[];
+    typeOptions: { value: string; label: string }[];
 }) {
     const { label } = usePage().props;
     const form = useForm({
@@ -76,6 +100,24 @@ export default function ReleaseForm({
         ppd_rate: release?.ppd_rate ?? '',
         reserves_rate: release?.reserves_rate ?? '',
         notes: release?.notes ?? '',
+        status: release?.status ?? 'todo',
+        release_type: release?.release_type ?? '',
+        version: release?.version ?? '',
+        genre: release?.genre ?? '',
+        subgenre: release?.subgenre ?? '',
+        language: release?.language ?? '',
+        explicit: release?.explicit ?? '',
+        p_line: release?.p_line ?? '',
+        c_line: release?.c_line ?? '',
+        original_released_on: release?.original_released_on ?? '',
+        preorder_on: release?.preorder_on ?? '',
+        press_release: release?.press_release ?? '',
+        key_facts: release?.key_facts ?? '',
+        todo: release?.todo ?? '',
+        files_url: release?.files_url ?? '',
+        blocked_services: (release?.blocked_services ?? []).join(', '),
+        blocked_territories: (release?.blocked_territories ?? []).join(', '),
+        artists: (release?.artists ?? []) as ArtistCredit[],
         tracks: (release?.tracks ?? []).map((track) => ({
             id: track.id,
             name: track.name,
@@ -275,6 +317,332 @@ export default function ReleaseForm({
                                 value={form.data.notes}
                                 onChange={(event) =>
                                     form.setData('notes', event.target.value)
+                                }
+                            />
+                        </Field>
+                    </div>
+                </Panel>
+
+                <Panel
+                    title="Release details"
+                    description="What stores and distributors ask for when the release is delivered."
+                >
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <Field
+                            label="Status"
+                            htmlFor="status"
+                            error={errors.status}
+                        >
+                            <SelectInput
+                                id="status"
+                                value={form.data.status}
+                                onChange={(event) =>
+                                    form.setData('status', event.target.value)
+                                }
+                            >
+                                {statusOptions.map((option) => (
+                                    <option
+                                        key={option.value}
+                                        value={option.value}
+                                    >
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </SelectInput>
+                        </Field>
+                        <Field
+                            label="Format"
+                            htmlFor="release_type"
+                            error={errors.release_type}
+                        >
+                            <SelectInput
+                                id="release_type"
+                                value={form.data.release_type}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'release_type',
+                                        event.target.value,
+                                    )
+                                }
+                                placeholder="Not set"
+                            >
+                                {typeOptions.map((option) => (
+                                    <option
+                                        key={option.value}
+                                        value={option.value}
+                                    >
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </SelectInput>
+                        </Field>
+                        <Field
+                            label="Version"
+                            htmlFor="version"
+                            error={errors.version}
+                            hint="e.g. Deluxe Edition, The Remixes"
+                        >
+                            <Input
+                                id="version"
+                                value={form.data.version}
+                                onChange={(event) =>
+                                    form.setData('version', event.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Genre"
+                            htmlFor="genre"
+                            error={errors.genre}
+                        >
+                            <Input
+                                id="genre"
+                                value={form.data.genre}
+                                onChange={(event) =>
+                                    form.setData('genre', event.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Subgenre"
+                            htmlFor="subgenre"
+                            error={errors.subgenre}
+                        >
+                            <Input
+                                id="subgenre"
+                                value={form.data.subgenre}
+                                onChange={(event) =>
+                                    form.setData('subgenre', event.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Language"
+                            htmlFor="language"
+                            error={errors.language}
+                            hint="e.g. en, de, zxx for instrumental"
+                        >
+                            <Input
+                                id="language"
+                                value={form.data.language}
+                                onChange={(event) =>
+                                    form.setData('language', event.target.value)
+                                }
+                                maxLength={8}
+                            />
+                        </Field>
+                        <Field
+                            label="℗ line"
+                            htmlFor="p_line"
+                            error={errors.p_line}
+                            hint="Owner of the recordings, e.g. 2026 My Label"
+                        >
+                            <Input
+                                id="p_line"
+                                value={form.data.p_line}
+                                onChange={(event) =>
+                                    form.setData('p_line', event.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="© line"
+                            htmlFor="c_line"
+                            error={errors.c_line}
+                            hint="Owner of artwork and packaging"
+                        >
+                            <Input
+                                id="c_line"
+                                value={form.data.c_line}
+                                onChange={(event) =>
+                                    form.setData('c_line', event.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Explicit"
+                            htmlFor="explicit"
+                            error={errors.explicit}
+                        >
+                            <SelectInput
+                                id="explicit"
+                                value={form.data.explicit}
+                                onChange={(event) =>
+                                    form.setData('explicit', event.target.value)
+                                }
+                                placeholder="Not explicit"
+                            >
+                                <option value="explicit">Explicit</option>
+                                <option value="clean">Clean version</option>
+                            </SelectInput>
+                        </Field>
+                        <Field
+                            label="Original release date"
+                            htmlFor="original_released_on"
+                            error={errors.original_released_on}
+                            hint="For reissues."
+                        >
+                            <Input
+                                id="original_released_on"
+                                type="date"
+                                value={form.data.original_released_on}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'original_released_on',
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Pre-order from"
+                            htmlFor="preorder_on"
+                            error={errors.preorder_on}
+                        >
+                            <Input
+                                id="preorder_on"
+                                type="date"
+                                value={form.data.preorder_on}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'preorder_on',
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Link to external files"
+                            htmlFor="files_url"
+                            error={errors.files_url}
+                            hint="A shared folder, if files live elsewhere too."
+                        >
+                            <Input
+                                id="files_url"
+                                type="url"
+                                value={form.data.files_url}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'files_url',
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Do not deliver to"
+                            htmlFor="blocked_services"
+                            error={errors.blocked_services}
+                            hint="Services, separated by commas."
+                        >
+                            <Input
+                                id="blocked_services"
+                                value={form.data.blocked_services}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'blocked_services',
+                                        event.target.value,
+                                    )
+                                }
+                                placeholder="Spotify"
+                            />
+                        </Field>
+                        <Field
+                            label="Blocked territories"
+                            htmlFor="blocked_territories"
+                            error={
+                                errors.blocked_territories ??
+                                Object.entries(errors).find(([key]) =>
+                                    key.startsWith('blocked_territories.'),
+                                )?.[1]
+                            }
+                            hint="Two-letter country codes, separated by commas."
+                        >
+                            <Input
+                                id="blocked_territories"
+                                value={form.data.blocked_territories}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'blocked_territories',
+                                        event.target.value,
+                                    )
+                                }
+                                placeholder="RU, IL"
+                                className="uppercase"
+                            />
+                        </Field>
+                    </div>
+                    <div className="mt-4 grid gap-1.5">
+                        <span className="text-sm font-medium">
+                            Further artist credits
+                        </span>
+                        <p className="text-xs text-muted-foreground">
+                            Other main artists, featured artists or remixers
+                            credited on the whole release. The artist chosen
+                            above stays the main one.
+                        </p>
+                        <ArtistCreditRows
+                            value={form.data.artists}
+                            onChange={(rows) => form.setData('artists', rows)}
+                            artistOptions={artistOptions}
+                        />
+                        <InputError
+                            message={
+                                Object.entries(errors).find(([key]) =>
+                                    key.startsWith('artists'),
+                                )?.[1]
+                            }
+                        />
+                    </div>
+                </Panel>
+
+                <Panel title="Promotion and planning">
+                    <div className="grid gap-4">
+                        <Field
+                            label="To do"
+                            htmlFor="todo"
+                            error={errors.todo}
+                            hint="Open tasks for this release."
+                        >
+                            <Textarea
+                                id="todo"
+                                value={form.data.todo}
+                                onChange={(event) =>
+                                    form.setData('todo', event.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Key facts"
+                            htmlFor="key_facts"
+                            error={errors.key_facts}
+                            hint="Selling points for stores, press and playlists."
+                        >
+                            <Textarea
+                                id="key_facts"
+                                value={form.data.key_facts}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'key_facts',
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Press release"
+                            htmlFor="press_release"
+                            error={errors.press_release}
+                        >
+                            <Textarea
+                                id="press_release"
+                                className="min-h-48"
+                                value={form.data.press_release}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'press_release',
+                                        event.target.value,
+                                    )
                                 }
                             />
                         </Field>

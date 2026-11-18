@@ -2,10 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\ArtistRole;
+use App\Enums\ReleaseStatus;
+use App\Enums\ReleaseType;
 use App\Models\Release;
 use App\Rules\Isrc;
 use App\Rules\Upc;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Validation\Rule;
 
 class ReleaseRequest extends LabelFormRequest
 {
@@ -14,7 +18,28 @@ class ReleaseRequest extends LabelFormRequest
      */
     protected function prepareForValidation(): void
     {
-        $this->nullify(['artist_id', 'contract_id', 'released_on', 'mechanicals_rate', 'ppd_rate', 'reserves_rate']);
+        // A form with no credit rows sends an empty marker instead of a list.
+        if ($this->input('artists') === '' || $this->input('artists') === null && $this->has('artists')) {
+            $this->merge(['artists' => []]);
+        }
+
+        $this->nullify(['artist_id', 'contract_id', 'released_on', 'mechanicals_rate', 'ppd_rate', 'reserves_rate', 'release_type', 'explicit', 'original_released_on', 'preorder_on', 'files_url']);
+
+        // Lists may arrive as "Spotify, Tidal" from a text field.
+        foreach (['blocked_services' => false, 'blocked_territories' => true] as $key => $uppercase) {
+            $value = $this->input($key);
+
+            if (is_string($value)) {
+                $value = preg_split('/\s*[,;\n]\s*/', $value) ?: [];
+            }
+
+            if (is_array($value)) {
+                $this->merge([$key => array_values(array_unique(array_filter(array_map(
+                    fn (mixed $entry): mixed => is_string($entry) ? ($uppercase ? strtoupper(trim($entry)) : trim($entry)) : $entry,
+                    $value,
+                ), fn (mixed $entry): bool => $entry !== '')))]);
+            }
+        }
     }
 
     /**
@@ -40,6 +65,28 @@ class ReleaseRequest extends LabelFormRequest
             'ppd_rate' => ['nullable', 'numeric', 'min:0'],
             'reserves_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'status' => [Rule::enum(ReleaseStatus::class)],
+            'release_type' => ['nullable', Rule::enum(ReleaseType::class)],
+            'version' => ['nullable', 'string', 'max:255'],
+            'genre' => ['nullable', 'string', 'max:255'],
+            'subgenre' => ['nullable', 'string', 'max:255'],
+            'language' => ['nullable', 'string', 'max:8'],
+            'explicit' => ['nullable', Rule::in(['explicit', 'clean'])],
+            'p_line' => ['nullable', 'string', 'max:255'],
+            'c_line' => ['nullable', 'string', 'max:255'],
+            'original_released_on' => ['nullable', 'date'],
+            'preorder_on' => ['nullable', 'date'],
+            'press_release' => ['nullable', 'string', 'max:100000'],
+            'key_facts' => ['nullable', 'string', 'max:20000'],
+            'todo' => ['nullable', 'string', 'max:20000'],
+            'files_url' => ['nullable', 'url:http,https', 'max:2000'],
+            'blocked_services' => ['nullable', 'array'],
+            'blocked_services.*' => ['string', 'max:100'],
+            'blocked_territories' => ['nullable', 'array'],
+            'blocked_territories.*' => ['string', 'size:2', 'alpha:ascii'],
+            'artists' => ['array'],
+            'artists.*.artist_id' => ['required', 'integer', $this->inLabel('artists')],
+            'artists.*.role' => ['required', Rule::enum(ArtistRole::class)],
             'tracks' => ['array'],
             'tracks.*.id' => ['nullable', 'integer', 'distinct', $this->inLabel('tracks')->where('release_id', $release instanceof Release ? $release->id : 0)],
             'tracks.*.name' => ['required', 'string', 'max:255'],
@@ -49,6 +96,7 @@ class ReleaseRequest extends LabelFormRequest
             'tracks.*.iswc' => ['nullable', 'string', 'max:16'],
             'tracks.*.track_number' => ['nullable', 'integer', 'min:1', 'max:999'],
             'tracks.*.duration' => ['nullable', 'integer', 'min:0'],
+            'tracks.*.version' => ['nullable', 'string', 'max:255'],
         ];
     }
 
@@ -57,6 +105,6 @@ class ReleaseRequest extends LabelFormRequest
      */
     public function attributes(): array
     {
-        return ['tracks.*.name' => 'track name', 'tracks.*.isrc' => 'ISRC'];
+        return ['tracks.*.name' => 'track name', 'tracks.*.isrc' => 'ISRC', 'blocked_territories.*' => 'country code', 'artists.*.artist_id' => 'artist'];
     }
 }

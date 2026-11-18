@@ -1,6 +1,6 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
 import TransactionController from '@/actions/App/Http/Controllers/TransactionController';
-import { Field, SelectInput } from '@/components/field';
+import { CheckField, Field, SelectInput } from '@/components/field';
 import { Page, Panel } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +36,7 @@ type Transaction = {
     memo: string | null;
     published: boolean;
     billable: boolean;
+    recoupable: boolean;
     raw_data: Record<string, string> | null;
     data_import_id: number | null;
 };
@@ -46,6 +47,7 @@ type Props = {
         type: string;
         release_id: number | null;
         payee_id: number | null;
+        recoupable: boolean;
     } | null;
     releaseOptions: Option[];
     trackOptions: TrackOption[];
@@ -108,6 +110,7 @@ export default function TransactionForm({
         memo: transaction?.memo ?? '',
         published: transaction?.published ?? true,
         billable: transaction?.billable ?? true,
+        recoupable: transaction?.recoupable ?? defaults?.recoupable ?? true,
     });
 
     const errors = form.errors;
@@ -135,7 +138,9 @@ export default function TransactionForm({
                 type === 'transfer'
                     ? 'A transfer moves money between the label and a payee outside of royalties: an advance, a payback, an opening balance.'
                     : type === 'expense'
-                      ? 'An expense reduces the net income of its release or track before the split, so the payee carries their share of it.'
+                      ? form.data.recoupable
+                          ? 'An expense reduces the net income of its release or track before the split, so the payee carries their share of it.'
+                          : 'A one-time payment or other cost the label bears alone. It does not reduce what payees earn and counts against the release in the profitability report.'
                       : 'Income entered by hand, for example a sync fee or a shop sale that is not in any statement.'
             }
         >
@@ -375,6 +380,44 @@ export default function TransactionForm({
                                 placeholder="No release"
                             />
                         </Field>
+                        {type === 'expense' && (
+                            <>
+                                <Field
+                                    label="Paid to"
+                                    htmlFor="payee_id"
+                                    error={errors.payee_id}
+                                    hint="Optional. For your reference only, e.g. the remixer or designer who received a one-time payment."
+                                >
+                                    <SelectInput
+                                        id="payee_id"
+                                        value={form.data.payee_id}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'payee_id',
+                                                numberOrBlank(
+                                                    event.target.value,
+                                                ),
+                                            )
+                                        }
+                                        options={payeeOptions}
+                                        placeholder="Nobody in particular"
+                                    />
+                                </Field>
+                                <CheckField
+                                    id="recoupable"
+                                    label="Recoup from payees"
+                                    hint="On: the cost is deducted before the split, so payees carry their share of it. Off: the label bears the cost alone and payees earn as if it did not exist."
+                                    checked={form.data.recoupable}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'recoupable',
+                                            event.target.checked,
+                                        )
+                                    }
+                                    className="md:pt-6"
+                                />
+                            </>
+                        )}
                         {type !== 'transfer' && (
                             <>
                                 <Field

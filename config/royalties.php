@@ -4,6 +4,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Release file uploads
+    |--------------------------------------------------------------------------
+    |
+    | The largest single file accepted for a release, in kilobytes. Audio
+    | masters are big: the server's own upload_max_filesize and
+    | post_max_size must allow at least as much.
+    |
+    */
+
+    'uploads' => [
+        'max_kilobytes' => (int) env('RELEASE_UPLOAD_MAX_KB', 1024 * 1024),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Transaction categories
     |--------------------------------------------------------------------------
     |

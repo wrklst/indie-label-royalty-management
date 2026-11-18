@@ -2,14 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ArtistRole;
+use App\Enums\ReleaseFileKind;
+use App\Enums\ReleaseStatus;
+use App\Enums\ReleaseType;
 use App\Http\Requests\ReleaseRequest;
+use App\Models\Artist;
 use App\Models\Release;
+use App\Models\ReleaseFile;
 use App\Models\Track;
 use App\Models\Transaction;
 use App\Services\Imports\Identifiers;
+use App\Services\Releases\ArtistCredits;
 use App\Support\Options;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,7 +27,7 @@ class ReleaseController extends Controller
     public function index(Request $request): Response
     {
         $releases = Release::query()
-            ->with(['artist:id,name', 'contract:id,name'])
+            ->with(['artist:id,name', 'artists:id,name', 'contract:id,name', 'cover:id,release_id'])
             ->withCount('tracks')
             ->withSum(['transactions as income' => fn ($query) => $query->where('type', 'income')], 'converted_total')
             ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
@@ -28,13 +36,17 @@ class ReleaseController extends Controller
                 ->orWhere('upc', 'like', "%{$search}%")))
             ->when($request->integer('artist'), fn ($query, int $artist) => $query->where('artist_id', $artist))
             ->when($request->boolean('without_contract'), fn ($query) => $query->whereNull('contract_id'))
+            ->when(ReleaseStatus::tryFrom((string) $request->query('status')), fn ($query, ReleaseStatus $status) => $query->where('status', $status))
             ->orderByRaw('catalog_number IS NULL')->orderBy('catalog_number')->orderBy('name')
             ->paginate(50)
             ->withQueryString()
             ->through(fn (Release $release): array => [
                 ...$release->only(['id', 'name', 'catalog_number', 'upc', 'tracks_count']),
                 'released_on' => $release->released_on?->toDateString(),
-                'artist' => $release->artist?->name,
+                'artist' => ArtistCredits::display($release),
+                'status' => $release->status->value,
+                'release_type' => $release->release_type?->label(),
+                'cover_file_id' => $release->cover?->id,
                 'contract' => $release->contract?->only(['id', 'name']),
                 'income' => (string) ($release->income ?? '0'),
             ]);
@@ -45,6 +57,7 @@ class ReleaseController extends Controller
                 'search' => $request->string('search')->value(),
                 'artist' => $request->integer('artist') ?: null,
                 'without_contract' => $request->boolean('without_contract'),
+                'status' => ReleaseStatus::tryFrom((string) $request->query('status'))?->value,
             ],
             'artistOptions' => Options::artists(),
         ]);
@@ -59,6 +72,7 @@ class ReleaseController extends Controller
     {
         $release = DB::transaction(function () use ($request): Release {
             $release = Release::query()->create($this->attributes($request));
+            $this->syncArtists($release, $request);
             $this->syncTracks($release, $request);
 
             return $release;
@@ -71,7 +85,11 @@ class ReleaseController extends Controller
 
     public function show(Release $release): Response
     {
-        $release->load(['artist:id,name', 'contract:id,name', 'tracks.artist:id,name', 'tracks.contract:id,name', 'items.contract:id,name', 'items.track:id,name']);
+        $release->load([
+            'artist:id,name', 'artists:id,name', 'contract:id,name', 'tracks.artist:id,name', 'tracks.artists:id,name', 'tracks.contract:id,name',
+            'items.contract:id,name', 'items.track:id,name', 'files.track:id,name',
+        ]);
+        $audioByTrack = $release->files->where('kind', ReleaseFileKind::Audio)->whereNotNull('track_id')->groupBy('track_id');
 
         $incomeByTrack = Transaction::query()->where('release_id', $release->id)->where('type', 'income')
             ->selectRaw('track_id, SUM(converted_total) as total, SUM(quantity) as quantity')->groupBy('track_id')->get()->keyBy('track_id');
@@ -82,13 +100,35 @@ class ReleaseController extends Controller
 
         return Inertia::render('releases/show', [
             'release' => [
-                ...$release->only(['id', 'name', 'catalog_number', 'upc', 'spotify_id', 'discogs_id', 'notes']),
+                ...$release->only([
+                    'id', 'name', 'catalog_number', 'upc', 'spotify_id', 'discogs_id', 'notes', 'version', 'genre', 'subgenre', 'language', 'explicit',
+                    'p_line', 'c_line', 'press_release', 'key_facts', 'todo', 'files_url', 'blocked_services', 'blocked_territories',
+                ]),
                 'released_on' => $release->released_on?->toDateString(),
-                'artist' => $release->artist?->name,
+                'original_released_on' => $release->original_released_on?->toDateString(),
+                'preorder_on' => $release->preorder_on?->toDateString(),
+                'status' => $release->status->value,
+                'release_type' => $release->release_type?->label(),
+                'artist' => ArtistCredits::display($release),
+                'cover_file_id' => $release->files->where('kind', ReleaseFileKind::Cover)->sortByDesc('id')->first()?->id,
                 'contract' => $release->contract?->only(['id', 'name']),
+                'files' => $release->files->sortBy([['kind', 'asc'], ['id', 'asc']])->values()->map(fn (ReleaseFile $file): array => [
+                    ...$file->only(['id', 'original_name', 'mime_type', 'size', 'track_id']),
+                    'kind' => $file->kind->value,
+                    'track' => $file->track?->name,
+                    'inline' => $file->canBeShownInline(),
+                    'is_image' => $file->isImage(),
+                    'uploaded_at' => $file->created_at?->toDateString(),
+                ]),
                 'tracks' => $release->tracks->sortBy([['track_number', 'asc'], ['id', 'asc']])->values()->map(fn (Track $track): array => [
-                    ...$track->only(['id', 'name', 'isrc', 'track_number', 'duration']),
-                    'artist' => $track->artist?->name,
+                    ...$track->only([
+                        'id', 'name', 'isrc', 'iswc', 'track_number', 'duration', 'artist_id', 'contract_id', 'disc_number', 'version', 'genre',
+                        'language', 'explicit', 'musical_key', 'preview_start', 'p_line', 'lyrics', 'credits',
+                    ]),
+                    'bpm' => $track->bpm === null ? null : rtrim(rtrim((string) $track->bpm, '0'), '.'),
+                    'artist' => ArtistCredits::display($track),
+                    'artists' => $track->artists->map(fn (Artist $artist): array => ['artist_id' => $artist->id, 'role' => $artist->pivot->role])->values(),
+                    'audio_file_id' => $this->playable($audioByTrack->get($track->id))?->id,
                     'contract' => $track->contract?->only(['id', 'name']),
                     'income' => (string) ($incomeByTrack[$track->id]->total ?? '0'),
                     'quantity' => (string) ($incomeByTrack[$track->id]->quantity ?? '0'),
@@ -108,19 +148,34 @@ class ReleaseController extends Controller
             'retailers' => $byRetailer->map(fn ($row): array => [
                 'retailer' => $row->retailer ?? 'Unknown', 'total' => (string) $row->total, 'quantity' => (string) $row->quantity,
             ]),
+            'artistOptions' => Options::artists(),
+            'contractOptions' => Options::contracts(),
+            'fileKinds' => array_map(fn (ReleaseFileKind $kind): array => ['value' => $kind->value, 'label' => $kind->label()], ReleaseFileKind::cases()),
+            'maxUploadMegabytes' => (int) floor(config('royalties.uploads.max_kilobytes') / 1024),
         ]);
     }
 
     public function edit(Release $release): Response
     {
-        $release->load('tracks');
+        $release->load(['tracks', 'artists:id,name']);
 
         return Inertia::render('releases/form', [
             'release' => [
-                ...$release->only(['id', 'name', 'artist_id', 'contract_id', 'catalog_number', 'upc', 'spotify_id', 'discogs_id', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'reserves_rate', 'notes']),
+                ...$release->only([
+                    'id', 'name', 'artist_id', 'contract_id', 'catalog_number', 'upc', 'spotify_id', 'discogs_id', 'accounts_mechanicals', 'mechanicals_rate',
+                    'ppd_rate', 'reserves_rate', 'notes', 'version', 'genre', 'subgenre', 'language', 'explicit', 'p_line', 'c_line', 'press_release',
+                    'key_facts', 'todo', 'files_url',
+                ]),
                 'released_on' => $release->released_on?->toDateString(),
+                'original_released_on' => $release->original_released_on?->toDateString(),
+                'preorder_on' => $release->preorder_on?->toDateString(),
+                'status' => $release->status->value,
+                'release_type' => $release->release_type?->value,
+                'blocked_services' => $release->blocked_services ?? [],
+                'blocked_territories' => $release->blocked_territories ?? [],
+                'artists' => $release->artists->map(fn (Artist $artist): array => ['artist_id' => $artist->id, 'role' => $artist->pivot->role])->values(),
                 'tracks' => $release->tracks->sortBy([['track_number', 'asc'], ['id', 'asc']])->values()
-                    ->map->only(['id', 'name', 'artist_id', 'contract_id', 'isrc', 'iswc', 'track_number', 'duration']),
+                    ->map->only(['id', 'name', 'artist_id', 'contract_id', 'isrc', 'iswc', 'track_number', 'duration', 'version']),
             ],
             ...$this->options(),
         ]);
@@ -130,6 +185,7 @@ class ReleaseController extends Controller
     {
         DB::transaction(function () use ($request, $release): void {
             $release->update($this->attributes($request));
+            $this->syncArtists($release, $request);
             $this->syncTracks($release, $request);
         });
 
@@ -152,13 +208,40 @@ class ReleaseController extends Controller
      */
     private function attributes(ReleaseRequest $request): array
     {
-        $attributes = $request->safe()->except('tracks');
+        $attributes = $request->safe()->except(['tracks', 'artists']);
 
         if (array_key_exists('upc', $attributes)) {
             $attributes['upc'] = Identifiers::upc($attributes['upc']);
         }
 
         return $attributes;
+    }
+
+    /**
+     * Replace the additional artist credits when the form sent them.
+     */
+    private function syncArtists(Release $release, ReleaseRequest $request): void
+    {
+        if ($request->has('artists')) {
+            ArtistCredits::sync($release, $request->validated('artists', []));
+        }
+    }
+
+    /**
+     * The audio file the player uses for a track: a format every browser
+     * plays if there is one, otherwise the first upload.
+     *
+     * @param  Collection<int, ReleaseFile>|null  $files
+     */
+    private function playable(?Collection $files): ?ReleaseFile
+    {
+        if ($files === null) {
+            return null;
+        }
+
+        return $files->first(fn (ReleaseFile $file): bool => in_array($file->mime_type, ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/aac'], true))
+            ?? $files->first(fn (ReleaseFile $file): bool => $file->canBeShownInline())
+            ?? $files->first();
     }
 
     /**
@@ -181,6 +264,7 @@ class ReleaseController extends Controller
                 'iswc' => $row['iswc'] ?? null,
                 'track_number' => $row['track_number'] ?? null,
                 'duration' => $row['duration'] ?? null,
+                'version' => $row['version'] ?? null,
             ];
 
             $track = isset($row['id']) ? $release->tracks()->whereKey($row['id'])->first() : null;
@@ -196,6 +280,12 @@ class ReleaseController extends Controller
      */
     private function options(): array
     {
-        return ['artistOptions' => Options::artists(), 'contractOptions' => Options::contracts()];
+        return [
+            'artistOptions' => Options::artists(),
+            'contractOptions' => Options::contracts(),
+            'statusOptions' => array_map(fn (ReleaseStatus $status): array => ['value' => $status->value, 'label' => $status->label()], ReleaseStatus::cases()),
+            'typeOptions' => array_map(fn (ReleaseType $type): array => ['value' => $type->value, 'label' => $type->label()], ReleaseType::cases()),
+            'roleOptions' => array_map(fn (ArtistRole $role): array => ['value' => $role->value, 'label' => $role->label()], ArtistRole::cases()),
+        ];
     }
 }

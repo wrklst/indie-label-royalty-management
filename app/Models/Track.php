@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -24,10 +25,21 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $duration
  * @property string|float|int|null $mechanicals_rate
  * @property string|float|int|null $ppd_rate
+ * @property int|null $disc_number
+ * @property string|null $version
+ * @property string|null $genre
+ * @property string|null $language
+ * @property string|null $explicit
+ * @property string|float|int|null $bpm
+ * @property string|null $musical_key
+ * @property int|null $preview_start
+ * @property string|null $p_line
+ * @property array<string, list<string>>|null $credits
+ * @property string|null $lyrics
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['label_id', 'release_id', 'artist_id', 'contract_id', 'name', 'isrc', 'iswc', 'track_number', 'duration', 'mechanicals_rate', 'ppd_rate'])]
+#[Fillable(['label_id', 'release_id', 'artist_id', 'contract_id', 'name', 'isrc', 'iswc', 'track_number', 'duration', 'mechanicals_rate', 'ppd_rate', 'disc_number', 'version', 'genre', 'language', 'explicit', 'bpm', 'musical_key', 'preview_start', 'p_line', 'credits', 'lyrics'])]
 class Track extends Model
 {
     /** @use HasFactory<TrackFactory> */
@@ -42,6 +54,34 @@ class Track extends Model
         static::deleting(function (Track $track): void {
             $track->items()->doesntHave('transactions')->delete();
         });
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'credits' => 'array',
+        ];
+    }
+
+    /**
+     * Every artist credited on the track, main artists first.
+     *
+     * @return BelongsToMany<Artist, $this>
+     */
+    public function artists(): BelongsToMany
+    {
+        return $this->belongsToMany(Artist::class)->withPivot(['role', 'position'])->withTimestamps()->orderByPivot('position');
+    }
+
+    /**
+     * @return HasMany<ReleaseFile, $this>
+     */
+    public function files(): HasMany
+    {
+        return $this->hasMany(ReleaseFile::class);
     }
 
     /**

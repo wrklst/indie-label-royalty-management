@@ -1,6 +1,7 @@
-import { Link } from '@inertiajs/react';
+import { Link, setLayoutProps } from '@inertiajs/react';
 import { Amount } from '@/components/amount';
-import { EmptyState, Page, Panel } from '@/components/page';
+import { EmptyState, Page, Panel, Stat } from '@/components/page';
+import { Badge } from '@/components/ui/badge';
 import {
     Table,
     TableBody,
@@ -21,51 +22,111 @@ type Statement = {
     published_at: string | null;
 };
 
-export default function Portal({ statements }: { statements: Statement[] }) {
+type Overview = {
+    statement_id: number;
+    period: string;
+    published_at: string | null;
+    currency: string | null;
+    owed: string;
+    earned: string;
+    paid: string;
+    paid_since: string;
+    ledgers: { name: string; balance: string; unrecouped: boolean }[];
+};
+
+type Payout = {
+    id: number;
+    paid_on: string;
+    period: string | null;
+    total: string;
+    memo: string | null;
+};
+
+type Props = {
+    view: 'admin' | 'payee' | 'unlinked';
+    overview: Overview | null;
+    payouts: Payout[];
+    statements: Statement[];
+};
+
+function OverviewSection({ overview }: { overview: Overview }) {
+    const currency = overview.currency ?? undefined;
+
     return (
-        <Page
-            title="My statements"
-            description="Your royalty statements from this label."
-        >
-            {statements.length === 0 ? (
-                <EmptyState
-                    title="No statements yet"
-                    description="You will find your statements here as soon as the label publishes them."
+        <>
+            <div className="grid gap-4 sm:grid-cols-3">
+                <Stat
+                    label="Owed to you"
+                    value={<Amount value={overview.owed} currency={currency} />}
+                    hint={
+                        <>
+                            As of {overview.period}
+                            {Number(overview.paid_since) > 0 && (
+                                <>
+                                    . Paid since and not deducted yet:{' '}
+                                    <Amount
+                                        value={overview.paid_since}
+                                        currency={currency}
+                                    />
+                                </>
+                            )}
+                        </>
+                    }
                 />
-            ) : (
-                <Panel flush>
+                <Stat
+                    label={`Earned in ${overview.period}`}
+                    value={
+                        <Amount value={overview.earned} currency={currency} />
+                    }
+                    hint="Your share after expenses and the contract split."
+                />
+                <Stat
+                    label={`Paid out for ${overview.period}`}
+                    value={<Amount value={overview.paid} currency={currency} />}
+                    hint={
+                        <Link
+                            href={show(overview.statement_id)}
+                            className="underline underline-offset-4"
+                        >
+                            Open the statement
+                        </Link>
+                    }
+                />
+            </div>
+
+            {overview.ledgers.length > 0 && (
+                <Panel
+                    flush
+                    title="Balance per ledger"
+                    description="A ledger below zero is unrecouped: your earnings go towards it first, and it is never set off against your other ledgers."
+                >
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Period</TableHead>
-                                <TableHead>Published</TableHead>
+                                <TableHead>Ledger</TableHead>
                                 <TableHead className="text-right">
                                     Balance
-                                </TableHead>
-                                <TableHead className="text-right">
-                                    Payable
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {statements.map((statement) => (
-                                <TableRow key={statement.id}>
+                            {overview.ledgers.map((ledger, index) => (
+                                <TableRow key={`${index}-${ledger.name}`}>
                                     <TableCell>
-                                        <Link
-                                            href={show(statement.id)}
-                                            className="font-medium underline decoration-muted-foreground/40 underline-offset-4"
-                                        >
-                                            {statement.period ?? statement.name}
-                                        </Link>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {date(statement.published_at)}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Amount value={statement.balance} />
+                                        <span className="flex items-center gap-2">
+                                            {ledger.name}
+                                            {ledger.unrecouped && (
+                                                <Badge variant="destructive">
+                                                    Unrecouped
+                                                </Badge>
+                                            )}
+                                        </span>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Amount value={statement.payable} />
+                                        <Amount
+                                            value={ledger.balance}
+                                            currency={currency}
+                                        />
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -73,8 +134,156 @@ export default function Portal({ statements }: { statements: Statement[] }) {
                     </Table>
                 </Panel>
             )}
+        </>
+    );
+}
+
+function PayoutsSection({ payouts }: { payouts: Payout[] }) {
+    return (
+        <Panel
+            flush={payouts.length > 0}
+            title="Payouts"
+            description="Payments the label has made to you."
+        >
+            {payouts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                    No payouts have been recorded for you yet.
+                </p>
+            ) : (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Paid on</TableHead>
+                            <TableHead>For period</TableHead>
+                            <TableHead>Memo</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {payouts.map((payout) => (
+                            <TableRow key={payout.id}>
+                                <TableCell>{date(payout.paid_on)}</TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    {payout.period ?? '–'}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    {payout.memo ?? '–'}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <Amount value={payout.total} />
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            )}
+        </Panel>
+    );
+}
+
+function StatementsTable({ statements }: { statements: Statement[] }) {
+    return (
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Published</TableHead>
+                    <TableHead className="text-right">Balance</TableHead>
+                    <TableHead className="text-right">Payable</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {statements.map((statement) => (
+                    <TableRow key={statement.id}>
+                        <TableCell>
+                            <Link
+                                href={show(statement.id)}
+                                className="font-medium underline decoration-muted-foreground/40 underline-offset-4"
+                            >
+                                {statement.period ?? statement.name}
+                            </Link>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                            {date(statement.published_at)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <Amount value={statement.balance} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <Amount value={statement.payable} />
+                        </TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    );
+}
+
+export default function Portal({ view, overview, payouts, statements }: Props) {
+    const title = view === 'admin' ? 'My statements' : 'Overview';
+
+    setLayoutProps({ breadcrumbs: [{ title, href: index() }] });
+
+    if (view === 'admin') {
+        return (
+            <Page
+                title={title}
+                description="What payees can see: every published statement of this label. Each payee only gets their own."
+            >
+                {statements.length === 0 ? (
+                    <EmptyState
+                        title="No statements yet"
+                        description="Statements appear here, and in the payee's portal, as soon as you publish them."
+                    />
+                ) : (
+                    <Panel flush>
+                        <StatementsTable statements={statements} />
+                    </Panel>
+                )}
+            </Page>
+        );
+    }
+
+    if (view === 'unlinked') {
+        return (
+            <Page title={title} description="Your royalties from this label.">
+                <EmptyState
+                    title="Your access is not linked to a payee yet"
+                    description="The label has to connect your account to the payee your royalties are booked on. Ask them to do that in their team settings; your statements and payouts will show up here afterwards."
+                />
+            </Page>
+        );
+    }
+
+    return (
+        <Page
+            title={title}
+            description="What you earned, what you are owed and what you have been paid, according to the statements this label has published."
+        >
+            {overview ? (
+                <OverviewSection overview={overview} />
+            ) : (
+                <EmptyState
+                    title="Nothing published yet"
+                    description="As soon as the label publishes your first statement, you will see here what you earned in that period, what you are owed and the balance of each of your ledgers. Payouts made to you are listed as well."
+                />
+            )}
+
+            {(overview || payouts.length > 0) && (
+                <PayoutsSection payouts={payouts} />
+            )}
+
+            {statements.length > 0 && (
+                <Panel
+                    flush
+                    title="My statements"
+                    description="Open a statement for the full breakdown per release and track."
+                >
+                    <StatementsTable statements={statements} />
+                </Panel>
+            )}
         </Page>
     );
 }
 
-Portal.layout = { breadcrumbs: [{ title: 'My statements', href: index() }] };
+Portal.layout = { breadcrumbs: [{ title: 'Overview', href: index() }] };

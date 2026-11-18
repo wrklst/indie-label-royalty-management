@@ -4,7 +4,7 @@ use App\Enums\LabelRole;
 use App\Models\Label;
 use App\Models\Payee;
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Notifications\LabelInvitation;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -52,10 +52,11 @@ test('an existing user can be added to the label', function () {
     $this->assertDatabaseHas('label_user', ['label_id' => $label->id, 'user_id' => $existing->id, 'role' => 'admin', 'payee_id' => null]);
     $this->assertDatabaseCount('users', 2);
     $this->assertDatabaseHas('users', ['id' => $existing->id, 'name' => 'Example Person']);
-    Notification::assertNothingSent();
+    Notification::assertSentTo($existing, LabelInvitation::class);
+    Notification::assertCount(1);
 });
 
-test('an unknown email gets an account and a link to set a password', function () {
+test('an unknown email gets an account and an invitation instead of a password reset link', function () {
     $label = Label::factory()->create();
     Notification::fake();
     $this->travelTo('2026-11-18 12:00:00');
@@ -70,8 +71,8 @@ test('an unknown email gets an account and a link to set a password', function (
     expect($user->name)->toBe('New Person')
         ->and($user->email_verified_at?->toDateTimeString())->toBe('2026-11-18 12:00:00');
     $this->assertDatabaseHas('label_user', ['label_id' => $label->id, 'user_id' => $user->id, 'role' => 'admin', 'payee_id' => null]);
-    $this->assertDatabaseHas('password_reset_tokens', ['email' => 'new.person@example.com']);
-    Notification::assertSentTo($user, ResetPassword::class);
+    $this->assertDatabaseMissing('password_reset_tokens', ['email' => 'new.person@example.com']);
+    Notification::assertSentTo($user, LabelInvitation::class);
     Notification::assertCount(1);
 });
 

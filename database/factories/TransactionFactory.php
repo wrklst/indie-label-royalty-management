@@ -29,6 +29,15 @@ class TransactionFactory extends Factory
             'conversion_rate' => 1,
             'converted_total' => fn (array $attributes) => $attributes['total'],
             'category' => 'Distribution',
+            'recoupable' => true,
         ];
+    }
+
+    /**
+     * An expense the label bears alone, such as a one-time fee.
+     */
+    public function labelCost(): static
+    {
+        return $this->state(fn (): array => ['type' => 'expense', 'recoupable' => false, 'category' => 'Fee']);
     }
 }

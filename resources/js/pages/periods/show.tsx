@@ -46,6 +46,7 @@ type Props = {
         | 'net'
         | 'payee_share'
         | 'label_share'
+        | 'label_costs'
         | 'previous_payable'
         | 'transfers'
         | 'total_payable'
@@ -142,6 +143,19 @@ export default function ShowPeriod({
                                 value={totals.label_share}
                                 currency={currency}
                             />
+                            {Number(totals.label_costs) !== 0 && (
+                                <>
+                                    {' '}
+                                    after{' '}
+                                    <Amount
+                                        value={Math.abs(
+                                            Number(totals.label_costs),
+                                        )}
+                                        currency={currency}
+                                    />{' '}
+                                    own costs
+                                </>
+                            )}
                         </>
                     }
                 />

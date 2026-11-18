@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
+import { create as loginCode } from '@/routes/login/code';
 import { request } from '@/routes/password';
 import PasskeyVerify from '@/components/passkey-verify';
 
@@ -89,6 +90,16 @@ export default function Login({ status, canResetPassword }: Props) {
                             >
                                 {processing && <Spinner />}
                                 Log in
+                            </Button>
+
+                            <Button
+                                asChild
+                                variant="outline"
+                                className="w-full"
+                            >
+                                <Link href={loginCode()} tabIndex={5}>
+                                    Email me a sign-in code
+                                </Link>
                             </Button>
                         </div>
 

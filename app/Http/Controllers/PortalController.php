@@ -2,15 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Payout;
+use App\Models\Period;
 use App\Models\Statement;
 use App\Support\CurrentLabel;
+use App\Support\Decimal;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * What a payee sees: their own published statements, nothing else.
+ * What a payee sees: their own published statements, an overview taken
+ * from the latest of them and the payouts they received. Figures the
+ * label has not published never reach this controller's responses.
  */
 class PortalController extends Controller
 {
@@ -18,7 +24,17 @@ class PortalController extends Controller
 
     public function index(): Response
     {
+        $isAdmin = $this->currentLabel->isAdmin();
+        $payeeId = $isAdmin ? null : $this->currentLabel->payeeId();
+
         return Inertia::render('portal/index', [
+            'view' => match (true) {
+                $isAdmin => 'admin',
+                $payeeId === null => 'unlinked',
+                default => 'payee',
+            },
+            'overview' => $payeeId === null ? null : $this->overview($payeeId),
+            'payouts' => $payeeId === null ? [] : $this->payouts($payeeId),
             'statements' => $this->visible()->with('period:id,name,starts_on,ends_on')->latest('id')->get()
                 ->map(fn (Statement $statement): array => [
                     ...$statement->only(['id', 'name', 'balance', 'payable']),
@@ -46,6 +62,89 @@ class PortalController extends Controller
     public function download(int $statement): StreamedResponse
     {
         return StatementController::csv($this->visible()->findOrFail($statement));
+    }
+
+    /**
+     * Where the payee stands according to the statement published for
+     * their most recent period. Live figures are deliberately not used:
+     * they may contain imports and corrections the label has not released.
+     *
+     * @return array{
+     *     statement_id: int,
+     *     period: string,
+     *     published_at: string|null,
+     *     currency: string|null,
+     *     owed: string,
+     *     earned: string,
+     *     paid: string,
+     *     paid_since: string,
+     *     ledgers: list<array{name: string, balance: string, unrecouped: bool}>
+     * }|null
+     */
+    private function overview(int $payeeId): ?array
+    {
+        $statement = $this->visible()
+            ->where('payee_id', $payeeId)
+            ->with('period:id,name')
+            ->orderByDesc(Period::query()->select('ends_on')->whereColumn('periods.id', 'statements.period_id'))
+            ->orderByDesc('id')
+            ->first();
+
+        if ($statement === null) {
+            return null;
+        }
+
+        $ledgers = [];
+
+        foreach (Arr::array($statement->data, 'ledgers', []) as $ledger) {
+            $balance = (string) data_get($ledger, 'balance', '0');
+
+            $ledgers[] = [
+                'name' => (string) data_get($ledger, 'ledger_name', 'Primary'),
+                'balance' => $balance,
+                'unrecouped' => Decimal::cmp($balance, '0') < 0,
+            ];
+        }
+
+        $currency = data_get($statement->data, 'currency');
+
+        return [
+            'statement_id' => $statement->id,
+            'period' => (string) data_get($statement->data, 'period.name', $statement->period->name ?? $statement->name),
+            'published_at' => $statement->published_at?->toDateString(),
+            'currency' => is_string($currency) ? $currency : null,
+            'owed' => (string) data_get($statement->data, 'totals.outstanding', $statement->payable),
+            'earned' => (string) data_get($statement->data, 'totals.payee_share', '0'),
+            'paid' => (string) data_get($statement->data, 'totals.total_paid', '0'),
+            'paid_since' => Decimal::add('0', (string) Payout::query()
+                ->where('payee_id', $payeeId)
+                ->where('created_at', '>', $statement->created_at)
+                ->sum('total')),
+            'ledgers' => $ledgers,
+        ];
+    }
+
+    /**
+     * Every payment the label recorded for the payee. Payouts are facts,
+     * so they show whether or not a statement mentions them yet.
+     *
+     * @return list<array{id: int, paid_on: string, period: string|null, total: string, memo: string|null}>
+     */
+    private function payouts(int $payeeId): array
+    {
+        return array_values(Payout::query()
+            ->where('payee_id', $payeeId)
+            ->with('period:id,name')
+            ->orderByDesc('paid_on')->orderByDesc('id')
+            ->get()
+            ->map(fn (Payout $payout): array => [
+                'id' => $payout->id,
+                'paid_on' => $payout->paid_on->toDateString(),
+                'period' => $payout->period?->name,
+                'total' => $payout->total,
+                'memo' => $payout->memo,
+            ])
+            ->all());
     }
 
     /**

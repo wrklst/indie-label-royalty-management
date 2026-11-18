@@ -75,4 +75,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
+require __DIR__.'/portal.php';
+require __DIR__.'/profitability.php';
+require __DIR__.'/bandcamp.php';
+require __DIR__.'/release-assets.php';
 require __DIR__.'/settings.php';

@@ -134,7 +134,7 @@ test('the new transaction form is prefilled from the query string', function () 
         ->assertInertia(fn (Assert $page) => $page
             ->component('transactions/form')
             ->where('transaction', null)
-            ->where('defaults', ['type' => 'transfer', 'release_id' => 7, 'payee_id' => 3]));
+            ->where('defaults', ['type' => 'transfer', 'release_id' => 7, 'payee_id' => 3, 'recoupable' => true]));
 });
 
 test('the new transaction form defaults to an income and offers only records of the label', function () {
@@ -146,7 +146,7 @@ test('the new transaction form defaults to an income and offers only records of 
     $this->actingAs(labelAdmin($label))
         ->get(route('transactions.create'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('defaults', ['type' => 'income', 'release_id' => null, 'payee_id' => null])
+            ->where('defaults', ['type' => 'income', 'release_id' => null, 'payee_id' => null, 'recoupable' => true])
             ->has('releaseOptions', 1)
             ->where('releaseOptions.0.name', 'Example Release [EX001]')
             ->has('payeeOptions', 0)

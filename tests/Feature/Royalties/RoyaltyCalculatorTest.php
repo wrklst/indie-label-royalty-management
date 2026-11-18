@@ -2,6 +2,7 @@
 
 use App\Models\Contract;
 use App\Models\ContractSplit;
+use App\Models\Label;
 use App\Models\Ledger;
 use App\Models\Payee;
 use App\Models\Period;
@@ -210,4 +211,78 @@ test('regenerating a statement archives the previous one as a revision', functio
         ->and($first->data['totals']['payee_share'])->toBe('50.000000000000000')
         ->and($second->revision_of_id)->toBe($first->id)
         ->and($second->data['totals']['payee_share'])->toBe('75.000000000000000');
+});
+
+test('an expense the label bears alone does not reduce what the payee earns', function () {
+    transaction(['total' => '100']);
+    transaction(['type' => 'expense', 'total' => '-40', 'category' => 'Mastering']);
+    transaction(['type' => 'expense', 'total' => '-20', 'category' => 'Remix', 'recoupable' => false]);
+
+    $payee = payeeReport();
+
+    expect($payee['totals']['expense'])->toBe('-40.000000000000000')
+        ->and($payee['totals']['net'])->toBe('60.000000000000000')
+        ->and($payee['totals']['payee_share'])->toBe('30.000000000000000')
+        ->and($payee['ledgers'][0]['releases'][0]['expense'])->toBe('-40.000000000000000')
+        ->and(array_column($payee['expense_rows'], 'category'))->toBe(['Mastering']);
+});
+
+test('the label keeps its share minus the expenses it bears alone', function () {
+    transaction(['total' => '100']);
+    transaction(['type' => 'expense', 'total' => '-40', 'category' => 'Mastering']);
+    transaction(['type' => 'expense', 'total' => '-20', 'category' => 'Remix', 'recoupable' => false]);
+
+    $totals = app(RoyaltyCalculator::class)->forPeriod($this->period)['totals'];
+
+    expect($totals['income'])->toBe('100.000000000000000')
+        ->and($totals['expense'])->toBe('-40.000000000000000')
+        ->and($totals['net'])->toBe('60.000000000000000')
+        ->and($totals['payee_share'])->toBe('30.000000000000000')
+        ->and($totals['label_costs'])->toBe('-20.000000000000000')
+        ->and($totals['label_share'])->toBe('10.000000000000000');
+});
+
+test('without label costs the label keeps net minus payee share', function () {
+    transaction(['total' => '100']);
+    transaction(['type' => 'expense', 'total' => '-40']);
+
+    $totals = app(RoyaltyCalculator::class)->forPeriod($this->period)['totals'];
+
+    expect($totals['label_costs'])->toBe('0.000000000000000')
+        ->and($totals['label_share'])->toBe('30.000000000000000');
+});
+
+test('a label cost counts in the period it was paid in and never reaches a payee balance', function () {
+    transaction(['type' => 'expense', 'total' => '-20', 'recoupable' => false]);
+    transaction(['type' => 'expense', 'total' => '-7', 'recoupable' => false, 'timestamp' => '2026-03-31', 'paid_timestamp' => '2026-04-15']);
+    transaction(['type' => 'expense', 'total' => '-3', 'recoupable' => false, 'currency' => 'GBP', 'conversion_rate' => null, 'converted_total' => null]);
+    Transaction::factory()->labelCost()->create(['label_id' => Label::factory(), 'total' => '-500']);
+    $next = Period::factory()->create(['label_id' => $this->label->id, 'name' => '2026 Q2', 'starts_on' => '2026-04-01', 'ends_on' => '2026-06-30']);
+
+    $first = app(RoyaltyCalculator::class)->forPeriod($this->period);
+    $second = app(RoyaltyCalculator::class)->forPeriod($next);
+
+    expect($first['totals']['label_costs'])->toBe('-20.000000000000000')
+        ->and($first['payees'])->toBe([])
+        ->and($second['totals']['label_costs'])->toBe('-7.000000000000000')
+        ->and($second['payees'])->toBe([]);
+});
+
+test('only an expense can be left out of the split', function () {
+    transaction(['total' => '100', 'recoupable' => false]);
+
+    expect(payeeReport()['totals']['payee_share'])->toBe('50.000000000000000');
+});
+
+test('naming who an expense was paid to does not touch that payee\'s ledger', function () {
+    transaction(['total' => '100']);
+    transaction(['type' => 'expense', 'total' => '-40', 'payee_id' => $this->payee->id]);
+    transaction(['type' => 'expense', 'total' => '-20', 'payee_id' => $this->payee->id, 'recoupable' => false]);
+
+    $report = payeeReport();
+
+    expect($report['totals']['transfers'])->toBe('0.000000000000000')
+        ->and($report['transfer_rows'])->toBe([])
+        ->and($report['totals']['payee_share'])->toBe('30.000000000000000')
+        ->and($report['totals']['total_payable'])->toBe('30.000000000000000');
 });
