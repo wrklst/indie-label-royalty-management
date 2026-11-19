@@ -353,7 +353,7 @@ export default function LabelSettings({
                                         territory.id,
                                     )}
                                     title={`Delete ${territory.name}?`}
-                                    description="Splits limited to this territory will apply worldwide instead. Check the contracts that use it first."
+                                    description="A territory that contract splits still use is kept; change those splits first."
                                 />
                             </li>
                         ))}

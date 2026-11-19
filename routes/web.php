@@ -7,6 +7,7 @@ use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataImportController;
+use App\Http\Controllers\HandbookController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\LabelController;
 use App\Http\Controllers\LedgerController;
@@ -36,6 +37,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::middleware('label.admin')->group(function () {
             Route::get('dashboard', DashboardController::class)->name('dashboard');
+
+            Route::get('handbook/{slug}/panel', [HandbookController::class, 'panel'])->where('slug', '[\w-]+')->name('handbook.panel');
+            Route::get('handbook/{slug?}', [HandbookController::class, 'show'])->where('slug', '[\w-]+')->name('handbook');
 
             Route::get('catalog', [CatalogController::class, 'index'])->name('catalog.index');
             Route::patch('catalog/assign', [CatalogController::class, 'assign'])->name('catalog.assign');

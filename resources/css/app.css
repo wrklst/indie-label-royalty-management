@@ -141,3 +141,66 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Handbook articles, rendered from Markdown. */
+.handbook-prose {
+    @apply text-sm leading-relaxed;
+}
+
+.handbook-prose > * + * {
+    @apply mt-3;
+}
+
+.handbook-prose h2 {
+    @apply mt-6 text-base font-semibold tracking-tight;
+}
+
+.handbook-prose h3 {
+    @apply mt-5 text-sm font-semibold;
+}
+
+.handbook-prose ul {
+    @apply list-disc space-y-1 ps-5;
+}
+
+.handbook-prose ol {
+    @apply list-decimal space-y-1 ps-5;
+}
+
+.handbook-prose li > ul,
+.handbook-prose li > ol {
+    @apply mt-1;
+}
+
+.handbook-prose a {
+    @apply underline underline-offset-4;
+}
+
+.handbook-prose code {
+    @apply rounded bg-muted px-1 py-0.5 font-mono text-[0.85em] break-words;
+}
+
+.handbook-prose pre {
+    @apply overflow-x-auto rounded-lg border bg-muted p-3 text-xs;
+}
+
+.handbook-prose pre code {
+    @apply bg-transparent p-0;
+}
+
+.handbook-prose blockquote {
+    @apply border-l-2 ps-3 text-muted-foreground;
+}
+
+.handbook-prose table {
+    @apply block w-full overflow-x-auto text-xs;
+}
+
+.handbook-prose th,
+.handbook-prose td {
+    @apply border-b px-2 py-1.5 text-left align-top;
+}
+
+.handbook-prose th {
+    @apply font-medium;
+}

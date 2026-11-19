@@ -166,7 +166,7 @@ export default function Team({
                 <Heading
                     variant="small"
                     title="Add a person"
-                    description="Someone without an account gets one, plus an email with a link to set their password."
+                    description="Someone without an account gets one, plus an email that leads to signing in with a one-time code."
                 />
 
                 <Form

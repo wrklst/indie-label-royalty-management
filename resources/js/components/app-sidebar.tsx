@@ -1,8 +1,8 @@
 import { usePage } from '@inertiajs/react';
 import {
-    Radio,
     ArrowLeftRight,
     Banknote,
+    BookMarked,
     BookOpenText,
     CalendarRange,
     Coins,
@@ -15,8 +15,9 @@ import {
     Mic2,
     Package,
     PiggyBank,
-    Tags,
+    Radio,
     Receipt,
+    Tags,
     TrendingUp,
     Upload,
     Users,
@@ -31,7 +32,7 @@ import {
     SidebarFooter,
     SidebarHeader,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import { dashboard, handbook } from '@/routes';
 import { index as airplays } from '@/routes/airplays';
 import { index as artists } from '@/routes/artists';
 import { index as catalog } from '@/routes/catalog';
@@ -56,7 +57,10 @@ import { index as transactions } from '@/routes/transactions';
 const adminGroups: NavGroup[] = [
     {
         title: 'Overview',
-        items: [{ title: 'Dashboard', href: dashboard(), icon: LayoutGrid }],
+        items: [
+            { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
+            { title: 'Handbook', href: handbook(), icon: BookMarked },
+        ],
     },
     {
         title: 'Royalties',
