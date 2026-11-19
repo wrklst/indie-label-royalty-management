@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\LabelRole;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -53,6 +54,15 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Someone invited to read their statements does not get to open a
+     * label of their own; someone new, or who runs a label already, does.
+     */
+    public function canCreateLabel(): bool
+    {
+        return $this->labels()->doesntExist() || $this->labels()->wherePivot('role', LabelRole::Admin->value)->exists();
     }
 
     /**

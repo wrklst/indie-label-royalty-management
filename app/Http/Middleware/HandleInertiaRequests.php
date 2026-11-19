@@ -46,6 +46,7 @@ class HandleInertiaRequests extends Middleware
             'label' => fn () => $this->currentLabel($request),
             'labels' => fn () => $request->user()?->labels()->orderBy('name')->get(['labels.id', 'labels.name'])
                 ->map(fn ($label): array => ['id' => $label->id, 'name' => $label->name])->all() ?? [],
+            'canCreateLabel' => fn () => $request->user()?->canCreateLabel() ?? false,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

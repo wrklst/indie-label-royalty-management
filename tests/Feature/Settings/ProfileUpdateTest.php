@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\Label;
 use App\Models\User;
+use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Support\Facades\Notification;
 
 test('profile page is displayed', function () {
     $user = User::factory()->create();
@@ -123,4 +126,47 @@ test('correct password must be provided to delete account', function () {
         ->assertRedirect(route('profile.edit'));
 
     expect($user->fresh())->not->toBeNull();
+});
+
+test('a changed email address gets a confirmation link', function () {
+    Notification::fake();
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->patch(route('profile.update'), ['name' => $user->name, 'email' => 'new@example.com'])
+        ->assertInertiaFlash('toast.message', 'Profile updated. Confirm the new address with the link we sent to it.');
+
+    Notification::assertSentTo($user, VerifyEmail::class);
+    expect($user->refresh()->email_verified_at)->toBeNull();
+});
+
+test('an unchanged email address gets no confirmation link', function () {
+    Notification::fake();
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->patch(route('profile.update'), ['name' => 'Another Name', 'email' => $user->email]);
+
+    Notification::assertNothingSent();
+});
+
+test('the only admin of a label cannot delete their account', function () {
+    $label = Label::factory()->create(['name' => 'Example Records']);
+    $admin = labelAdmin($label);
+
+    $this->actingAs($admin)
+        ->delete(route('profile.destroy'), ['password' => 'password'])
+        ->assertSessionHasErrors(['password' => 'You are the only admin of Example Records. Make someone else an admin under Settings → Team first.']);
+
+    expect($admin->fresh())->not->toBeNull();
+    $this->assertAuthenticatedAs($admin);
+});
+
+test('an admin can delete their account when the label has another admin', function () {
+    $label = Label::factory()->create();
+    $admin = labelAdmin($label);
+    labelAdmin($label);
+
+    $this->actingAs($admin)->delete(route('profile.destroy'), ['password' => 'password'])->assertSessionHasNoErrors();
+
+    expect($admin->fresh())->toBeNull();
 });

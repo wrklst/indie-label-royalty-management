@@ -43,7 +43,7 @@ One installation can hold any number of labels. Each has its own catalog, contra
 The **label switcher** is the button at the top of the sidebar. It shows the current label and its currency. Open it to:
 
 - switch to another label you belong to,
-- choose **Add a label** to create another one.
+- choose **Add a label** to create another one. The entry is shown to people who run a label or have none yet, not to people who were only invited as payees.
 
 One account can belong to several labels with a different role in each, for example admin of your own label and payee of a label that releases your music.
 
@@ -185,8 +185,8 @@ On a production installation a password needs at least 12 characters with upper 
 
 Open the settings through your name at the bottom of the sidebar, then **Settings**.
 
-- **Profile**: change your **Name** and **Email address**. A changed address counts as unverified, and the label pages are not available to you until it is verified. Request the verification link with **Resend verification email** on the page you are shown, or with "Click here to re-send the verification email" on the profile page, and open the link in that email.
-- **Profile → Delete account**: deletes your account for good after you enter your password.
+- **Profile**: change your **Name** and **Email address**. A changed address counts as unverified, and the label pages are not available to you until it is verified. A confirmation link is sent to the new address when you save; **Resend verification email** on the page you are shown sends another one.
+- **Profile → Delete account**: deletes your account for good after you enter your password. It is refused while you are the only admin of a label: make someone else an admin under **Settings → Team** first.
 - **Appearance**: choose **Light**, **Dark** or **System**, which follows your device.
 
 Payees see **Profile**, **Security** and **Appearance** only. Admins also see **Label**, **Team** and **Bandcamp**.
@@ -197,9 +197,9 @@ Payees see **Profile**, **Security** and **Appearance** only. Admins also see **
 - **Settings → Security** and **Delete account** ask for your password. An account that has only ever used codes has to set a password through **Forgot your password?** first.
 - The **Email** field of a payee record under **Catalog → Payees** gives no access and receives nothing. Access always goes through **Settings → Team**.
 - Publishing a statement sends no notification. Tell your payees when there is something to read.
-- Anyone with an account can create a label with **Add a label**, including people you only invited as payees. They become admin of that new, empty label and see nothing of yours.
-- **Delete account** does not check whether you are the only admin of a label. Add another admin before you delete your account, or the label is left without one.
+- Someone invited only as a payee cannot create a label. Someone who runs a label can create further ones with **Add a label**.
+- A label always keeps at least one admin: neither the team page nor **Delete account** lets its last admin go.
 - Removing someone from the team does not delete their account, and deleting a payee record does not remove the user: they keep signing in and see the "not linked" notice until you link or remove them.
 - Passkeys are bound to the web address of the installation. If the address changes, they stop working and have to be registered again.
 - Repeated failed attempts are limited: five password attempts a minute per email address and network address, and after ten wrong codes for one email address code sign-in pauses for up to an hour.
-- Signing in with an emailed code while your email address is unverified, for example right after changing it, verifies the address but also replaces your password with an unknown one and removes your passkeys and two-factor authentication. Verify a changed address through the link instead.
+- Signing in with an emailed code while your email address is unverified verifies the address, and also replaces your password with an unknown one and removes your passkeys and two-factor authentication: nobody has proven yet that the address is theirs. After changing your address, use the confirmation link you were sent instead.

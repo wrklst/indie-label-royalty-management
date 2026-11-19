@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\LabelRole;
 use App\Models\Label;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -93,4 +94,23 @@ test('a guest cannot create a label', function () {
     $this->post(route('labels.store'), ['name' => 'Example Records', 'currency' => 'EUR'])->assertRedirect(route('login'));
 
     $this->assertDatabaseCount('labels', 0);
+});
+
+test('someone invited as a payee cannot create a label and is not offered to', function () {
+    $label = Label::factory()->create();
+    $payee = User::factory()->create();
+    $label->users()->attach($payee, ['role' => LabelRole::Payee->value]);
+    $this->actingAs($payee);
+
+    $this->get(route('labels.create'))->assertForbidden();
+    $this->post(route('labels.store'), ['name' => 'Example Records', 'currency' => 'EUR'])->assertForbidden();
+    $this->get(route('portal.index'))->assertInertia(fn (Assert $page) => $page->where('canCreateLabel', false));
+
+    $this->assertDatabaseMissing('labels', ['name' => 'Example Records']);
+});
+
+test('an admin is offered to add a label', function () {
+    $this->actingAs(labelAdmin(Label::factory()->create()))
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page->where('canCreateLabel', true));
 });

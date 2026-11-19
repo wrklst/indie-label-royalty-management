@@ -14,6 +14,8 @@ class LabelController extends Controller
 {
     public function create(Request $request): Response
     {
+        abort_unless($request->user()->canCreateLabel(), 403);
+
         return Inertia::render('labels/create', [
             'isFirst' => ! $request->user()->labels()->exists(),
         ]);
@@ -21,6 +23,8 @@ class LabelController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        abort_unless($request->user()->canCreateLabel(), 403);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'currency' => ['required', 'string', 'size:3', 'alpha'],

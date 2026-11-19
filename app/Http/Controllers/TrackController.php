@@ -89,9 +89,9 @@ class TrackController extends Controller
             'track' => [
                 ...$track->only(['id', 'name', 'version', 'isrc', 'iswc', 'track_number', 'duration', 'genre', 'bpm', 'musical_key']),
                 'credited_artist' => ArtistCredits::display($track),
-                'artists' => $track->artists->isNotEmpty()
-                    ? $track->artists->map->only(['id', 'name'])->values()
-                    : collect([$track->artist?->only(['id', 'name'])])->filter()->values(),
+                // The main artist is not among the further credits, so it is put in front of them.
+                'artists' => collect([$track->artist])->concat($track->artists)->filter()->unique('id')
+                    ->map(fn (Artist $artist): array => $artist->only(['id', 'name']))->values(),
                 'release' => $track->release?->only(['id', 'name', 'catalog_number']),
                 'cover_file_id' => $track->release?->cover?->id,
                 'audio_file_id' => PlayableAudio::pick($track->files)?->id,

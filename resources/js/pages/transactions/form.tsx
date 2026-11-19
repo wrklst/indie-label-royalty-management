@@ -571,25 +571,6 @@ export default function TransactionForm({
                                     />
                                 </Field>
                                 <Field
-                                    label="Country"
-                                    htmlFor="region"
-                                    error={errors.region}
-                                    hint="Two-letter code, e.g. DE. Used by territory splits."
-                                >
-                                    <Input
-                                        id="region"
-                                        value={form.data.region}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'region',
-                                                event.target.value.toUpperCase(),
-                                            )
-                                        }
-                                        maxLength={2}
-                                        className="w-24 uppercase"
-                                    />
-                                </Field>
-                                <Field
                                     label="External ID"
                                     htmlFor="external_id"
                                     error={errors.external_id}
@@ -606,6 +587,31 @@ export default function TransactionForm({
                                     />
                                 </Field>
                             </>
+                        )}
+                        {type !== 'transfer' && (
+                            <Field
+                                label="Country"
+                                htmlFor="region"
+                                error={errors.region}
+                                hint={
+                                    type === 'income'
+                                        ? 'Two-letter code, e.g. DE. Used by territory splits.'
+                                        : 'Two-letter code. Without one, payees whose split is limited to a territory are not charged their share of this expense.'
+                                }
+                            >
+                                <Input
+                                    id="region"
+                                    value={form.data.region}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'region',
+                                            event.target.value.toUpperCase(),
+                                        )
+                                    }
+                                    maxLength={2}
+                                    className="w-24 uppercase"
+                                />
+                            </Field>
                         )}
                         <Field
                             label="Source"

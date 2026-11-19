@@ -189,7 +189,7 @@ Check: net income is 1,000 − 200 + 240 = 1,040. Payees earn 400 + 80 + 60 + 60
 
 - Splits are stored with nine decimals and amounts are calculated with fifteen, so streaming lines worth fractions of a cent are not rounded away.
 - Deleting a contract removes its splits. Releases, tracks, items and transactions that used it fall back to the next contract in the order above, or to none. Statements already generated keep their figures.
-- A territory split is checked line by line against the **Country** of each transaction. Income without a country earns nothing for a territory split, and an expense without a country is not charged to it either. The transaction form only offers **Country** for income, so an expense entered by hand is never charged to a territory split: that payee earns from the income of their countries without sharing the cost.
+- A territory split is checked line by line against the **Country** of each transaction. Income without a country earns nothing for a territory split, and an expense without a country is not charged to it either. When you enter an expense by hand that a territory-limited payee should carry their share of, fill in its **Country**.
 - A recoupable expense is deducted from the release or track it is booked on. An expense booked on the whole release is shared under the release contract only; it does not reduce what a track with its own contract earns.
 - A transfer with **Ledger** on **Automatic** uses the first split the payee has in the contract of the selected release. Without a release, or when the payee has no split there, it lands on the primary ledger.
 - Editing a contract changes the live figures of every period, including past ones. Only generated statements are frozen.

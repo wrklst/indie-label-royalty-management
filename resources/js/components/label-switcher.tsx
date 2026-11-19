@@ -19,7 +19,7 @@ import { create, switchMethod } from '@/routes/labels';
  * Shows the label you are working in and lets you switch to another.
  */
 export function LabelSwitcher() {
-    const { label, labels, name } = usePage().props;
+    const { label, labels, name, canCreateLabel } = usePage().props;
 
     return (
         <SidebarMenu>
@@ -64,13 +64,20 @@ export function LabelSwitcher() {
                                 )}
                             </DropdownMenuItem>
                         ))}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                            <Link href={create()} className="cursor-pointer">
-                                <Plus className="size-4" />
-                                Add a label
-                            </Link>
-                        </DropdownMenuItem>
+                        {canCreateLabel && (
+                            <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link
+                                        href={create()}
+                                        className="cursor-pointer"
+                                    >
+                                        <Plus className="size-4" />
+                                        Add a label
+                                    </Link>
+                                </DropdownMenuItem>
+                            </>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
             </SidebarMenuItem>

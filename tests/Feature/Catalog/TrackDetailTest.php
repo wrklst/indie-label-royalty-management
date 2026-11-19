@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\AirplayOrigin;
+use App\Enums\ArtistRole;
 use App\Models\Airplay;
 use App\Models\AirplayFinding;
 use App\Models\Artist;
@@ -124,4 +125,19 @@ test('a track on several releases shows every release and combines airplay and i
 
     $this->actingAs($admin)->get(route('airplays.index', ['track' => $first->id]))
         ->assertInertia(fn (Assert $page) => $page->has('airplays', 1)->where('airplays.0.id', $airplay->id));
+});
+
+test('the track page names the main artist first and then the further credits', function () {
+    $label = Label::factory()->create();
+    $main = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
+    $guest = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Guest Artist']);
+    $track = Track::factory()->create(['label_id' => $label->id, 'artist_id' => $main->id]);
+    $track->artists()->attach($guest, ['role' => ArtistRole::Featuring->value]);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('tracks.show', $track->id))
+        ->assertInertia(fn (Assert $page) => $page->where('track.artists', [
+            ['id' => $main->id, 'name' => 'Example Artist'],
+            ['id' => $guest->id, 'name' => 'Guest Artist'],
+        ]));
 });
