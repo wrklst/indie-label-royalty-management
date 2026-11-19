@@ -74,26 +74,41 @@ export function TrackActions({ track }: { track: PlayerTrack }) {
 /**
  * "Play release" and "Queue release" for a list of tracks in play order.
  */
-export function ReleaseActions({ tracks }: { tracks: PlayerTrack[] }) {
+export function ReleaseActions({
+    tracks,
+    name,
+}: {
+    tracks: PlayerTrack[];
+    /** Given in lists: the buttons shrink to icons and name the release for screen readers. */
+    name?: string;
+}) {
     if (tracks.length === 0) {
         return null;
     }
+
+    const compact = name !== undefined;
 
     return (
         <>
             <Button
                 type="button"
                 variant="outline"
-                size="sm"
+                size={compact ? 'icon' : 'sm'}
+                title={compact ? 'Play release' : undefined}
+                aria-label={compact ? `Play release ${name}` : undefined}
                 onClick={() => playAll(tracks)}
             >
                 <Play />
-                Play release
+                {!compact && 'Play release'}
             </Button>
             <Button
                 type="button"
-                variant="outline"
-                size="sm"
+                variant={compact ? 'ghost' : 'outline'}
+                size={compact ? 'icon' : 'sm'}
+                title={compact ? 'Add release to queue' : undefined}
+                aria-label={
+                    compact ? `Add release ${name} to queue` : undefined
+                }
                 onClick={() => {
                     const added = enqueue(tracks);
 
@@ -106,8 +121,8 @@ export function ReleaseActions({ tracks }: { tracks: PlayerTrack[] }) {
                     }
                 }}
             >
-                <ListPlus />
-                Queue release
+                <ListPlus className={compact ? 'text-muted-foreground' : ''} />
+                {!compact && 'Queue release'}
             </Button>
         </>
     );

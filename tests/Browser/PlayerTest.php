@@ -144,6 +144,30 @@ test('a release is played as a whole and the queue can be edited and cleared', f
         ->assertNoJavaScriptErrors();
 });
 
+test('a release is played and queued as a whole from the release list', function () {
+    Storage::fake('local');
+    $scenario = royaltyScenario();
+    $scenario['track']->update(['track_number' => 1]);
+    $second = Track::factory()->create([
+        'label_id' => $scenario['label']->id, 'release_id' => $scenario['release']->id, 'name' => 'Second Track', 'track_number' => 2,
+    ]);
+    trackWithAudio($scenario['release'], $scenario['track']);
+    trackWithAudio($scenario['release'], $second);
+    $name = $scenario['release']->name;
+    $this->actingAs($scenario['admin']);
+
+    visit('/releases')
+        ->click("[aria-label=\"Add release {$name} to queue\"]")
+        ->assertSee('2 tracks added to the queue.')
+        ->assertSeeIn('[data-player="count"]', '2')
+        ->click("[aria-label=\"Play release {$name}\"]")
+        ->assertSeeIn('[data-player="title"]', 'Example Track')
+        ->assertSeeIn('[data-player="count"]', '2')
+        ->wait(1)
+        ->assertScript(AUDIO_IS_PLAYING)
+        ->assertNoJavaScriptErrors();
+});
+
 test('a track without a playback copy is reported and skipped', function () {
     Storage::fake('local');
     $scenario = royaltyScenario();

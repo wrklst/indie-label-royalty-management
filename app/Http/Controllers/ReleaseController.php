@@ -53,9 +53,12 @@ class ReleaseController extends Controller
             ->when(ReleaseStatus::tryFrom((string) $request->query('status')), fn ($query, ReleaseStatus $status) => $query->where('status', $status))
             ->tap($sorting)
             ->paginate(50)
-            ->withQueryString()
+            ->withQueryString();
+        $albums = PlayableAudio::albums($releases->getCollection());
+        $releases = $releases
             ->through(fn (Release $release): array => [
                 ...$release->only(['id', 'name', 'catalog_number', 'upc', 'tracks_count', 'artist_id']),
+                'player_tracks' => $albums[$release->id],
                 'released_on' => $release->released_on?->toDateString(),
                 'artist' => ArtistCredits::display($release),
                 'status' => $release->status->value,

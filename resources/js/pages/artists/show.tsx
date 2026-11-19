@@ -1,4 +1,6 @@
 import { EmptyState, Page, Panel } from '@/components/page';
+import type { PlayerTrack } from '@/components/player/player-store';
+import { ReleaseActions } from '@/components/player/track-actions';
 import { RecordLink } from '@/components/record-link';
 import {
     Table,
@@ -18,6 +20,7 @@ type Props = {
         name: string;
         catalog_number: string | null;
         released_on: string | null;
+        player_tracks: PlayerTrack[];
     }[];
     tracks: {
         id: number;
@@ -46,6 +49,9 @@ export default function ShowArtist({ artist, releases, tracks }: Props) {
                                 <TableHead>Release</TableHead>
                                 <TableHead>Catalog number</TableHead>
                                 <TableHead>Released</TableHead>
+                                <TableHead>
+                                    <span className="sr-only">Play</span>
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -66,6 +72,14 @@ export default function ShowArtist({ artist, releases, tracks }: Props) {
                                         {release.released_on
                                             ? date(release.released_on)
                                             : '–'}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center justify-end gap-1">
+                                            <ReleaseActions
+                                                tracks={release.player_tracks}
+                                                name={release.name}
+                                            />
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))}

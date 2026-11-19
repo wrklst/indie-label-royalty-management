@@ -6,6 +6,7 @@ use App\Http\Requests\ArtistRequest;
 use App\Models\Artist;
 use App\Models\Release;
 use App\Models\Track;
+use App\Services\Releases\PlayableAudio;
 use App\Support\Options;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
@@ -52,12 +53,16 @@ class ArtistController extends Controller
         $tracks = Track::query()->where(fn ($query) => $query->where('artist_id', $artist->id)->orWhereHas('artists', fn ($query) => $query->whereKey($artist->id)))
             ->with('release:id,name')->withCount('airplays')->orderBy('name')->get();
 
+        $releases = Release::query()->where(fn ($query) => $query->where('artist_id', $artist->id)->orWhereHas('artists', fn ($query) => $query->whereKey($artist->id)))
+            ->orderByDesc('released_on')->orderBy('name')->get(['id', 'name', 'catalog_number', 'released_on', 'artist_id']);
+        $albums = PlayableAudio::albums($releases);
+
         return Inertia::render('artists/show', [
             'artist' => $artist->only(['id', 'name']),
-            'releases' => Release::query()->where(fn ($query) => $query->where('artist_id', $artist->id)->orWhereHas('artists', fn ($query) => $query->whereKey($artist->id)))
-                ->orderByDesc('released_on')->orderBy('name')->get(['id', 'name', 'catalog_number', 'released_on'])
+            'releases' => $releases
                 ->map(fn (Release $release): array => [
                     ...$release->only(['id', 'name', 'catalog_number']),
+                    'player_tracks' => $albums[$release->id],
                     'released_on' => $release->released_on?->toDateString(),
                 ]),
             'tracks' => $tracks->map(fn (Track $track): array => [

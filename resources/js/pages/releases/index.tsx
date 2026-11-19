@@ -4,6 +4,8 @@ import { Amount } from '@/components/amount';
 import { CheckField, SelectInput } from '@/components/field';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import type { PlayerTrack } from '@/components/player/player-store';
+import { ReleaseActions } from '@/components/player/track-actions';
 import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +43,7 @@ type Release = {
     status: 'todo' | 'in_progress' | 'done';
     release_type: string | null;
     cover_file_id: number | null;
+    player_tracks: PlayerTrack[];
 };
 
 type Filters = {
@@ -160,6 +163,9 @@ export default function Releases({
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-12" />
+                                <TableHead className="w-20">
+                                    <span className="sr-only">Play</span>
+                                </TableHead>
                                 <SortableHead
                                     column="catalog_number"
                                     sorter={sorter}
@@ -226,6 +232,14 @@ export default function Releases({
                                                     className="size-full object-cover"
                                                 />
                                             )}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-1">
+                                            <ReleaseActions
+                                                tracks={release.player_tracks}
+                                                name={release.name}
+                                            />
                                         </div>
                                     </TableCell>
                                     <TableCell className="font-mono text-xs">

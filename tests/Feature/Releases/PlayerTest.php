@@ -48,6 +48,28 @@ test('the release page gives the player a file, title, artist, release and cover
             ->where('release.tracks.1.audio_file_id', null));
 });
 
+test('the release list and the artist page give the player each release as an album in play order without silent tracks', function (Closure $url, string $path) {
+    $guest = Artist::factory()->create(['label_id' => $this->label->id, 'name' => 'Guest Artist']);
+    $second = playerTrack($this->release, ['name' => 'Second', 'track_number' => 2, 'artist_id' => $guest->id, 'version' => 'Club Mix']);
+    $first = playerTrack($this->release, ['name' => 'First', 'track_number' => 1]);
+    playerTrack($this->release, ['name' => 'Silent One', 'track_number' => 3]);
+    $secondAudio = playerFile($this->release, ['track_id' => $second->id]);
+    $firstAudio = playerFile($this->release, ['track_id' => $first->id]);
+    $cover = playerFile($this->release, ['kind' => 'cover', 'mime_type' => 'image/png', 'original_name' => 'cover.png']);
+    $other = Release::factory()->create(['label_id' => $this->label->id, 'artist_id' => $this->artist->id, 'name' => 'Another Release']);
+    playerFile($other, ['track_id' => playerTrack($other, ['name' => 'Elsewhere'])->id]);
+
+    $this->get($url($this))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page->where($path, fn ($releases) => collect($releases)->firstWhere('id', $this->release->id)['player_tracks'] === [
+            ['id' => $first->id, 'fileId' => $firstAudio->id, 'title' => 'First', 'artist' => 'Example Artist', 'artistId' => $this->artist->id, 'release' => ['id' => $this->release->id, 'name' => 'Example Release'], 'coverFileId' => $cover->id],
+            ['id' => $second->id, 'fileId' => $secondAudio->id, 'title' => 'Second (Club Mix)', 'artist' => 'Guest Artist', 'artistId' => $guest->id, 'release' => ['id' => $this->release->id, 'name' => 'Example Release'], 'coverFileId' => $cover->id],
+        ]));
+})->with([
+    'release list' => [fn ($test) => route('releases.index'), 'releases.data'],
+    'artist page' => [fn ($test) => route('artists.show', $test->artist), 'releases'],
+]);
+
 test('the tracks list gives the player a file, title, artist, release and cover for each track', function () {
     $guest = Artist::factory()->create(['label_id' => $this->label->id, 'name' => 'Guest Artist']);
     $withAudio = playerTrack($this->release, ['name' => 'Alpha', 'artist_id' => $guest->id, 'version' => 'Club Mix']);
