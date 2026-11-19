@@ -46,6 +46,31 @@ Example Records receives its Zebralution statement for the third quarter on 15 N
 
 The original line of the file is kept with every transaction, without personal data. Buyer names, emails and addresses in Bandcamp reports are discarded before anything is stored.
 
+## What was deducted before the money arrived
+
+A statement reports what the label receives. Some also say what was paid in the first place and who kept what on the way. Where a file says so, every transaction keeps three more figures:
+
+| Figure                                       | Zebralution                                                | Bandcamp                                                 | Rightz Audio                             |
+| -------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------- |
+| **Paid by customers**                        | "Amount Distributable": what the shop paid the distributor | "item total": what the buyer paid, with shipping and tax | Your amount plus the agency's commission |
+| **Kept by distributors, shops and agencies** | The part the contract share leaves to Zebralution          | Bandcamp's revenue share                                 | "Total RightzAudio"                      |
+| **Kept by payment providers**                | not reported                                               | The payment provider's fee                               | not reported                             |
+
+The import page, every period and the dashboard add these up in the panel **Where the money went**:
+
+| Line                                                                   | Example    |
+| ---------------------------------------------------------------------- | ---------- |
+| Paid by customers                                                      | 100.00     |
+| Kept by distributors, shops and agencies                               | −20.00     |
+| Kept by payment providers                                              | −4.00      |
+| Other deductions (taxes, shipping, mechanicals passed on, payout fees) | −6.00      |
+| Received without a breakdown                                           | 30.00      |
+| **Received by the label**                                              | **100.00** |
+
+A period continues from there with **Costs**, **Owed to payees** and **Kept by the label**; see [Periods, statements and payouts](32-periods-statements-and-payouts.md).
+
+"Received without a breakdown" is income from statements that only report the amount paid out: the legacy Zebralution layout, the spreadsheet template, entries made by hand and anything migrated from another system.
+
 ## Lines that are left out
 
 The import page lists them under **Lines left out**, with the reason:

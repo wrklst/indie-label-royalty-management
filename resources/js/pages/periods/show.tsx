@@ -1,3 +1,5 @@
+import { MoneyFlow } from '@/components/money-flow';
+import type { Flow } from '@/components/money-flow';
 import { Link, router } from '@inertiajs/react';
 import { Banknote, FileText, Pencil } from 'lucide-react';
 import PeriodController from '@/actions/App/Http/Controllers/PeriodController';
@@ -56,6 +58,7 @@ type Props = {
         | 'outstanding',
         string
     >;
+    flow: Flow;
     audit: {
         transactions: number;
         unassigned: number;
@@ -91,6 +94,7 @@ export default function ShowPeriod({
     period,
     currency,
     totals,
+    flow,
     audit,
     payees,
 }: Props) {
@@ -212,6 +216,18 @@ export default function ShowPeriod({
                     }
                 />
             </div>
+
+            <MoneyFlow
+                flow={flow}
+                currency={currency}
+                shares={{
+                    expense: String(
+                        Number(totals.expense) + Number(totals.label_costs),
+                    ),
+                    payee_share: totals.payee_share,
+                    label_share: totals.label_share,
+                }}
+            />
 
             <Panel
                 title="1. Check the data"

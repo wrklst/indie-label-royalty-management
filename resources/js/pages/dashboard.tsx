@@ -1,3 +1,5 @@
+import { MoneyFlow } from '@/components/money-flow';
+import type { Flow } from '@/components/money-flow';
 import { Link } from '@inertiajs/react';
 import { Upload } from 'lucide-react';
 import { Amount } from '@/components/amount';
@@ -21,6 +23,7 @@ import type { Breakdown } from '@/types';
 type Props = {
     filters: { from: string; to: string; date: 'sold' | 'paid' };
     totals: { income: string; expense: string; transactions: number };
+    flow: Flow;
     months: { label: string; total: string }[];
     retailers: Breakdown[];
     formats: Breakdown[];
@@ -87,6 +90,7 @@ function BreakdownList({
 export default function Dashboard({
     filters,
     totals,
+    flow,
     months,
     retailers,
     formats,
@@ -217,6 +221,8 @@ export default function Dashboard({
                     value={totals.transactions.toLocaleString('en-GB')}
                 />
             </div>
+
+            <MoneyFlow flow={flow} />
 
             <Panel title="Income by month">
                 {months.length === 0 ? (

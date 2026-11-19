@@ -136,8 +136,16 @@ class BandcampImporter extends BaseImporter
         $date = $row->requireDate('date', 'n/j/y g:ia');
         $itemName = $row->string('item name');
 
+        // "item total" is what the buyer paid, "amount you received" what was left after the
+        // payment provider, and "net amount" what was left after Bandcamp's revenue share.
+        $gross = $row->decimal('item total');
+        $received = $row->decimal('amount you received');
+
         return new ImportRow(
             total: $this->disableFee ? $net : Decimal::mul($net, '0.99'),
+            gross: $gross,
+            paymentFee: $gross === null ? null : ($row->decimal('transaction fee') ?? ($received === null ? null : Decimal::sub($gross, $received))),
+            distributionFee: $gross === null ? null : ($row->decimal('assessed revenue share') ?? ($received === null ? null : Decimal::sub($received, $net))),
             timestamp: $date,
             paidTimestamp: $date,
             currency: $row->upper('currency'),

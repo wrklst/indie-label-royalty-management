@@ -1,3 +1,5 @@
+import { MoneyFlow } from '@/components/money-flow';
+import type { Flow } from '@/components/money-flow';
 import { Form, Link } from '@inertiajs/react';
 import DataImportController from '@/actions/App/Http/Controllers/DataImportController';
 import { Amount } from '@/components/amount';
@@ -58,6 +60,7 @@ type Props = {
         user: string | null;
     };
     unassignedItems: number;
+    flow: Flow;
     byRetailer: Row[];
     byFormat: Row[];
     byMonth: Row[];
@@ -267,6 +270,7 @@ function Breakdown({
 export default function ShowDataImport({
     import: dataImport,
     unassignedItems,
+    flow,
     byRetailer,
     byFormat,
     byMonth,
@@ -401,6 +405,8 @@ export default function ShowDataImport({
                             hint="new releases / tracks"
                         />
                     </div>
+
+                    <MoneyFlow flow={flow} />
 
                     {(unassigned > 0 ||
                         unconverted > 0 ||

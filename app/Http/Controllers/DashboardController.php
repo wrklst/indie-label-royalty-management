@@ -6,6 +6,7 @@ use App\Models\DataImport;
 use App\Models\Item;
 use App\Models\Release;
 use App\Models\Transaction;
+use App\Services\Royalties\MoneyFlow;
 use App\Support\Decimal;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
@@ -40,6 +41,7 @@ class DashboardController extends Controller
                 'expense' => Decimal::parse($byType['expense']->total ?? 0) ?? '0',
                 'transactions' => (int) $byType->sum('transactions'),
             ],
+            'flow' => MoneyFlow::of(Transaction::query()->whereBetween($dateColumn, [$from->toDateString(), $to->toDateString()])),
             'months' => $income()->selectRaw("{$month} as label, SUM(converted_total) as total")->groupByRaw('1')->orderByRaw('1')->get()
                 ->map(fn ($row): array => ['label' => $row->label, 'total' => Decimal::parse($row->total) ?? '0']),
             'retailers' => $this->breakdown($income(), 'retailer'),

@@ -53,8 +53,13 @@ class RightzAudioImporter extends BaseImporter
         $version = $row->string('Recording Display Title Version');
         $allocation = self::period($row->string('Allocation Period'));
 
+        $total = $row->requireDecimal('Total Client [€]');
+        $commission = $row->decimal('Total RightzAudio [€]');
+
         return new ImportRow(
-            total: $row->requireDecimal('Total Client [€]'),
+            total: $total,
+            gross: $commission === null ? null : Decimal::add($total, $commission),
+            distributionFee: $commission,
             timestamp: $allocation['end'] ?? null,
             currency: 'EUR',
             category: 'Rights',

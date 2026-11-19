@@ -27,6 +27,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|float|int|null $quantity
  * @property string|float|int|null $price
  * @property numeric-string $total
+ * @property numeric-string|null $gross_total What customers paid before deductions; null when the statement does not say.
+ * @property numeric-string|null $distribution_fee What the distributor, shop or agency kept.
+ * @property numeric-string|null $payment_fee What the payment provider kept.
  * @property string $currency
  * @property string|float|int|null $conversion_rate
  * @property numeric-string|null $converted_total
@@ -49,7 +52,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['label_id', 'data_import_id', 'release_id', 'track_id', 'item_id', 'contract_id', 'payee_id', 'ledger_id', 'type', 'timestamp', 'paid_timestamp', 'quantity', 'price', 'total', 'currency', 'conversion_rate', 'converted_total', 'category', 'format', 'usage_type', 'region', 'provider', 'retailer', 'external_id', 'source', 'importer_source', 'memo', 'published', 'billable', 'recoupable', 'recurring_expense_id', 'fingerprint', 'raw_data'])]
+#[Fillable(['label_id', 'data_import_id', 'release_id', 'track_id', 'item_id', 'contract_id', 'payee_id', 'ledger_id', 'type', 'timestamp', 'paid_timestamp', 'quantity', 'price', 'total', 'gross_total', 'distribution_fee', 'payment_fee', 'currency', 'conversion_rate', 'converted_total', 'category', 'format', 'usage_type', 'region', 'provider', 'retailer', 'external_id', 'source', 'importer_source', 'memo', 'published', 'billable', 'recoupable', 'recurring_expense_id', 'fingerprint', 'raw_data'])]
 class Transaction extends Model
 {
     /** @use HasFactory<TransactionFactory> */
@@ -65,6 +68,9 @@ class Transaction extends Model
             'timestamp' => 'date:Y-m-d',
             'paid_timestamp' => 'date:Y-m-d',
             'total' => 'decimal:15',
+            'gross_total' => 'decimal:15',
+            'distribution_fee' => 'decimal:15',
+            'payment_fee' => 'decimal:15',
             'converted_total' => 'decimal:15',
             'published' => 'boolean',
             'billable' => 'boolean',

@@ -47,6 +47,24 @@ When all is well it says "Everything is assigned to a release, covered by a cont
 
 These are warnings, not locks. You can generate statements with open issues, but the amounts concerned stay with the label.
 
+## Where the money went
+
+Below the four figures at the top, a period shows the path of its income in one panel, from the label's point of view:
+
+| Line                                         | Meaning                                                                             |
+| -------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Paid by customers**                        | What shops and buyers paid, for the lines whose statement reports it                |
+| **Kept by distributors, shops and agencies** | The distributor's share, Bandcamp's revenue share, a collecting agency's commission |
+| **Kept by payment providers**                | Payment fees, where reported                                                        |
+| **Other deductions**                         | Taxes, shipping, mechanicals passed on and payout fees                              |
+| **Received without a breakdown**             | Income whose statement does not say what was deducted before                        |
+| **Received by the label**                    | The income of the period                                                            |
+| **Costs**                                    | Expenses paid in the period, recoupable ones and the label's own                    |
+| **Owed to payees**                           | Their shares under the contracts, before earlier balances and payouts               |
+| **Kept by the label**                        | What remains                                                                        |
+
+Which statements report deductions is listed in [Importing statements](10-importing-statements.md).
+
 ## How the figures are calculated
 
 For every payee and every ledger:

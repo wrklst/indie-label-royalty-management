@@ -4,6 +4,7 @@ namespace App\Services\Imports\Importers;
 
 use App\Services\Imports\ImportRow;
 use App\Services\Imports\Row;
+use App\Support\Decimal;
 
 /**
  * Zebralution "statement_label_track" file, in use since 2024 Q1.
@@ -57,9 +58,15 @@ class ZebralutionImporter extends BaseImporter
     protected function map(Row $row): ImportRow
     {
         $usageType = $row->string('Usage Type');
+        $total = $row->requireDecimal('Licensor Amount in EUR');
+        // What the shop paid Zebralution, and the share of it the contract leaves to the label, in percent.
+        $gross = $row->decimal('Amount Distributable in EUR');
+        $share = $row->decimal('Contract Share');
 
         return new ImportRow(
-            total: $row->requireDecimal('Licensor Amount in EUR'),
+            total: $total,
+            gross: $gross,
+            distributionFee: $gross === null || $share === null ? null : Decimal::div(Decimal::mul($gross, Decimal::sub('100', $share)), '100'),
             timestamp: $row->requireMonthEnd('DSP Reporting Period'),
             currency: 'EUR',
             quantity: $row->decimal('Quantity Integer', 'Quantity'),

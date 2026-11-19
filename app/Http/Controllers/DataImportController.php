@@ -14,6 +14,7 @@ use App\Services\Imports\Importers\TemplateImporter;
 use App\Services\Imports\ImportException;
 use App\Services\Imports\ImportRunner;
 use App\Services\Imports\Readers\ReaderFactory;
+use App\Services\Royalties\MoneyFlow;
 use App\Support\CurrentLabel;
 use App\Support\Sorting;
 use App\Support\WorkingCopy;
@@ -167,6 +168,7 @@ class DataImportController extends Controller
                 'created_at' => $dataImport->created_at->toDateTimeString(),
                 'user' => $dataImport->user?->name,
             ],
+            'flow' => MoneyFlow::of(clone $transactions),
             'unassignedItems' => Item::query()->where('data_import_id', $dataImport->id)->whereNull('release_id')->count(),
             'byRetailer' => (clone $transactions)->selectRaw('retailer, COUNT(*) as transactions, SUM(quantity) as quantity, SUM(converted_total) as total')
                 ->groupBy('retailer')->orderByDesc('total')->toBase()->get()

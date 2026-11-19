@@ -7,6 +7,8 @@ use App\Http\Requests\PeriodRequest;
 use App\Models\Payee;
 use App\Models\Period;
 use App\Models\Statement;
+use App\Models\Transaction;
+use App\Services\Royalties\MoneyFlow;
 use App\Services\Royalties\PayoutService;
 use App\Services\Royalties\RoyaltyCalculator;
 use App\Services\Royalties\StatementGenerator;
@@ -58,6 +60,7 @@ class PeriodController extends Controller
             'period' => [...$report['period'], 'closed' => $period->closed_at !== null],
             'currency' => $report['currency'],
             'totals' => $report['totals'],
+            'flow' => MoneyFlow::of(Transaction::query()->whereBetween('paid_timestamp', [$period->starts_on->toDateString(), $period->ends_on->toDateString()])),
             'audit' => $report['audit'],
             'payees' => collect($report['payees'])->map(fn (array $payee): array => [
                 'payee_id' => $payee['payee_id'],
