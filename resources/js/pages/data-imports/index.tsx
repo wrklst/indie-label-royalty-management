@@ -159,7 +159,7 @@ export default function DataImports({
                                     <TableCell className="max-w-sm">
                                         <Link
                                             href={show(dataImport.id)}
-                                            className="font-medium underline decoration-muted-foreground/40 underline-offset-4"
+                                            className="font-medium wrap-anywhere underline decoration-muted-foreground/40 underline-offset-4"
                                         >
                                             {dataImport.name}
                                         </Link>
