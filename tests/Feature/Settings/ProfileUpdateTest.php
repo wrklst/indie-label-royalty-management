@@ -1,9 +1,11 @@
 <?php
 
+use App\Enums\LabelRole;
 use App\Models\Label;
 use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Notification;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('profile page is displayed', function () {
     $user = User::factory()->create();
@@ -170,3 +172,12 @@ test('an admin can delete their account when the label has another admin', funct
 
     expect($admin->fresh())->toBeNull();
 });
+
+test('the profile page knows the role in the current label, so the label settings stay in reach', function (LabelRole $role) {
+    $label = Label::factory()->create();
+    $user = User::factory()->create(['current_label_id' => $label->id]);
+    $label->users()->attach($user, ['role' => $role->value]);
+
+    $this->actingAs($user)->get(route('profile.edit'))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('label.id', $label->id)->where('label.role', $role->value));
+})->with([LabelRole::Admin, LabelRole::Payee]);

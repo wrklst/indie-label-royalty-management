@@ -59,11 +59,16 @@ class HandleInertiaRequests extends Middleware
         $current = app(CurrentLabel::class);
         $label = $current->get() ?? $request->user()?->currentLabel;
 
+        // Account pages such as the profile are not tied to a label, so the role is looked up
+        // there: without it the settings would hide everything that belongs to the label.
+        $role = $label === null ? null : ($current->role()?->value
+            ?? $request->user()?->labels()->whereKey($label->id)->first()?->pivot->role);
+
         return $label === null ? null : [
             'id' => $label->id,
             'name' => $label->name,
             'currency' => $label->currency,
-            'role' => $current->role()?->value,
+            'role' => $role,
             // Which of the mechanicals, PPD and reserves tools the label uses.
             'tools' => array_combine(
                 array_map(fn (RoyaltyTool $tool): string => $tool->value, RoyaltyTool::cases()),

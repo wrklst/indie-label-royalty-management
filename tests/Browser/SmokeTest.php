@@ -98,3 +98,21 @@ test('a payee only gets the statement portal and can read a published statement'
         ->assertSee('Streaming/Other')
         ->assertNoSmoke();
 });
+
+test('the settings opened from the profile list everything that belongs to the label', function () {
+    $this->actingAs(labelAdmin(Label::factory()->create(['name' => 'Example Records'])));
+
+    visit('/settings')
+        ->assertPathIs('/settings/profile')
+        ->assertSeeIn('nav[aria-label="Settings"]', 'Profile')
+        ->assertSeeIn('nav[aria-label="Settings"]', 'Team')
+        ->assertSeeIn('nav[aria-label="Settings"]', 'Connections')
+        ->assertSeeIn('nav[aria-label="Settings"]', 'Bandcamp')
+        ->click('nav[aria-label="Settings"] a[href$="/settings/connections"]')
+        ->assertPathIs('/settings/connections')
+        ->assertSee('Receipt reading')
+        ->click('nav[aria-label="Settings"] a[href$="/settings/label"]')
+        ->assertPathIs('/settings/label')
+        ->assertSee('Accounting currency')
+        ->assertNoJavaScriptErrors();
+});
