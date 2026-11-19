@@ -152,11 +152,22 @@ class LabelCostController extends Controller
         return back();
     }
 
-    public function destroyRecurring(RecurringExpense $recurringExpense): RedirectResponse
+    /**
+     * Stop a recurring cost. Its booked payments stay in the accounts,
+     * unless they are asked to go with it: for a cost that was entered
+     * by mistake, or with a wrong amount or start.
+     */
+    public function destroyRecurring(Request $request, RecurringExpense $recurringExpense): RedirectResponse
     {
+        $deleted = $request->boolean('payments')
+            ? Transaction::query()->where('recurring_expense_id', $recurringExpense->id)->delete()
+            : null;
+
         $recurringExpense->delete();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Recurring cost stopped. Payments already booked stay.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $deleted === null
+            ? __('Recurring cost stopped. Payments already booked stay.')
+            : trans_choice('Recurring cost deleted with its :count booked payment.|Recurring cost deleted with its :count booked payments.', $deleted)]);
 
         return back();
     }

@@ -587,6 +587,7 @@ export default function LabelCosts({
                             label="First payment"
                             htmlFor="starts_on"
                             error={errors.starts_on}
+                            hint="A date in the past books every payment since then at once."
                             required
                         >
                             <Input
@@ -790,9 +791,32 @@ export default function LabelCosts({
                                                 url={LabelCostController.destroyRecurring.url(
                                                     cost.id,
                                                 )}
-                                                confirmLabel="Stop"
-                                                title={`Stop ${cost.name}?`}
-                                                description={`No further payments are booked. The ${cost.occurrences_booked} already booked stay in the accounts.`}
+                                                confirmLabel={
+                                                    cost.occurrences_booked > 0
+                                                        ? 'Stop, keep the payments'
+                                                        : 'Delete'
+                                                }
+                                                alternative={
+                                                    cost.occurrences_booked > 0
+                                                        ? {
+                                                              label: `Delete with its ${cost.occurrences_booked} ${cost.occurrences_booked === 1 ? 'payment' : 'payments'}`,
+                                                              url: LabelCostController.destroyRecurring.url(
+                                                                  cost.id,
+                                                                  {
+                                                                      query: {
+                                                                          payments: 1,
+                                                                      },
+                                                                  },
+                                                              ),
+                                                          }
+                                                        : undefined
+                                                }
+                                                title={`Stop or delete ${cost.name}?`}
+                                                description={
+                                                    cost.occurrences_booked > 0
+                                                        ? `Stopping books no further payments and keeps the ${cost.occurrences_booked} already booked in the accounts. Deleting removes those payments too: use it for a cost entered by mistake. Receipts attached to them go back to the list of receipts.`
+                                                        : 'Nothing was booked for it yet.'
+                                                }
                                             />
                                         </div>
                                     </TableCell>

@@ -6,6 +6,7 @@ use App\Models\ContractSplit;
 use App\Models\Label;
 use App\Models\Payee;
 use App\Models\Period;
+use App\Models\Receipt;
 use App\Models\RecurringExpense;
 use App\Models\Release;
 use App\Models\Transaction;
@@ -129,6 +130,24 @@ test('stopping a recurring cost keeps what was booked', function () {
     $this->assertDatabaseCount('recurring_expenses', 0);
     $this->assertDatabaseCount('transactions', 2);
     $this->assertDatabaseHas('transactions', ['recurring_expense_id' => null]);
+});
+
+test('deleting a recurring cost with its payments removes exactly those and frees their receipts', function () {
+    $expense = RecurringExpense::factory()->create(['label_id' => $this->label->id, 'starts_on' => '2026-01-15']);
+    app(RecurringExpenseBooker::class)->bookDue($this->label, CarbonImmutable::parse('2026-02-20'));
+    $other = RecurringExpense::factory()->create(['label_id' => $this->label->id, 'name' => 'Another subscription', 'starts_on' => '2026-02-01']);
+    app(RecurringExpenseBooker::class)->bookDue($this->label, CarbonImmutable::parse('2026-02-20'));
+    $oneTime = Transaction::factory()->create(['label_id' => $this->label->id, 'type' => 'expense', 'recoupable' => false, 'release_id' => null]);
+    $receipt = Receipt::factory()->create(['label_id' => $this->label->id, 'transaction_id' => Transaction::query()->where('recurring_expense_id', $expense->id)->value('id')]);
+
+    $this->delete(route('label-costs.recurring.destroy', ['recurring_expense' => $expense->id, 'payments' => 1]))
+        ->assertInertiaFlash('toast.message', 'Recurring cost deleted with its 2 booked payments.');
+
+    expect(RecurringExpense::query()->pluck('id')->all())->toBe([$other->id])
+        ->and(Transaction::query()->where('recurring_expense_id', $other->id)->count())->toBe(1)
+        ->and(Transaction::query()->whereKey($oneTime->id)->exists())->toBeTrue()
+        ->and(Transaction::query()->count())->toBe(2)
+        ->and($receipt->refresh()->transaction_id)->toBeNull();
 });
 
 test('a recurring cost needs a known interval and an end after its start', function (array $input, string $field) {

@@ -22,7 +22,10 @@ export function DeleteButton({
     description,
     label,
     confirmLabel = 'Delete',
+    alternative,
 }: {
+    /** A second, further-reaching way to delete, offered beside the first. */
+    alternative?: { label: string; url: string };
     url: string;
     title: string;
     description: ReactNode;
@@ -31,6 +34,15 @@ export function DeleteButton({
 }) {
     const [open, setOpen] = useState(false);
     const [processing, setProcessing] = useState(false);
+    const remove = (target: string) =>
+        router.delete(target, {
+            preserveScroll: true,
+            onStart: () => setProcessing(true),
+            onFinish: () => {
+                setProcessing(false);
+                setOpen(false);
+            },
+        });
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -46,31 +58,31 @@ export function DeleteButton({
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className={alternative ? 'sm:max-w-xl' : undefined}>
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>{description}</DialogDescription>
                 </DialogHeader>
-                <DialogFooter>
+                <DialogFooter className="flex-wrap gap-y-2">
                     <Button variant="secondary" onClick={() => setOpen(false)}>
                         Cancel
                     </Button>
                     <Button
-                        variant="destructive"
+                        variant={alternative ? 'outline' : 'destructive'}
                         disabled={processing}
-                        onClick={() =>
-                            router.delete(url, {
-                                preserveScroll: true,
-                                onStart: () => setProcessing(true),
-                                onFinish: () => {
-                                    setProcessing(false);
-                                    setOpen(false);
-                                },
-                            })
-                        }
+                        onClick={() => remove(url)}
                     >
                         {confirmLabel}
                     </Button>
+                    {alternative && (
+                        <Button
+                            variant="destructive"
+                            disabled={processing}
+                            onClick={() => remove(alternative.url)}
+                        >
+                            {alternative.label}
+                        </Button>
+                    )}
                 </DialogFooter>
             </DialogContent>
         </Dialog>
