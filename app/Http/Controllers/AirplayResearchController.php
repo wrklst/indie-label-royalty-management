@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AirplayOrigin;
+use App\Jobs\ResearchAirplayEntry;
 use App\Jobs\ResearchTrackAirplay;
 use App\Models\Airplay;
 use App\Models\AirplayFinding;
@@ -55,21 +56,43 @@ class AirplayResearchController extends Controller
     }
 
     /**
+     * Queue a closer look at one play: the show it was in and what was written about it.
+     */
+    public function airplay(Airplay $airplay, WebSearch $search): RedirectResponse
+    {
+        if (! $search->isConfigured()) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Web search is not set up: DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD are missing.')]);
+
+            return back();
+        }
+
+        ResearchAirplayEntry::dispatch($airplay->id);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Research queued. Findings for this play appear here in a few minutes.')]);
+
+        return back();
+    }
+
+    /**
      * Keep a finding: as a link of the play it was searched for, or as a new play.
      */
     public function keep(AirplayFinding $finding): RedirectResponse
     {
         DB::transaction(function () use ($finding): void {
-            $track = Track::query()->with(['artist:id,name', 'artists:id,name'])->findOrFail($finding->track_id);
+            $airplay = $finding->airplay;
 
-            $airplay = $finding->airplay ?? new Airplay([
-                'origin' => AirplayOrigin::Search,
-                'track_id' => $track->id,
-                'track_name' => $track->name,
-                'artist_name' => ArtistCredits::display($track),
-                'isrc' => $track->isrc,
-                'station' => $finding->station ?? $finding->domain ?? __('Unknown'),
-            ]);
+            if ($airplay === null) {
+                $track = Track::query()->with(['artist:id,name', 'artists:id,name'])->findOrFail($finding->track_id);
+
+                $airplay = new Airplay([
+                    'origin' => AirplayOrigin::Search,
+                    'track_id' => $track->id,
+                    'track_name' => $track->name,
+                    'artist_name' => ArtistCredits::display($track),
+                    'isrc' => $track->isrc,
+                    'station' => $finding->station ?? $finding->domain,
+                ]);
+            }
 
             $airplay->addLink($finding->only(['url', 'title', 'description']), AirplayOrigin::Search);
             $airplay->save();

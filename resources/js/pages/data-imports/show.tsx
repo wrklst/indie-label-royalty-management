@@ -1,7 +1,9 @@
-import { Link } from '@inertiajs/react';
+import { Form, Link } from '@inertiajs/react';
 import DataImportController from '@/actions/App/Http/Controllers/DataImportController';
 import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
+import { SelectInput } from '@/components/field';
+import InputError from '@/components/input-error';
 import { Page, Panel, Stat } from '@/components/page';
 import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
@@ -34,7 +36,7 @@ type Props = {
         name: string;
         importer_name: string;
         original_filename: string | null;
-        status: 'pending' | 'imported' | 'failed' | 'deleted';
+        status: 'pending' | 'imported' | 'review' | 'failed' | 'deleted';
         rows_count: number;
         transactions_count: number;
         duplicates_count: number;
@@ -45,6 +47,8 @@ type Props = {
         total: string;
         errors: { line: number | null; message: string }[] | null;
         metadata: {
+            duplicates?: Duplicate[];
+            resolved_duplicates?: (Duplicate & { decision: string })[];
             skipped?: number;
             unassigned?: number;
             unconverted?: number;
@@ -58,6 +62,128 @@ type Props = {
     byFormat: Row[];
     byMonth: Row[];
 };
+
+type Duplicate = {
+    key: string;
+    kind: 'sum' | 'line';
+    release: string | null;
+    existing: {
+        id: number;
+        paid: string;
+        total: string;
+        memo: string | null;
+        source: string | null;
+    }[];
+    existing_total: string;
+    imported: { count: number; total: string; tracks: string[] };
+};
+
+const DECISIONS: Record<string, string> = {
+    replace: 'Merge: keep the lines of this file, remove the existing booking',
+    skip: 'Leave these lines of the file out, keep the existing booking',
+    both: 'Not a duplicate: keep both',
+};
+
+function DuplicateSides({ duplicate }: { duplicate: Duplicate }) {
+    return (
+        <div className="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">
+                    Already booked
+                </p>
+                <ul className="mt-1 grid gap-1">
+                    {duplicate.existing.map((booking) => (
+                        <li key={booking.id}>
+                            <Amount value={booking.total} /> · paid{' '}
+                            {date(booking.paid)}
+                            {booking.source && ` · ${booking.source}`}
+                            {booking.memo && (
+                                <p className="text-xs text-muted-foreground">
+                                    {booking.memo}
+                                </p>
+                            )}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+            <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">
+                    In this file
+                </p>
+                <p className="mt-1">
+                    <Amount value={duplicate.imported.total} /> in{' '}
+                    {duplicate.imported.count} line(s)
+                </p>
+                {duplicate.imported.tracks.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                        {duplicate.imported.tracks.join(', ')}
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}
+
+/**
+ * An import that was held: nothing is booked until each possible duplicate is decided.
+ */
+function DuplicateReview({
+    importId,
+    duplicates,
+}: {
+    importId: number;
+    duplicates: Duplicate[];
+}) {
+    return (
+        <Panel
+            title={`Possible duplicates (${duplicates.length})`}
+            description="Lines of this file look like bookings that exist already, so nothing was imported yet. A merge keeps the detailed lines of the file and removes the earlier booking; the lines stay unpublished if the booking was, and take over its contract, payee and ledger."
+        >
+            <Form
+                {...DataImportController.resolve.form(importId)}
+                className="grid gap-4"
+            >
+                {({ errors, processing }) => (
+                    <>
+                        {duplicates.map((duplicate) => (
+                            <fieldset
+                                key={duplicate.key}
+                                className="grid gap-3 rounded-lg border p-3"
+                            >
+                                <legend className="px-1 text-sm font-medium">
+                                    {duplicate.release ?? 'Release'} ·{' '}
+                                    {duplicate.kind === 'sum'
+                                        ? 'same total in the month'
+                                        : 'same amount on the same day'}
+                                </legend>
+                                <DuplicateSides duplicate={duplicate} />
+                                <SelectInput
+                                    name={`decisions[${duplicate.key}]`}
+                                    defaultValue="replace"
+                                    aria-label={`Decision for ${duplicate.release ?? 'the release'}`}
+                                >
+                                    {Object.entries(DECISIONS).map(
+                                        ([value, label]) => (
+                                            <option key={value} value={value}>
+                                                {label}
+                                            </option>
+                                        ),
+                                    )}
+                                </SelectInput>
+                            </fieldset>
+                        ))}
+                        <InputError message={errors.decisions} />
+                        <div>
+                            <Button disabled={processing}>
+                                Import with these decisions
+                            </Button>
+                        </div>
+                    </>
+                )}
+            </Form>
+        </Panel>
+    );
+}
 
 const BREAKDOWN_COLUMNS = {
     label: (row: Row) => row.label,
@@ -146,6 +272,8 @@ export default function ShowDataImport({
     byMonth,
 }: Props) {
     const failed = dataImport.status === 'failed';
+    const review = dataImport.status === 'review';
+    const resolved = dataImport.metadata?.resolved_duplicates ?? [];
     const skipped = dataImport.metadata?.skipped ?? 0;
     const unconverted = dataImport.metadata?.unconverted ?? 0;
     const unassigned = dataImport.metadata?.unassigned ?? 0;
@@ -212,7 +340,34 @@ export default function ShowDataImport({
                 </div>
             )}
 
-            {!failed && (
+            {review && (
+                <DuplicateReview
+                    importId={dataImport.id}
+                    duplicates={dataImport.metadata?.duplicates ?? []}
+                />
+            )}
+
+            {resolved.length > 0 && (
+                <Panel
+                    title="Duplicates decided at import"
+                    description="What was done about lines that looked like existing bookings."
+                >
+                    <div className="grid gap-4">
+                        {resolved.map((duplicate) => (
+                            <div key={duplicate.key} className="grid gap-2">
+                                <p className="text-sm font-medium">
+                                    {duplicate.release ?? 'Release'} ·{' '}
+                                    {DECISIONS[duplicate.decision] ??
+                                        duplicate.decision}
+                                </p>
+                                <DuplicateSides duplicate={duplicate} />
+                            </div>
+                        ))}
+                    </div>
+                </Panel>
+            )}
+
+            {!failed && !review && (
                 <>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <Stat

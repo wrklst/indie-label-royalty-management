@@ -3,6 +3,7 @@
 namespace App\Services\Airplay;
 
 use Illuminate\Support\Facades\Http;
+use Locale;
 use RuntimeException;
 use Throwable;
 
@@ -24,18 +25,39 @@ class WebSearch
 
     private const int ATTEMPTS = 3;
 
+    /**
+     * The language Google is asked in per country; English everywhere else.
+     *
+     * @var array<string, string>
+     */
+    private const array LANGUAGES = [
+        'DE' => 'de', 'AT' => 'de', 'CH' => 'de', 'FR' => 'fr', 'BE' => 'fr', 'ES' => 'es', 'MX' => 'es', 'AR' => 'es', 'IT' => 'it',
+        'NL' => 'nl', 'PT' => 'pt', 'BR' => 'pt', 'FI' => 'fi', 'SE' => 'sv', 'NO' => 'no', 'DK' => 'da', 'PL' => 'pl', 'JP' => 'ja',
+    ];
+
     public function isConfigured(): bool
     {
         return filled(config('services.dataforseo.login')) && filled(config('services.dataforseo.password'));
     }
 
     /**
+     * The countries a research looks in.
+     *
+     * @return non-empty-list<string>
+     */
+    public function markets(): array
+    {
+        return config('services.dataforseo.markets') ?: ['DE'];
+    }
+
+    /**
      * @param  int  $depth  How many results to ask for; every ten are billed as one search.
+     * @param  string|null  $region  ISO code of the country to search from; the first configured market by default.
      * @return list<array{title: string, url: string, description: string|null, domain: string|null}>
      *
      * @throws RuntimeException when the search could not be run
      */
-    public function search(string $query, int $depth = 10): array
+    public function search(string $query, int $depth = 10, ?string $region = null): array
     {
         if (! $this->isConfigured()) {
             throw new RuntimeException('Web search is not set up: DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD are missing.');
@@ -43,7 +65,7 @@ class WebSearch
 
         // The service's own search engine fails often ("Internal SE Server Error"); failed tries are not billed.
         for ($attempt = 1; $attempt <= self::ATTEMPTS; $attempt++) {
-            $task = $this->task($query, $depth);
+            $task = $this->task($query, $depth, $region);
 
             if ((int) ($task['status_code'] ?? 0) < self::SERVICE_ERROR) {
                 break;
@@ -55,14 +77,23 @@ class WebSearch
             throw new RuntimeException('The search failed: '.($task['status_message'] ?? 'no answer'));
         }
 
-        return collect($task['result'][0]['items'] ?? [])
-            ->filter(fn (mixed $item): bool => is_array($item) && ($item['type'] ?? null) === 'organic' && filled($item['url'] ?? null))
-            ->map(fn (array $item): array => [
-                'title' => (string) ($item['title'] ?? $item['url']),
-                'url' => (string) $item['url'],
-                'description' => $item['description'] ?? null,
-                'domain' => $item['domain'] ?? null,
-            ])->values()->all();
+        $items = data_get($task, 'result.0.items');
+        $results = [];
+
+        foreach (is_array($items) ? $items : [] as $item) {
+            if (! is_array($item) || ($item['type'] ?? null) !== 'organic' || ! is_string($item['url'] ?? null) || $item['url'] === '') {
+                continue;
+            }
+
+            $results[] = [
+                'title' => is_string($item['title'] ?? null) ? $item['title'] : $item['url'],
+                'url' => $item['url'],
+                'description' => is_string($item['description'] ?? null) ? $item['description'] : null,
+                'domain' => is_string($item['domain'] ?? null) ? $item['domain'] : null,
+            ];
+        }
+
+        return $results;
     }
 
     /**
@@ -72,15 +103,17 @@ class WebSearch
      *
      * @throws RuntimeException when the service cannot be reached or refuses the request
      */
-    private function task(string $query, int $depth): array
+    private function task(string $query, int $depth, ?string $region): array
     {
+        $region = strtoupper($region ?? $this->markets()[0]);
+
         try {
             $response = Http::withBasicAuth(config('services.dataforseo.login'), config('services.dataforseo.password'))
                 ->acceptJson()->connectTimeout(10)->timeout(70)
                 ->post(self::URL, [[
                     'keyword' => mb_substr($query, 0, 700),
-                    'location_code' => (int) config('services.dataforseo.location_code'),
-                    'language_code' => config('services.dataforseo.language_code'),
+                    'location_name' => Locale::getDisplayRegion("-{$region}", 'en'),
+                    'language_code' => self::LANGUAGES[$region] ?? 'en',
                     'depth' => $depth,
                     // Without this Google's results are session-bound redirect links that stop working.
                     // It only works on the "advanced" endpoint and makes a search take about half a minute.

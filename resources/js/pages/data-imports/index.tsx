@@ -25,7 +25,7 @@ type DataImport = {
     name: string;
     importer_name: string;
     original_filename: string | null;
-    status: 'pending' | 'imported' | 'failed' | 'deleted';
+    status: 'pending' | 'imported' | 'review' | 'failed' | 'deleted';
     transactions_count: number;
     duplicates_count: number;
     errors_count: number;
@@ -49,6 +49,10 @@ export function ImportStatusBadge({
 
     if (status === 'deleted') {
         return <Badge variant="outline">Deleted</Badge>;
+    }
+
+    if (status === 'review') {
+        return <Badge variant="destructive">Duplicates to review</Badge>;
     }
 
     if (status === 'pending') {

@@ -3,8 +3,13 @@
 use App\Enums\AirplayOrigin;
 use App\Models\Airplay;
 use App\Models\AirplayFinding;
+use App\Models\DataImport;
 use App\Models\Label;
+use App\Models\Release;
 use App\Models\Track;
+use App\Models\Transaction;
+use App\Services\Imports\ImportRunner;
+use Illuminate\Support\Facades\Storage;
 
 test('an airplay is added by hand and shows where it is known from', function () {
     $label = Label::factory()->create();
@@ -39,6 +44,7 @@ test('a finding is kept as a new airplay and leaves the list of findings', funct
         ->assertDontSee('Findings to review')
         ->assertSee('radio.example.com')
         ->assertSee('Web search')
+        ->assertSee('Not researched yet')
         ->assertNoJavaScriptErrors();
 
     expect(Airplay::query()->withoutGlobalScope('label')->sole()->origin)->toBe(AirplayOrigin::Search);
@@ -58,4 +64,30 @@ test('a link is added to an airplay in its links dialog', function () {
         ->assertNoJavaScriptErrors();
 
     expect($airplay->refresh()->links[0]['url'])->toBe('https://example.com/playlist');
+});
+
+test('an import held for a possible duplicate is merged from its review screen', function () {
+    $label = Label::factory()->create(['currency' => 'EUR']);
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release']);
+    $booking = Transaction::factory()->create([
+        'label_id' => $label->id, 'release_id' => $release->id, 'data_import_id' => null, 'type' => 'income', 'timestamp' => '2026-03-31',
+        'paid_timestamp' => '2026-03-31', 'total' => '25', 'converted_total' => '25', 'currency' => 'EUR', 'format' => 'Performance Rights',
+        'importer_source' => 'manual', 'memo' => 'Entered by hand',
+    ]);
+    Storage::disk('local')->put('imports/duplicates.csv', "paid date,total,release name,format\n2026-03-31,25,Example Release,Neighboring Rights\n");
+    $import = app(ImportRunner::class)->run(DataImport::factory()->create([
+        'label_id' => $label->id, 'importer' => 'template', 'status' => 'pending', 'file_path' => 'imports/duplicates.csv',
+    ]), $label);
+    $this->actingAs(labelAdmin($label));
+
+    visit("/data-imports/{$import->id}")
+        ->assertSee('Possible duplicates (1)')
+        ->assertSee('Entered by hand')
+        ->press('Import with these decisions')
+        ->assertSee('1 transactions imported.')
+        ->assertSee('Duplicates decided at import')
+        ->assertNoJavaScriptErrors();
+
+    expect(Transaction::query()->withoutGlobalScope('label')->find($booking->id))->toBeNull()
+        ->and(Transaction::query()->withoutGlobalScope('label')->sole()->data_import_id)->toBe($import->id);
 });

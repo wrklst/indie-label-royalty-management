@@ -14,8 +14,8 @@ use Carbon\CarbonImmutable;
 
 /**
  * The "recording allocation" sheet of a Rightz Audio statement: one line
- * per recording, society and usage period. Lines from GVL also name the
- * broadcaster, which is kept as an airplay.
+ * per recording, society and usage period. Every line is kept as an
+ * airplay; lines from GVL also name the broadcaster.
  */
 class RightzAudioImporter extends BaseImporter
 {
@@ -33,7 +33,7 @@ class RightzAudioImporter extends BaseImporter
 
     public function description(): string
     {
-        return 'Neighbouring rights statements from Rightz Audio, as downloaded (Excel). Stations named in the statement are listed under Airplay.';
+        return 'Neighbouring rights statements from Rightz Audio, as downloaded (Excel). Every line is listed under Airplay, with the station when the society names it.';
     }
 
     public function requiresPaidDate(): bool
@@ -73,9 +73,10 @@ class RightzAudioImporter extends BaseImporter
     }
 
     /**
-     * Keep the broadcasters an import names as airplays. A play that is
-     * already listed gets the new amount added, so later correction runs
-     * for the same year do not list it twice.
+     * Keep every line of an import as an airplay: with the broadcaster
+     * when the society names it, as an unidentified play otherwise. A play
+     * that is already listed gets the new amount added, so later
+     * correction runs do not list it twice.
      */
     public static function recordAirplays(DataImport $import): void
     {
@@ -85,22 +86,21 @@ class RightzAudioImporter extends BaseImporter
 
         foreach ($transactions as $transaction) {
             $raw = $transaction->raw_data ?? [];
-            $station = self::attributes($raw['Source Attributes'] ?? null)['broadcaster'] ?? null;
-
-            if (! is_string($station) || trim($station) === '') {
-                continue;
-            }
-
+            $station = trim((string) (self::attributes($raw['Source Attributes'] ?? null)['broadcaster'] ?? ''));
             $usage = self::period($raw['Usage Period'] ?? null);
             $version = trim((string) ($raw['Recording Display Title Version'] ?? ''));
 
-            $airplay = Airplay::query()->withoutGlobalScope('label')->firstOrNew([
+            $play = [
                 'label_id' => $import->label_id,
                 'isrc' => Identifiers::isrc($raw['ISRC'] ?? null),
                 'track_name' => trim((string) ($raw['Recording Display Title'] ?? '')).($version === '' ? '' : " ({$version})"),
-                'station' => trim($station),
-                'period_start' => $usage['start'] ?? null,
-                'period_end' => $usage['end'] ?? null,
+                'society' => $transaction->provider,
+                'station' => $station === '' ? null : $station,
+            ];
+
+            // A society that names no broadcaster pays one play in many small lines; they are one unidentified play.
+            $airplay = Airplay::query()->withoutGlobalScope('label')->firstOrNew($station === '' ? $play : [
+                ...$play, 'period_start' => $usage['start'] ?? null, 'period_end' => $usage['end'] ?? null,
             ]);
 
             $airplay->fill([
@@ -110,7 +110,8 @@ class RightzAudioImporter extends BaseImporter
                 'artist_name' => $raw['Recording Display Artist'] ?? null,
                 'media_type' => $transaction->usage_type,
                 'region' => $transaction->region,
-                'society' => $transaction->provider,
+                'period_start' => collect([$airplay->period_start?->toDateString(), $usage['start'] ?? null])->filter()->min(),
+                'period_end' => collect([$airplay->period_end?->toDateString(), $usage['end'] ?? null])->filter()->max(),
                 'amount' => Decimal::add($airplay->amount, $transaction->converted_total ?? $transaction->total),
             ])->save();
         }

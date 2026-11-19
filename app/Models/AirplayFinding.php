@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property int $id
  * @property int $label_id
- * @property int $track_id
+ * @property int|null $track_id
  * @property int|null $airplay_id
  * @property string $status
  * @property bool $is_radio

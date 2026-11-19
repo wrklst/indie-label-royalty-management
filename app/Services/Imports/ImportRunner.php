@@ -32,13 +32,15 @@ class ImportRunner
     public function __construct(
         private readonly ImporterRegistry $importers,
         private readonly ReaderFactory $readers,
+        private readonly DuplicateFinder $duplicates,
     ) {}
 
     /**
      * Import the file attached to a pending data import.
      *
      * The whole file is imported in one database transaction: either every
-     * valid line ends up in the ledger or none does.
+     * valid line ends up in the ledger or none does. An import with
+     * possible duplicates is held for review with nothing saved.
      */
     public function run(DataImport $import, Label $label): DataImport
     {
@@ -53,11 +55,18 @@ class ImportRunner
 
             DB::transaction(function () use ($import, $label, $importer, $reader): void {
                 $this->process($import, $label, fn (): iterable => $importer->rows($reader, $label, $import->options ?? []));
+                $this->settleDuplicates($import);
 
                 if ($importer instanceof RightzAudioImporter) {
                     RightzAudioImporter::recordAirplays($import);
                 }
             });
+        } catch (DuplicatesFound $found) {
+            // Everything was rolled back; the model still holds what process() wrote.
+            $import->refresh()->update([
+                'status' => ImportStatus::Review,
+                'metadata' => ['duplicates' => array_map(fn (array $proposal): array => collect($proposal)->except('imported_ids')->all(), $found->proposals)],
+            ]);
         } catch (ImportException $exception) {
             $import->update([
                 'status' => ImportStatus::Failed,
@@ -75,6 +84,36 @@ class ImportRunner
         }
 
         return $import->refresh();
+    }
+
+    /**
+     * Stop the import when lines look like bookings that exist already and
+     * nobody has decided about them; otherwise carry the decisions out.
+     *
+     * @throws DuplicatesFound
+     */
+    private function settleDuplicates(DataImport $import): void
+    {
+        $proposals = $this->duplicates->find($import);
+
+        if ($proposals === []) {
+            return;
+        }
+
+        $decisions = $import->options['duplicates'] ?? [];
+
+        if (array_any($proposals, fn (array $proposal): bool => ! isset($decisions[$proposal['key']]))) {
+            throw new DuplicatesFound($proposals);
+        }
+
+        $resolved = $this->duplicates->apply($proposals, $decisions);
+        $transactions = Transaction::query()->withoutGlobalScope('label')->where('data_import_id', $import->id);
+
+        $import->update([
+            'transactions_count' => $transactions->count(),
+            'total' => (string) ($transactions->sum('converted_total') ?: '0'),
+            'metadata' => [...($import->metadata ?? []), 'resolved_duplicates' => $resolved],
+        ]);
     }
 
     /**

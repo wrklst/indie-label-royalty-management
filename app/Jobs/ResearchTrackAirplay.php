@@ -18,7 +18,7 @@ class ResearchTrackAirplay implements ShouldBeUnique, ShouldQueue
 
     public int $tries = 1;
 
-    /** Up to three searches, each tried three times for at most 70 seconds, and below Horizon's worker timeout. */
+    /** The research stops starting searches after seven minutes; this leaves the last one time to end, below Horizon's worker timeout. */
     public int $timeout = 660;
 
     public int $uniqueFor = 900;

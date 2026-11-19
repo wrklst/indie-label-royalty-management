@@ -70,6 +70,12 @@ class ImportStatement extends Command
             'options' => ['conversion_rate' => $this->option('rate'), 'skip_duplicates' => true],
         ]), $label);
 
+        if ($import->status === ImportStatus::Review) {
+            $this->warn('Nothing was imported: '.count($import->metadata['duplicates'] ?? []).' possible duplicate(s) of existing bookings. Decide about them under Data imports → '.$import->name.'.');
+
+            return self::FAILURE;
+        }
+
         if ($import->status !== ImportStatus::Imported) {
             $this->error($import->errors[0]['message'] ?? 'The import failed.');
 

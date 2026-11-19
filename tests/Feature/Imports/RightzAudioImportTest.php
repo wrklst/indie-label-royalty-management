@@ -67,17 +67,36 @@ test('a broadcaster named in a statement is kept as an airplay of the track', fu
     $label = currentLabel(['currency' => 'EUR']);
     $track = Track::factory()->create(['label_id' => $label->id, 'isrc' => 'ZZTST2600001']);
 
-    $import = importRightz($label, rightzLine('1.50', 'Example Radio'), rightzLine('0.25', null));
+    $import = importRightz($label, rightzLine('1.50', 'Example Radio'));
 
     $airplay = Airplay::query()->sole();
 
-    expect(Transaction::query()->count())->toBe(2)
-        ->and($airplay->only(['label_id', 'track_id', 'data_import_id', 'track_name', 'artist_name', 'isrc', 'station', 'media_type', 'region', 'society', 'amount']))->toBe([
-            'label_id' => $label->id, 'track_id' => $track->id, 'data_import_id' => $import->id, 'track_name' => 'Example Track',
-            'artist_name' => 'Example Artist', 'isrc' => 'ZZTST2600001', 'station' => 'Example Radio', 'media_type' => 'Radioprogramm',
-            'region' => 'DE', 'society' => 'Example Society', 'amount' => '1.500000000000000',
-        ])
+    expect($airplay->only(['label_id', 'track_id', 'data_import_id', 'track_name', 'artist_name', 'isrc', 'station', 'media_type', 'region', 'society', 'amount']))->toBe([
+        'label_id' => $label->id, 'track_id' => $track->id, 'data_import_id' => $import->id, 'track_name' => 'Example Track',
+        'artist_name' => 'Example Artist', 'isrc' => 'ZZTST2600001', 'station' => 'Example Radio', 'media_type' => 'Radioprogramm',
+        'region' => 'DE', 'society' => 'Example Society', 'amount' => '1.500000000000000',
+    ])
         ->and($airplay->origin)->toBe(AirplayOrigin::Statement)
+        ->and($airplay->period_start->toDateString())->toBe('2025-01-01')
+        ->and($airplay->period_end->toDateString())->toBe('2025-12-31');
+});
+
+test('lines that name no broadcaster become one unidentified airplay per track and society', function () {
+    $label = currentLabel(['currency' => 'EUR']);
+
+    importRightz(
+        $label,
+        rightzLine('0.25', null, usage: '[2025-01-01,2025-07-01)'),
+        rightzLine('0.50', null, usage: '[2025-07-01,2026-01-01)'),
+        rightzLine('1.50', 'Example Radio'),
+    );
+
+    $airplay = Airplay::query()->whereNull('station')->sole();
+
+    expect(Airplay::query()->count())->toBe(2)
+        ->and($airplay->only(['track_name', 'society', 'region', 'amount']))->toBe([
+            'track_name' => 'Example Track', 'society' => 'Example Society', 'region' => 'DE', 'amount' => '0.750000000000000',
+        ])
         ->and($airplay->period_start->toDateString())->toBe('2025-01-01')
         ->and($airplay->period_end->toDateString())->toBe('2025-12-31');
 });

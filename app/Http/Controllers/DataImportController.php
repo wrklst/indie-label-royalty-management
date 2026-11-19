@@ -8,6 +8,7 @@ use App\Http\Requests\DataImportRequest;
 use App\Models\DataImport;
 use App\Models\Item;
 use App\Models\Transaction;
+use App\Services\Imports\DuplicateFinder;
 use App\Services\Imports\ImporterRegistry;
 use App\Services\Imports\Importers\TemplateImporter;
 use App\Services\Imports\ImportException;
@@ -18,6 +19,7 @@ use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -106,11 +108,48 @@ class DataImportController extends Controller
 
         $import = $runner->run($import, $label);
 
-        Inertia::flash('toast', $import->status === ImportStatus::Imported
-            ? ['type' => 'success', 'message' => __(':count transactions imported.', ['count' => $import->transactions_count])]
-            : ['type' => 'error', 'message' => __('The import failed. Nothing was saved.')]);
+        Inertia::flash('toast', $this->outcome($import));
 
         return to_route('data-imports.show', $import);
+    }
+
+    /**
+     * Import a file that was held for possible duplicates, with a decision for each of them.
+     */
+    public function resolve(Request $request, DataImport $dataImport, ImportRunner $runner, CurrentLabel $currentLabel): RedirectResponse
+    {
+        abort_unless($dataImport->status === ImportStatus::Review, 404);
+
+        $keys = array_column($dataImport->metadata['duplicates'] ?? [], 'key');
+        $decisions = $request->validate([
+            'decisions' => ['required', 'array:'.implode(',', $keys)],
+            'decisions.*' => ['required', Rule::in([DuplicateFinder::REPLACE, DuplicateFinder::SKIP, DuplicateFinder::BOTH])],
+        ])['decisions'];
+
+        if (array_diff($keys, array_keys($decisions)) !== []) {
+            throw ValidationException::withMessages(['decisions' => __('Decide for every possible duplicate.')]);
+        }
+
+        $dataImport->update([
+            'status' => ImportStatus::Pending,
+            'options' => [...($dataImport->options ?? []), 'duplicates' => [...($dataImport->options['duplicates'] ?? []), ...$decisions]],
+        ]);
+
+        Inertia::flash('toast', $this->outcome($runner->run($dataImport, $currentLabel->get())));
+
+        return to_route('data-imports.show', $dataImport);
+    }
+
+    /**
+     * @return array{type: string, message: string}
+     */
+    private function outcome(DataImport $import): array
+    {
+        return match ($import->status) {
+            ImportStatus::Imported => ['type' => 'success', 'message' => __(':count transactions imported.', ['count' => $import->transactions_count])],
+            ImportStatus::Review => ['type' => 'error', 'message' => __('Possible duplicates found. Nothing was imported yet: decide below.')],
+            default => ['type' => 'error', 'message' => __('The import failed. Nothing was saved.')],
+        };
     }
 
     public function show(DataImport $dataImport, ImporterRegistry $importers): Response

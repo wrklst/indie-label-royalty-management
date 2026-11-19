@@ -23,14 +23,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $track_name
  * @property string|null $artist_name
  * @property string|null $isrc
- * @property string $station
+ * @property string|null $station
  * @property string|null $media_type
  * @property string|null $region
  * @property string|null $society
  * @property CarbonImmutable|null $period_start
  * @property CarbonImmutable|null $period_end
  * @property string|null $amount
- * @property list<array{url: string, title: string|null, description: string|null, source: string}>|null $links
+ * @property array<int, array{url: string, title: string|null, description: string|null, source?: string}>|null $links
  * @property string|null $notes
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
@@ -80,7 +80,8 @@ class Airplay extends Model
      */
     public function searchQuery(): string
     {
-        return collect([$this->artist_name, $this->track_name])->filter()->map(fn (string $part): string => "\"{$part}\"")
-            ->push($this->station)->implode(' ');
+        $names = collect([$this->artist_name, $this->track_name])->filter()->map(fn (string $part): string => "\"{$part}\"")->all();
+
+        return implode(' ', [...$names, $this->station ?? 'radio playlist']);
     }
 }

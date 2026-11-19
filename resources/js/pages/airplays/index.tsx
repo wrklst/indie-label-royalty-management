@@ -70,6 +70,7 @@ type Finding = {
     domain: string | null;
     query: string;
     airplay_id: number | null;
+    airplay_station: string | null;
     track: string | null;
 };
 
@@ -80,7 +81,7 @@ type Airplay = {
     track_name: string;
     artist_name: string | null;
     isrc: string | null;
-    station: string;
+    station: string | null;
     media_type: string | null;
     region: string | null;
     society: string | null;
@@ -91,7 +92,27 @@ type Airplay = {
     period_end: string | null;
     links: AirplayLink[];
     search_query: string;
+    researched_at: string | null;
 };
+
+type SearchEntry = {
+    id: number;
+    query: string;
+    region: string | null;
+    succeeded: boolean;
+    new_findings: number;
+    error: string | null;
+    airplay_id: number | null;
+    track: string | null;
+    station: string | null;
+    results: SearchResult[];
+    created_at: string;
+};
+
+/** The station of a play, or how to call a play whose station is not known. */
+function stationName(airplay: Airplay): string {
+    return airplay.station ?? 'an unidentified station';
+}
 
 type SearchResult = {
     title: string;
@@ -164,14 +185,13 @@ function AirplayFields({
                     label="Station"
                     htmlFor="station"
                     error={errors.station}
-                    required
+                    hint="Leave empty when you do not know it yet."
                 >
                     <Input
                         id="station"
                         name="station"
-                        defaultValue={airplay?.station}
+                        defaultValue={airplay?.station ?? ''}
                         placeholder="FluxFM"
-                        required
                     />
                 </Field>
                 <Field
@@ -270,7 +290,7 @@ function LinksDialog({
                 <Button
                     variant="ghost"
                     size="sm"
-                    aria-label={`Links for ${airplay.track_name} on ${airplay.station}`}
+                    aria-label={`Links for ${airplay.track_name} on ${stationName(airplay)}`}
                 >
                     <Link2 className="text-muted-foreground" />
                     {airplay.links.length}
@@ -279,7 +299,7 @@ function LinksDialog({
             <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>
-                        {airplay.track_name} on {airplay.station}
+                        {airplay.track_name} on {stationName(airplay)}
                     </DialogTitle>
                     <DialogDescription>
                         Keep playlists, show pages and anything else you found
@@ -614,6 +634,8 @@ function Findings({ findings }: { findings: Finding[] }) {
                                     <Badge variant="outline">Mention</Badge>
                                 )}
                                 <p className="mt-1 text-xs text-muted-foreground">
+                                    {finding.airplay_station &&
+                                        `For the play on ${finding.airplay_station}. `}
                                     Searched: {finding.query}
                                 </p>
                             </TableCell>
@@ -657,10 +679,91 @@ function Findings({ findings }: { findings: Finding[] }) {
     );
 }
 
+/**
+ * Every search that was run, newest first, so nothing is researched twice without need.
+ */
+function ResearchLog({ searches }: { searches: SearchEntry[] }) {
+    return (
+        <Panel
+            title="Research log"
+            description="The last 100 searches with what they returned."
+            flush
+        >
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>When</TableHead>
+                        <TableHead>For</TableHead>
+                        <TableHead>Searched</TableHead>
+                        <TableHead>Result</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {searches.map((entry) => (
+                        <TableRow key={entry.id}>
+                            <TableCell className="align-top text-muted-foreground">
+                                {entry.created_at}
+                            </TableCell>
+                            <TableCell className="align-top">
+                                {entry.track ?? '–'}
+                                {entry.airplay_id !== null && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Play on{' '}
+                                        {entry.station ??
+                                            'an unidentified station'}
+                                    </p>
+                                )}
+                            </TableCell>
+                            <TableCell className="max-w-sm align-top whitespace-normal">
+                                {entry.query}
+                                <p className="text-xs text-muted-foreground">
+                                    {entry.region ? country(entry.region) : ''}
+                                </p>
+                            </TableCell>
+                            <TableCell className="max-w-md align-top whitespace-normal">
+                                {entry.succeeded ? (
+                                    <details>
+                                        <summary className="cursor-pointer">
+                                            {entry.results.length} result(s),{' '}
+                                            {entry.new_findings} new finding(s)
+                                        </summary>
+                                        <ul className="mt-1 grid gap-1 text-xs">
+                                            {entry.results.map((result) => (
+                                                <li key={result.url}>
+                                                    <a
+                                                        href={result.url}
+                                                        target="_blank"
+                                                        rel="noreferrer noopener"
+                                                        className="hover:underline"
+                                                    >
+                                                        {result.title}
+                                                    </a>{' '}
+                                                    <span className="text-muted-foreground">
+                                                        {result.domain}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </details>
+                                ) : (
+                                    <span className="text-red-600 dark:text-red-400">
+                                        {entry.error ?? 'Failed'}
+                                    </span>
+                                )}
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </Panel>
+    );
+}
+
 const SORT_COLUMNS = {
     track: (row: Airplay) => row.track_name,
     artist: (row: Airplay) => row.artist_name,
     station: (row: Airplay) => row.station,
+    researched: (row: Airplay) => row.researched_at,
     origin: (row: Airplay) => ORIGINS[row.origin],
     period: (row: Airplay) => row.period_start,
     amount: (row: Airplay) => (row.amount === null ? null : Number(row.amount)),
@@ -670,6 +773,7 @@ const SORT_COLUMNS = {
 export default function Airplays({
     airplays,
     findings,
+    searches,
     tracks,
     releases,
     staleCount,
@@ -678,6 +782,7 @@ export default function Airplays({
 }: {
     airplays: Airplay[];
     findings: Finding[];
+    searches: SearchEntry[];
     tracks: Option[];
     releases: Option[];
     staleCount: number;
@@ -754,7 +859,7 @@ export default function Airplays({
                                 <SortableHead column="links" sorter={sorter}>
                                     Links
                                 </SortableHead>
-                                <TableHead className="w-20" />
+                                <TableHead className="w-28" />
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -772,7 +877,11 @@ export default function Airplays({
                                         {airplay.artist_name ?? '–'}
                                     </TableCell>
                                     <TableCell>
-                                        {airplay.station}
+                                        {airplay.station ?? (
+                                            <span className="text-muted-foreground italic">
+                                                Unidentified
+                                            </span>
+                                        )}
                                         <p className="text-xs text-muted-foreground">
                                             {[
                                                 airplay.media_type,
@@ -797,6 +906,11 @@ export default function Airplays({
                                         >
                                             {ORIGINS[airplay.origin]}
                                         </Badge>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            {airplay.researched_at
+                                                ? `Researched ${date(airplay.researched_at.slice(0, 10))}`
+                                                : 'Not researched yet'}
+                                        </p>
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">
                                         {period(airplay)}
@@ -816,6 +930,27 @@ export default function Airplays({
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex justify-end">
+                                            {searchAvailable && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    title="Research this play: the show, the playlist, what was written about it"
+                                                    aria-label={`Research ${airplay.track_name} on ${stationName(airplay)}`}
+                                                    onClick={() =>
+                                                        router.post(
+                                                            AirplayResearchController.airplay.url(
+                                                                airplay.id,
+                                                            ),
+                                                            {},
+                                                            {
+                                                                preserveScroll: true,
+                                                            },
+                                                        )
+                                                    }
+                                                >
+                                                    <Radar className="text-muted-foreground" />
+                                                </Button>
+                                            )}
                                             <FormDialog
                                                 title="Edit airplay"
                                                 form={AirplayController.update.form(
@@ -825,7 +960,7 @@ export default function Airplays({
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        aria-label={`Edit ${airplay.track_name} on ${airplay.station}`}
+                                                        aria-label={`Edit ${airplay.track_name} on ${stationName(airplay)}`}
                                                     >
                                                         <Pencil className="text-muted-foreground" />
                                                     </Button>
@@ -843,7 +978,7 @@ export default function Airplays({
                                                 url={AirplayController.destroy.url(
                                                     airplay.id,
                                                 )}
-                                                title={`Delete ${airplay.track_name} on ${airplay.station}?`}
+                                                title={`Delete ${airplay.track_name} on ${stationName(airplay)}?`}
                                                 description="The play and its links and notes are removed. Income from the statement stays."
                                             />
                                         </div>
@@ -854,6 +989,7 @@ export default function Airplays({
                     </Table>
                 </Panel>
             )}
+            {searches.length > 0 && <ResearchLog searches={searches} />}
         </Page>
     );
 }

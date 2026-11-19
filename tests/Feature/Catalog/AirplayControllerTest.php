@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Airplay;
+use App\Models\AirplaySearch;
 use App\Models\Label;
 use App\Models\Track;
 use Illuminate\Http\Client\Request;
@@ -52,6 +53,16 @@ test('an airplay of a catalog track takes its names from the track', function ()
     ]);
 });
 
+test('an airplay can be entered without knowing the station', function () {
+    $label = Label::factory()->create();
+
+    $this->actingAs(labelAdmin($label))
+        ->post(route('airplays.store'), ['track_name' => 'Example Track', 'station' => '', 'region' => 'GB'])
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('airplays', ['label_id' => $label->id, 'track_name' => 'Example Track', 'station' => null, 'region' => 'GB']);
+});
+
 test('an airplay is refused', function (array $input, string $field) {
     $label = Label::factory()->create();
     $foreignTrack = Track::factory()->create();
@@ -62,7 +73,6 @@ test('an airplay is refused', function (array $input, string $field) {
 
     $this->assertDatabaseCount('airplays', 0);
 })->with([
-    'without a station' => [['station' => ''], 'station'],
     'without a track' => [['track_name' => ''], 'track_name'],
     'for a track of another label' => [[], 'track_id'],
     'when it ends before it starts' => [['period_start' => '2026-03-31', 'period_end' => '2026-03-01'], 'period_end'],
@@ -137,6 +147,11 @@ test('a web search returns the organic results for the play', function () {
             ['title' => 'Playlist', 'url' => 'https://example.com/playlist', 'description' => 'Example Track was played.', 'domain' => 'example.com'],
         ]]);
 
+    expect(AirplaySearch::query()->withoutGlobalScope('label')->sole()->only(['airplay_id', 'query', 'succeeded', 'results']))->toBe([
+        'airplay_id' => $airplay->id, 'query' => '"Example Artist" "Example Track" Example Radio', 'succeeded' => true,
+        'results' => [['title' => 'Playlist', 'url' => 'https://example.com/playlist', 'description' => 'Example Track was played.', 'domain' => 'example.com']],
+    ]);
+
     Http::assertSent(fn (Request $request): bool => $request->hasHeader('Authorization', 'Basic '.base64_encode('example-login:example-password'))
         && $request[0]['resolve_goto_urls'] === true
         && $request[0]['keyword'] === '"Example Artist" "Example Track" Example Radio');
@@ -182,6 +197,8 @@ test('a failed web search reports why', function (Closure $arrange, string $mess
     $this->actingAs(labelAdmin($label))
         ->postJson(route('airplays.search', $airplay->id))
         ->assertJsonValidationErrors(['query' => $message]);
+
+    expect(AirplaySearch::query()->withoutGlobalScope('label')->sole()->only(['succeeded', 'error']))->toBe(['succeeded' => false, 'error' => $message]);
 })->with([
     'when the search service keeps failing' => [
         fn () => Http::fake([SERP_URL => Http::response(['status_code' => 20000, 'tasks' => [['status_code' => 50000, 'status_message' => 'Internal SE Server Error.']]])]),

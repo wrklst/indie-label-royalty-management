@@ -54,11 +54,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('airplays/research', [AirplayResearchController::class, 'store'])->name('airplays.research.store');
             Route::post('airplay-findings/{finding}/keep', [AirplayResearchController::class, 'keep'])->name('airplay-findings.keep');
             Route::post('airplay-findings/{finding}/dismiss', [AirplayResearchController::class, 'dismiss'])->name('airplay-findings.dismiss');
+            Route::post('airplays/{airplay}/research', [AirplayResearchController::class, 'airplay'])->name('airplays.research.airplay');
             Route::post('airplays/{airplay}/search', [AirplayController::class, 'search'])->middleware('throttle:30,1')->name('airplays.search');
 
             Route::resource('transactions', TransactionController::class)->except(['show']);
 
             Route::get('data-imports/template', [DataImportController::class, 'template'])->name('data-imports.template');
+            Route::post('data-imports/{data_import}/resolve', [DataImportController::class, 'resolve'])->name('data-imports.resolve');
             Route::resource('data-imports', DataImportController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
 
             Route::resource('periods', PeriodController::class)->only(['index', 'store', 'show', 'update', 'destroy']);

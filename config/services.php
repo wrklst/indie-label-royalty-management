@@ -38,9 +38,8 @@ return [
     'dataforseo' => [
         'login' => env('DATAFORSEO_LOGIN'),
         'password' => env('DATAFORSEO_PASSWORD'),
-        // ponytail: one search market for every label; make it a label setting when a label needs another.
-        'location_code' => env('DATAFORSEO_LOCATION_CODE', 2276),
-        'language_code' => env('DATAFORSEO_LANGUAGE_CODE', 'de'),
+        // Countries a research looks in, as ISO codes. Each one is a billed search per track.
+        'markets' => array_values(array_filter(array_map('trim', explode(',', (string) env('DATAFORSEO_MARKETS', 'DE,GB,US'))))),
     ],
 
 ];

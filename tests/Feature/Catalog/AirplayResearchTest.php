@@ -1,9 +1,11 @@
 <?php
 
 use App\Enums\AirplayOrigin;
+use App\Jobs\ResearchAirplayEntry;
 use App\Jobs\ResearchTrackAirplay;
 use App\Models\Airplay;
 use App\Models\AirplayFinding;
+use App\Models\AirplaySearch;
 use App\Models\Artist;
 use App\Models\Label;
 use App\Models\Release;
@@ -17,7 +19,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 const RESEARCH_SERP_URL = 'https://api.dataforseo.com/v3/serp/google/organic/live/advanced';
 
 beforeEach(function () {
-    config(['services.dataforseo.login' => 'example-login', 'services.dataforseo.password' => 'example-password']);
+    config(['services.dataforseo.login' => 'example-login', 'services.dataforseo.password' => 'example-password', 'services.dataforseo.markets' => ['DE']]);
 });
 
 /**
@@ -82,6 +84,79 @@ test('a research also searches for each station a statement named and ties the f
     ]);
     Http::assertSentCount(2);
     Http::assertSent(fn (Request $request): bool => $request[0]['keyword'] === '"Example Artist" "Example Track" radio playlist' && $request[0]['depth'] === 30);
+});
+
+test('a research looks in every configured country, asks for the national broadcaster and follows unidentified plays abroad', function () {
+    config(['services.dataforseo.markets' => ['DE', 'GB']]);
+    $label = Label::factory()->create();
+    $track = researchTrack($label);
+    Airplay::factory()->create(['label_id' => $label->id, 'track_id' => $track->id, 'station' => null, 'region' => 'FI']);
+    fakeSearchResults([]);
+
+    app(AirplayResearch::class)->research($track);
+
+    $sent = Http::recorded()->map(fn (array $pair): array => [$pair[0][0]['keyword'], $pair[0][0]['location_name'], $pair[0][0]['language_code']])->all();
+
+    expect($sent)->toBe([
+        ['"Example Artist" "Example Track" radio playlist', 'Germany', 'de'],
+        ['"Example Artist" "Example Track" radio playlist', 'United Kingdom', 'en'],
+        ['"Example Artist" "Example Track" BBC', 'United Kingdom', 'en'],
+        ['"Example Artist" "Example Track" radio playlist', 'Finland', 'fi'],
+    ]);
+});
+
+test('every search is logged with what it returned, and a failed one does not lose the others', function () {
+    config(['services.dataforseo.markets' => ['DE', 'GB']]);
+    $label = Label::factory()->create();
+    $track = researchTrack($label);
+    $failing = ['status_code' => 20000, 'tasks' => [['status_code' => 50000, 'status_message' => 'Internal SE Server Error.']]];
+    Http::preventStrayRequests();
+    Http::fake([RESEARCH_SERP_URL => fn (Request $request) => Http::response($request[0]['location_name'] === 'Germany' ? $failing : ['status_code' => 20000, 'tasks' => [['status_code' => 20000, 'result' => [[
+        'items' => [['type' => 'organic', 'title' => 'Playlist', 'url' => 'https://radio.example.com/playlist', 'domain' => 'radio.example.com']],
+    ]]]]])]);
+
+    app(AirplayResearch::class)->research($track);
+
+    expect(AirplaySearch::query()->withoutGlobalScope('label')->orderBy('id')->get()->map->only(['track_id', 'region', 'succeeded', 'new_findings', 'error'])->all())->toBe([
+        ['track_id' => $track->id, 'region' => 'DE', 'succeeded' => false, 'new_findings' => 0, 'error' => 'The search failed: Internal SE Server Error.'],
+        ['track_id' => $track->id, 'region' => 'GB', 'succeeded' => true, 'new_findings' => 1, 'error' => null],
+        ['track_id' => $track->id, 'region' => 'GB', 'succeeded' => true, 'new_findings' => 0, 'error' => null],
+    ])
+        ->and(AirplaySearch::query()->withoutGlobalScope('label')->where('succeeded', true)->first()->results[0]['url'])->toBe('https://radio.example.com/playlist')
+        ->and($track->refresh()->researched_at)->not->toBeNull();
+});
+
+test('a closer look at one play searches for it at its station and ties the findings to it', function () {
+    $label = Label::factory()->create();
+    $airplay = Airplay::factory()->create(['label_id' => $label->id, 'track_name' => 'Example Track', 'artist_name' => 'Example Artist', 'station' => 'Example Radio', 'region' => 'GB']);
+    fakeSearchResults([['url' => 'https://example.com/show', 'title' => 'The evening show', 'domain' => 'example.com']]);
+
+    $found = app(AirplayResearch::class)->researchAirplay($airplay);
+
+    expect($found)->toBe(1)
+        ->and(AirplayFinding::query()->withoutGlobalScope('label')->sole()->only(['label_id', 'track_id', 'airplay_id', 'station']))->toBe([
+            'label_id' => $label->id, 'track_id' => null, 'airplay_id' => $airplay->id, 'station' => 'Example Radio',
+        ])
+        ->and(Http::recorded()->map(fn (array $pair): string => $pair[0][0]['keyword'].' @'.$pair[0][0]['location_name'])->all())->toBe([
+            '"Example Artist" "Example Track" Example Radio @United Kingdom',
+            '"Example Artist" Example Radio playlist @United Kingdom',
+            '"Example Track" Example Radio playlist @United Kingdom',
+        ])
+        ->and(AirplaySearch::query()->withoutGlobalScope('label')->where('airplay_id', $airplay->id)->count())->toBe(3);
+});
+
+test('a closer look at one play is queued from its row', function () {
+    Queue::fake();
+    $label = Label::factory()->create();
+    $airplay = Airplay::factory()->create(['label_id' => $label->id]);
+    $foreign = Airplay::factory()->create();
+    $admin = labelAdmin($label);
+
+    $this->actingAs($admin)->post(route('airplays.research.airplay', $airplay->id))->assertRedirect();
+    $this->actingAs($admin)->post(route('airplays.research.airplay', $foreign->id))->assertNotFound();
+
+    Queue::assertPushed(ResearchAirplayEntry::class, 1);
+    Queue::assertPushed(ResearchAirplayEntry::class, fn (ResearchAirplayEntry $job): bool => $job->airplayId === $airplay->id);
 });
 
 test('a page that was found before is not listed again, even after it was dismissed', function () {
@@ -182,6 +257,7 @@ test('the airplay page lists new findings and how many tracks are due', function
             ->has('findings', 1)
             ->where('findings.0.id', $finding->id)
             ->where('findings.0.track', 'Example Track')
+            ->has('searches', 0)
             ->where('staleCount', 1)
             ->where('staleDays', 31));
 });

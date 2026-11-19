@@ -6,6 +6,7 @@ use App\Enums\AirplayOrigin;
 use App\Http\Requests\AirplayRequest;
 use App\Models\Airplay;
 use App\Models\AirplayFinding;
+use App\Models\AirplaySearch;
 use App\Models\Release;
 use App\Models\Track;
 use App\Services\Airplay\AirplayResearch;
@@ -24,24 +25,37 @@ class AirplayController extends Controller
 {
     public function index(WebSearch $search, AirplayResearch $research): Response
     {
+        $researched = AirplaySearch::query()->whereNotNull('airplay_id')->where('succeeded', true)
+            ->selectRaw('airplay_id, MAX(created_at) as researched_at')->groupBy('airplay_id')->toBase()->pluck('researched_at', 'airplay_id');
+
         return Inertia::render('airplays/index', [
-            'findings' => AirplayFinding::query()->where('status', AirplayFinding::NEW)->with('track:id,name')
+            'findings' => AirplayFinding::query()->where('status', AirplayFinding::NEW)->with(['track:id,name', 'airplay:id,track_name,station'])
                 ->orderByDesc('is_radio')->latest()->limit(200)->get()
                 ->map(fn (AirplayFinding $finding): array => [
                     ...$finding->only(['id', 'is_radio', 'station', 'url', 'title', 'description', 'domain', 'query', 'airplay_id']),
-                    'track' => $finding->track?->name,
+                    'track' => $finding->track->name ?? $finding->airplay?->track_name,
+                    'airplay_station' => $finding->airplay_id === null ? null : ($finding->airplay->station ?? __('Unidentified')),
+                ]),
+            'searches' => AirplaySearch::query()->with(['track:id,name', 'airplay:id,track_name,station'])->latest('id')->limit(100)->get()
+                ->map(fn (AirplaySearch $entry): array => [
+                    ...$entry->only(['id', 'query', 'region', 'succeeded', 'new_findings', 'error', 'airplay_id']),
+                    'track' => $entry->track->name ?? $entry->airplay?->track_name,
+                    'station' => $entry->airplay?->station,
+                    'results' => $entry->results ?? [],
+                    'created_at' => $entry->created_at?->toDateTimeString(),
                 ]),
             'releases' => Release::query()->orderBy('name')->get(['id', 'name']),
             'staleCount' => $research->stale(Track::query())->count(),
             'staleDays' => AirplayResearch::STALE_DAYS,
             // ponytail: the whole list in one page; paginate when a label has thousands of plays.
-            'airplays' => Airplay::query()->orderBy('station')->orderByDesc('period_end')->orderBy('track_name')->get()
+            'airplays' => Airplay::query()->orderByRaw('station is null')->orderBy('station')->orderByDesc('period_end')->orderBy('track_name')->get()
                 ->map(fn (Airplay $airplay): array => [
                     ...$airplay->only(['id', 'origin', 'track_id', 'track_name', 'artist_name', 'isrc', 'station', 'media_type', 'region', 'society', 'amount', 'notes', 'data_import_id']),
                     'period_start' => $airplay->period_start?->toDateString(),
                     'period_end' => $airplay->period_end?->toDateString(),
                     'links' => $airplay->links ?? [],
                     'search_query' => $airplay->searchQuery(),
+                    'researched_at' => $researched[$airplay->id] ?? null,
                 ]),
             'tracks' => Track::query()->with(['artist:id,name', 'artists:id,name'])->orderBy('name')->get()
                 ->map(fn (Track $track): array => [
@@ -111,10 +125,17 @@ class AirplayController extends Controller
     {
         $query = $request->validate(['query' => ['nullable', 'string', 'max:300']])['query'] ?? null;
 
+        $query = $query ?: $airplay->searchQuery();
+        $log = ['track_id' => $airplay->track_id, 'airplay_id' => $airplay->id, 'query' => $query, 'region' => $airplay->region ?? $search->markets()[0]];
+
         try {
-            return response()->json(['results' => $search->search($query ?: $airplay->searchQuery())]);
+            $results = $search->search($query, region: $airplay->region);
+            AirplaySearch::query()->create([...$log, 'succeeded' => true, 'results' => $results]);
+
+            return response()->json(['results' => $results]);
         } catch (RuntimeException $exception) {
             report($exception);
+            AirplaySearch::query()->create([...$log, 'succeeded' => false, 'error' => mb_substr($exception->getMessage(), 0, 500)]);
 
             throw ValidationException::withMessages(['query' => $exception->getMessage()]);
         }
@@ -128,7 +149,7 @@ class AirplayController extends Controller
     private function attributes(AirplayRequest $request): array
     {
         $attributes = $request->validated();
-        $track = isset($attributes['track_id']) ? Track::query()->with(['artist:id,name', 'artists:id,name'])->find($attributes['track_id']) : null;
+        $track = isset($attributes['track_id']) ? Track::query()->with(['artist:id,name', 'artists:id,name'])->whereKey($attributes['track_id'])->first() : null;
 
         if ($track === null) {
             return $attributes;
