@@ -188,6 +188,33 @@ Example: with 1,250.00 of income and −400.00 of expenses, **Net** shows 850.00
 
 **Notes.** Shown when the release has notes.
 
+## Where to find it
+
+The panel **Where to find it** on the release page collects the pages of the release on streaming services, shops and platforms: Spotify, Apple Music, Bandcamp, Subvert, Deezer, Tidal, YouTube, Beatport and so on.
+
+### Finding links
+
+**Find links** looks the release and each of its tracks up in the background. Links appear in the panel as they are found.
+
+| Source                                                     | What it finds                                                                                  | Shown as        |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | --------------- |
+| The **UPC** of the release                                 | Its album page on Deezer and on Apple Music                                                    | found by code   |
+| The **Spotify ID** stored on the release                   | Its album page on Spotify                                                                      | found by code   |
+| The **ISRC** of each track                                 | The track's page on Deezer, and its song page on Apple Music                                   | found by code   |
+| **Bandcamp sales** fetched through the Bandcamp connection | The Bandcamp page the sales name                                                               | from sales      |
+| **Subvert**                                                | The address Subvert builds from artist and release name, kept when that page names the release | found           |
+| One **web search**, when the label has a web search login  | Results on known platforms whose title names the release                                       | found by search |
+
+At most one link per platform is found. The web search is one billed search per release; without a login under **Settings → Connections** it is skipped.
+
+### Adding and correcting
+
+- **Add link**: paste the address. The platform is recognised from it; choose one yourself for an address that is not recognised.
+- The pencil corrects a link. A corrected link counts as your own.
+- Removing a link that was found keeps it out for good: **Find links** does not bring it back. Add it by hand if you want it again.
+
+Example: for `Example Release` (EX001, UPC 4000000000001), **Find links** adds Deezer and Apple Music by the UPC and the Subvert page `subvert.fm/example-artist/example-release`. The Bandcamp page is not found, because no sale came in through the sync yet, so you paste `https://example.bandcamp.com/album/example-release` with **Add link**.
+
 ## Play or queue a whole release
 
 When at least one track of a release has audio, two buttons appear above the track table:

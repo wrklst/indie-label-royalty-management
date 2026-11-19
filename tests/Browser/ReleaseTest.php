@@ -68,3 +68,19 @@ test('delivery details are entered on the release form and shown on the release'
         ->assertSee('A record about examples.')
         ->assertNoJavaScriptErrors();
 });
+
+test('a platform link is added to a release by hand and listed with its platform', function () {
+    $scenario = royaltyScenario();
+    $this->actingAs($scenario['admin']);
+
+    visit("/releases/{$scenario['release']->id}")
+        ->assertSee('Where to find it')
+        ->assertSee('No links yet')
+        ->press('Add link')
+        ->fill('#platform_link_url', 'https://example.bandcamp.com/album/example-release')
+        ->press('Save link')
+        ->assertSee('Link added.')
+        ->assertSeeIn('[data-platform-links] li span.font-medium', 'Bandcamp')
+        ->assertSeeIn('[data-platform-links] a', 'https://example.bandcamp.com/album/example-release')
+        ->assertNoJavaScriptErrors();
+});

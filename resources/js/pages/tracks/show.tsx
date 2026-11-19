@@ -1,3 +1,5 @@
+import { PlatformLinks } from '@/components/platform-links';
+import type { PlatformLinksProps } from '@/components/platform-links';
 import { Link, router } from '@inertiajs/react';
 import { ExternalLink, Radar } from 'lucide-react';
 import AirplayResearchController from '@/actions/App/Http/Controllers/AirplayResearchController';
@@ -38,6 +40,7 @@ type Airplay = {
 };
 
 type Props = {
+    platformLinks: PlatformLinksProps;
     track: {
         id: number;
         name: string;
@@ -118,6 +121,7 @@ export default function ShowTrack({
     openFindings,
     searches,
     searchAvailable,
+    platformLinks,
 }: Props) {
     const title = track.version
         ? `${track.name} (${track.version})`
@@ -284,6 +288,11 @@ export default function ShowTrack({
                     <Fact label="ISWC">{track.iswc ?? '–'}</Fact>
                 </dl>
             </Panel>
+
+            <PlatformLinks
+                owner={{ track_id: track.id }}
+                platformLinks={platformLinks}
+            />
 
             {releases.length > 1 && (
                 <Panel

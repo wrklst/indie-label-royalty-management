@@ -92,6 +92,10 @@ Example: `Opening` with the ISRC `ZZEXA2600001` is on the single `Opening` (EX00
 
 **Research log.** The last 20 web searches run for the recording, with their result. Shown only when there are any.
 
+### Where to find a track
+
+The track page has the same panel **Where to find it** as the release page, for the track's own pages. **Find links** looks the track up by its ISRC on Deezer, as a song of its album on Apple Music, and in Bandcamp sales of the track. Links are added, corrected and removed as on a release; see [Releases](20-releases.md#where-to-find-it).
+
 ## Artists
 
 Artists are the performers on your releases and tracks. An import creates an artist whenever a statement mentions a name that is not in your catalog yet. Names are compared without regard to upper and lower case and extra spaces.

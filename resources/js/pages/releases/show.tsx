@@ -1,3 +1,5 @@
+import { PlatformLinks } from '@/components/platform-links';
+import type { PlatformLinksProps } from '@/components/platform-links';
 import { Link } from '@inertiajs/react';
 import { Pencil, Plus } from 'lucide-react';
 import TrackController from '@/actions/App/Http/Controllers/TrackController';
@@ -75,6 +77,7 @@ type Track = {
 };
 
 type Props = {
+    platformLinks: PlatformLinksProps;
     release: {
         id: number;
         name: string;
@@ -425,6 +428,7 @@ const TRACK_COLUMNS = {
 };
 
 export default function ShowRelease({
+    platformLinks,
     release,
     totals,
     retailers,
@@ -858,6 +862,12 @@ export default function ShowRelease({
                     )}
                 </div>
             )}
+
+            <PlatformLinks
+                owner={{ release_id: release.id }}
+                platformLinks={platformLinks}
+                includesTracks
+            />
 
             <div className="grid gap-6 xl:grid-cols-2">
                 <Panel title="Income by retailer" flush>

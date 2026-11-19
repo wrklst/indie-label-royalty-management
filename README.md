@@ -67,6 +67,8 @@ Self-hosted, open source (MIT), built with Laravel, Inertia and React.
 - An audio player that keeps playing while you work: play a track, a whole
   release, or build a queue. Masters are kept exactly as uploaded; an MP3
   copy is made for listening.
+- The pages of every release and track on streaming services, shops and
+  platforms, found by UPC, ISRC, Bandcamp sales and web search, or added by hand.
 - Export of all metadata as a CSV sheet, a delivery package per release, and
   a ZIP for [Subvert](https://subvert.fm)'s uploader.
 

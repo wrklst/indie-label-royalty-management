@@ -130,6 +130,7 @@ class TrackController extends Controller
                     'created_at' => $entry->created_at?->toDateTimeString(),
                 ]),
             'searchAvailable' => $search->isConfigured(),
+            'platformLinks' => PlatformLinkController::props($track),
         ]);
     }
 

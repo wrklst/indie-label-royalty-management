@@ -166,6 +166,7 @@ class ReleaseController extends Controller
             'retailers' => $byRetailer->map(fn ($row): array => [
                 'retailer' => $row->retailer ?? 'Unknown', 'total' => (string) $row->total, 'quantity' => (string) $row->quantity,
             ]),
+            'platformLinks' => PlatformLinkController::props($release),
             'artistOptions' => Options::artists(),
             'contractOptions' => Options::contracts(),
             'fileKinds' => array_map(fn (ReleaseFileKind $kind): array => ['value' => $kind->value, 'label' => $kind->label()], ReleaseFileKind::cases()),

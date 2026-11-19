@@ -14,6 +14,7 @@ use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\PayeeController;
 use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\PeriodController;
+use App\Http\Controllers\PlatformLinkController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ReleaseController;
 use App\Http\Controllers\Settings\ConnectionsController;
@@ -47,6 +48,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::resource('artists', ArtistController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
             Route::resource('releases', ReleaseController::class);
+
+            Route::post('platform-links', [PlatformLinkController::class, 'store'])->name('platform-links.store');
+            Route::post('platform-links/detect', [PlatformLinkController::class, 'detect'])->name('platform-links.detect');
+            Route::put('platform-links/{platform_link}', [PlatformLinkController::class, 'update'])->name('platform-links.update');
+            Route::delete('platform-links/{platform_link}', [PlatformLinkController::class, 'destroy'])->name('platform-links.destroy');
             Route::resource('tracks', TrackController::class)->only(['index', 'show', 'update', 'destroy']);
             Route::resource('items', ItemController::class)->only(['index', 'update', 'destroy']);
             Route::resource('contracts', ContractController::class)->except(['show']);
