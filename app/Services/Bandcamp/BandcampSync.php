@@ -10,6 +10,7 @@ use App\Services\Imports\Importers\BandcampImporter;
 use App\Services\Imports\ImportRunner;
 use App\Services\Imports\Row;
 use App\Support\CurrentLabel;
+use App\Support\WorkingCopy;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -256,7 +257,7 @@ class BandcampSync
 
         $filename = "bandcamp-sync-{$from->format('Ymd-His')}-{$to->format('Ymd-His')}.csv";
         $path = "imports/{$label->id}/".Str::random(40).'.csv';
-        Storage::disk('local')->put($path, $contents);
+        Storage::disk(WorkingCopy::disk())->put($path, $contents);
 
         return $this->runner->run(DataImport::query()->create([
             'label_id' => $label->id,

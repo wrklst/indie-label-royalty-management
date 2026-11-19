@@ -19,6 +19,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | File storage
+    |--------------------------------------------------------------------------
+    |
+    | The filesystem disk new release files and statement files are stored
+    | on: "local" keeps them on this server, "s3" in a bucket (any
+    | S3-compatible storage). Every release file remembers its own disk,
+    | so changing this does not lose the files stored before; move those
+    | with `php artisan royalties:move-files`.
+    |
+    */
+
+    'storage' => [
+        'disk' => env('ROYALTIES_FILES_DISK', 'local'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Playback copies of audio
     |--------------------------------------------------------------------------
     |

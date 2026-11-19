@@ -7,6 +7,7 @@ use App\Models\Release;
 use App\Models\ReleaseFile;
 use App\Models\Track;
 use App\Models\User;
+use App\Support\WorkingCopy;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -15,12 +16,10 @@ use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
- * Stores the files of a release on the private disk.
+ * Stores the files of a release on the configured disk.
  */
 class ReleaseFileStore
 {
-    public const string DISK = 'local';
-
     /** @var list<string> */
     public const array COVER_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -54,10 +53,11 @@ class ReleaseFileStore
             $trackId = null;
         }
 
+        $disk = WorkingCopy::disk();
         $path = $upload->storeAs(
             "releases/{$release->label_id}/{$release->id}",
             Str::uuid()->toString().($extension !== '' ? ".{$extension}" : ''),
-            self::DISK,
+            $disk,
         );
 
         if ($path === false) {
@@ -65,7 +65,7 @@ class ReleaseFileStore
         }
 
         try {
-            $file = DB::transaction(function () use ($release, $upload, $kind, $trackId, $user, $path, $mimeType): ReleaseFile {
+            $file = DB::transaction(function () use ($release, $upload, $kind, $trackId, $user, $path, $mimeType, $disk): ReleaseFile {
                 // A release shows one cover; an earlier one is kept as artwork.
                 if ($kind === ReleaseFileKind::Cover) {
                     $release->files()->where('kind', ReleaseFileKind::Cover)->update(['kind' => ReleaseFileKind::Artwork]);
@@ -76,7 +76,7 @@ class ReleaseFileStore
                     'track_id' => $trackId,
                     'user_id' => $user?->id,
                     'kind' => $kind,
-                    'disk' => self::DISK,
+                    'disk' => $disk,
                     'path' => $path,
                     'original_name' => Str::limit(basename($upload->getClientOriginalName()), 250, ''),
                     'mime_type' => $mimeType,
@@ -86,7 +86,7 @@ class ReleaseFileStore
             });
         } catch (Throwable $exception) {
             // Without its record nothing would ever remove the stored file.
-            Storage::disk(self::DISK)->delete($path);
+            Storage::disk($disk)->delete($path);
 
             throw $exception;
         }

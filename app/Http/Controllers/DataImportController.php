@@ -16,6 +16,7 @@ use App\Services\Imports\ImportRunner;
 use App\Services\Imports\Readers\ReaderFactory;
 use App\Support\CurrentLabel;
 use App\Support\Sorting;
+use App\Support\WorkingCopy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -93,7 +94,7 @@ class DataImportController extends Controller
             'name' => $request->validated('name') ?? pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
             'status' => ImportStatus::Pending,
             'original_filename' => $file->getClientOriginalName(),
-            'file_path' => $file->store("imports/{$label->id}", 'local'),
+            'file_path' => $file->store("imports/{$label->id}", WorkingCopy::disk()),
             'file_hash' => $hash,
             'default_timestamp' => $request->validated('default_timestamp'),
             'replace_timestamp' => $request->boolean('replace_timestamp'),

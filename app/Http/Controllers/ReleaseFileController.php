@@ -12,20 +12,20 @@ use App\Services\Releases\ReleaseFileStore;
 use App\Services\Releases\ReleaseImageSize;
 use App\Services\Releases\ReleaseImageVariants;
 use App\Support\CurrentLabel;
+use App\Support\WorkingCopy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Uploads and serves the files of a release. Files sit on the private
- * disk; this controller is the only way to reach them, so every request
- * is checked against the signed-in label.
+ * Uploads and serves the files of a release. Files sit on a private
+ * disk or in a private bucket; this controller is the only way to reach
+ * them, so every request is checked against the signed-in label.
  */
 class ReleaseFileController extends Controller
 {
@@ -34,6 +34,9 @@ class ReleaseFileController extends Controller
 
     /** How long a browser may show a resized image before asking again, in seconds. */
     private const int VARIANT_MAX_AGE = 86400;
+
+    /** How long a link to a file in a bucket works: long enough to start a download or a song. */
+    private const int BUCKET_LINK_MINUTES = 10;
 
     public function store(Request $request, Release $release, ReleaseFileStore $files, CurrentLabel $currentLabel): RedirectResponse
     {
@@ -90,7 +93,7 @@ class ReleaseFileController extends Controller
 
             // Without a variant (not an image, or one that cannot be read) the original is sent.
             if ($variant !== null) {
-                return $this->variant($request, $releaseFile, $disk->path($variant));
+                return $this->variant($request, $releaseFile, $variant);
             }
         }
 
@@ -101,7 +104,8 @@ class ReleaseFileController extends Controller
         $inline = ! $request->boolean('download') && $releaseFile->canBeShownInline();
 
         return $this->privateFile(
-            $disk->path($releaseFile->path),
+            $releaseFile->disk,
+            $releaseFile->path,
             $inline ? (string) $releaseFile->mime_type : 'application/octet-stream',
             $this->disposition($inline, $releaseFile->original_name),
         );
@@ -119,14 +123,15 @@ class ReleaseFileController extends Controller
 
         if ($preview !== null) {
             return $this->privateFile(
-                $disk->path($preview),
+                $releaseFile->disk,
+                $preview,
                 'audio/mpeg',
                 $this->disposition(true, pathinfo($releaseFile->original_name, PATHINFO_FILENAME).'.mp3'),
             );
         }
 
         if ($releaseFile->canBeShownInline() && str_starts_with((string) $releaseFile->mime_type, 'audio/')) {
-            return $this->privateFile($disk->path($releaseFile->path), (string) $releaseFile->mime_type, $this->disposition(true, $releaseFile->original_name));
+            return $this->privateFile($releaseFile->disk, $releaseFile->path, (string) $releaseFile->mime_type, $this->disposition(true, $releaseFile->original_name));
         }
 
         return response()->json([
@@ -140,10 +145,16 @@ class ReleaseFileController extends Controller
     /**
      * A stored file, sent so that it is not kept by any cache and cannot
      * act as a page. Range requests are answered, so audio can be seeked.
+     * A file in a bucket is not passed through this server: the browser is
+     * sent to a link to it that only works for a few minutes.
      */
-    private function privateFile(string $path, string $contentType, string $disposition): BinaryFileResponse
+    private function privateFile(string $disk, string $path, string $contentType, string $disposition): Response
     {
-        $response = response()->file($path, [
+        if (! WorkingCopy::isLocal($disk)) {
+            return $this->bucketFile($disk, $path, $contentType, $disposition);
+        }
+
+        $response = response()->file(Storage::disk($disk)->path($path), [
             'Content-Type' => $contentType,
             'Content-Disposition' => $disposition,
             'X-Content-Type-Options' => 'nosniff',
@@ -164,9 +175,15 @@ class ReleaseFileController extends Controller
      */
     private function variant(Request $request, ReleaseFile $releaseFile, string $path): Response
     {
-        $response = response()->file($path, [
+        $disposition = $this->disposition(true, pathinfo($releaseFile->original_name, PATHINFO_FILENAME).'.jpg');
+
+        if (! WorkingCopy::isLocal($releaseFile->disk)) {
+            return $this->bucketFile($releaseFile->disk, $path, 'image/jpeg', $disposition);
+        }
+
+        $response = response()->file(Storage::disk($releaseFile->disk)->path($path), [
             'Content-Type' => 'image/jpeg',
-            'Content-Disposition' => $this->disposition(true, pathinfo($releaseFile->original_name, PATHINFO_FILENAME).'.jpg'),
+            'Content-Disposition' => $disposition,
             'X-Content-Type-Options' => 'nosniff',
             'Content-Security-Policy' => "default-src 'none'; sandbox",
         ]);
@@ -175,6 +192,24 @@ class ReleaseFileController extends Controller
         $response->setPrivate();
         $response->setMaxAge(self::VARIANT_MAX_AGE);
         $response->isNotModified($request);
+
+        return $response;
+    }
+
+    /**
+     * Send the browser to the file in its bucket. The link is signed, says
+     * how the file is to be served and stops working after a few minutes.
+     */
+    private function bucketFile(string $disk, string $path, string $contentType, string $disposition): RedirectResponse
+    {
+        $response = redirect()->away(Storage::disk($disk)->temporaryUrl($path, now()->addMinutes(self::BUCKET_LINK_MINUTES), [
+            'ResponseContentType' => $contentType,
+            'ResponseContentDisposition' => $disposition,
+            'ResponseCacheControl' => 'private, no-store',
+        ]));
+
+        // The link itself must not be remembered either.
+        $response->headers->set('Cache-Control', 'private, no-store');
 
         return $response;
     }

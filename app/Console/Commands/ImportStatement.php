@@ -10,6 +10,7 @@ use App\Services\Imports\ImportException;
 use App\Services\Imports\ImportRunner;
 use App\Services\Imports\Readers\ReaderFactory;
 use App\Support\CurrentLabel;
+use App\Support\WorkingCopy;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -57,7 +58,7 @@ class ImportStatement extends Command
         }
 
         $currentLabel->set($label);
-        $stored = Storage::disk('local')->putFile("imports/{$label->id}", $path);
+        $stored = Storage::disk(WorkingCopy::disk())->putFile("imports/{$label->id}", $path);
 
         $import = $runner->run(DataImport::query()->create([
             'importer' => $importer->key(),

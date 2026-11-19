@@ -6,6 +6,7 @@ use App\Enums\ReleaseFileKind;
 use App\Models\Release;
 use App\Models\ReleaseFile;
 use App\Models\Track;
+use App\Support\WorkingCopy;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -151,8 +152,12 @@ class SubvertPackage
             throw new RuntimeException('The package could not be created.');
         }
 
+        // Files from a bucket are downloaded first and have to stay until the archive is closed.
+        $copies = [];
+
         foreach ($this->entries($release) as $name => $file) {
-            $zip->addFile(Storage::disk($file->disk)->path($file->path), $name);
+            $copies[] = $copy = WorkingCopy::of($file->disk, $file->path);
+            $zip->addFile($copy->path, $name);
             $zip->setCompressionName($name, ZipArchive::CM_STORE);
         }
 

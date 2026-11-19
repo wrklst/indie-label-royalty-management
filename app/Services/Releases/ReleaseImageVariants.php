@@ -3,6 +3,7 @@
 namespace App\Services\Releases;
 
 use App\Models\ReleaseFile;
+use App\Support\WorkingCopy;
 use GdImage;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
@@ -48,12 +49,14 @@ class ReleaseImageVariants
             return null;
         }
 
-        $source = $disk->path($file->path);
-        $variant = $this->directory($file).'/'.$this->name($file, $size, $source);
+        $variant = $this->directory($file).'/'.$this->name($file, $size, $disk);
 
         if ($disk->exists($variant)) {
             return $variant;
         }
+
+        $copy = WorkingCopy::of($file->disk, $file->path);
+        $source = $copy->path;
 
         $dimensions = @getimagesize($source);
 
@@ -80,10 +83,9 @@ class ReleaseImageVariants
 
         // Written under a temporary name first so a request arriving in
         // the meantime never reads half a file.
-        $target = $disk->path($variant);
-        $temporary = $target.'.'.bin2hex(random_bytes(4)).'.tmp';
+        $temporary = WorkingCopy::scratch($file->disk, $variant);
 
-        if (! imagejpeg($resized, $temporary, self::JPEG_QUALITY) || ! rename($temporary, $target)) {
+        if (! imagejpeg($resized, $temporary, self::JPEG_QUALITY) || ! WorkingCopy::publish($file->disk, $variant, $temporary)) {
             @unlink($temporary);
 
             return null;
@@ -116,9 +118,9 @@ class ReleaseImageVariants
      * recorded checksum and the size and modification time of the stored
      * file, so a replaced source is noticed without reading it.
      */
-    private function name(ReleaseFile $file, ReleaseImageSize $size, string $source): string
+    private function name(ReleaseFile $file, ReleaseImageSize $size, Filesystem $disk): string
     {
-        $fingerprint = substr(hash('sha256', implode('|', [$file->checksum, filesize($source), filemtime($source)])), 0, 16);
+        $fingerprint = substr(hash('sha256', implode('|', [$file->checksum, $disk->size($file->path), $disk->lastModified($file->path)])), 0, 16);
 
         return "{$file->id}-{$size->value}-{$fingerprint}.jpg";
     }

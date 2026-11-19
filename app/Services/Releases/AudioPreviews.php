@@ -5,6 +5,7 @@ namespace App\Services\Releases;
 use App\Enums\AudioPreviewStatus;
 use App\Jobs\GenerateAudioPreview;
 use App\Models\ReleaseFile;
+use App\Support\WorkingCopy;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -63,7 +64,8 @@ class AudioPreviews
             return $this->fail($file, 'The stored file is missing.');
         }
 
-        $source = $disk->path($file->path);
+        $copy = WorkingCopy::of($file->disk, $file->path);
+        $source = $copy->path;
 
         if ($this->isOwnPreview($file)) {
             $this->forget($file);
@@ -86,7 +88,7 @@ class AudioPreviews
         $disk->makeDirectory($this->directory($file));
 
         // Written under a temporary name first, so a half-written copy is never played.
-        $temporary = $disk->path($target).'.'.bin2hex(random_bytes(4)).'.tmp';
+        $temporary = WorkingCopy::scratch($file->disk, $target);
 
         try {
             $result = Process::timeout((int) config('royalties.audio.timeout'))->run($this->command($file, $source, $temporary));
@@ -96,7 +98,7 @@ class AudioPreviews
             return $this->fail($file, 'ffmpeg could not be run: '.$exception->getMessage());
         }
 
-        if ($result->failed() || ! is_file($temporary) || filesize($temporary) === 0 || ! rename($temporary, $disk->path($target))) {
+        if ($result->failed() || ! is_file($temporary) || filesize($temporary) === 0 || ! WorkingCopy::publish($file->disk, $target, $temporary)) {
             @unlink($temporary);
 
             return $this->fail($file, $this->lastLines($result->errorOutput()) ?: 'ffmpeg wrote no file.');

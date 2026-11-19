@@ -7,6 +7,7 @@ use App\Enums\ReleaseFileKind;
 use App\Models\Release;
 use App\Models\ReleaseFile;
 use App\Models\Track;
+use App\Support\WorkingCopy;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use ZipArchive;
@@ -44,12 +45,15 @@ class ReleasePackage
 
         $folder = $this->folderName($release);
         $used = [];
-        $add = function (ReleaseFile $file, string $name) use ($zip, $folder, &$used): void {
-            $source = Storage::disk($file->disk)->path($file->path);
-
-            if (! is_file($source)) {
+        // Files from a bucket are downloaded first and have to stay until the archive is closed.
+        $copies = [];
+        $add = function (ReleaseFile $file, string $name) use ($zip, $folder, &$used, &$copies): void {
+            if (! Storage::disk($file->disk)->exists($file->path)) {
                 return;
             }
+
+            $copies[] = $copy = WorkingCopy::of($file->disk, $file->path);
+            $source = $copy->path;
 
             // Two files may ask for the same name; the later one gets a number.
             $candidate = $name;

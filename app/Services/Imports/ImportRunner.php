@@ -15,6 +15,7 @@ use App\Services\Imports\Importers\RightzAudioImporter;
 use App\Services\Imports\Readers\ReaderFactory;
 use App\Support\Decimal;
 use App\Support\Formats;
+use App\Support\WorkingCopy;
 use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -51,7 +52,10 @@ class ImportRunner
                 throw new ImportException("Unknown importer [{$import->importer}].");
             }
 
-            $reader = $this->readers->open(Storage::disk('local')->path($import->file_path));
+            // A statement uploaded before the files moved to a bucket is still on this server.
+            $disk = Storage::disk(WorkingCopy::disk())->exists($import->file_path) ? WorkingCopy::disk() : 'local';
+            $file = WorkingCopy::of($disk, $import->file_path);
+            $reader = $this->readers->open($file->path);
 
             DB::transaction(function () use ($import, $label, $importer, $reader): void {
                 $this->process($import, $label, fn (): iterable => $importer->rows($reader, $label, $import->options ?? []));
