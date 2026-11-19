@@ -23,6 +23,8 @@ class WebSearch
     /** Task codes from here on are failures on the service's side, worth another try. */
     private const int SERVICE_ERROR = 50000;
 
+    private const int SEARCH_ENGINE_ERROR = 40101;
+
     private const int ATTEMPTS = 3;
 
     /**
@@ -67,7 +69,7 @@ class WebSearch
         for ($attempt = 1; $attempt <= self::ATTEMPTS; $attempt++) {
             $task = $this->task($query, $depth, $region);
 
-            if ((int) ($task['status_code'] ?? 0) < self::SERVICE_ERROR) {
+            if (! $this->isWorthRetrying($task)) {
                 break;
             }
         }
@@ -94,6 +96,19 @@ class WebSearch
         }
 
         return $results;
+    }
+
+    /**
+     * Whether the failure is the service's own and may pass on another try.
+     * Its search engine failing is reported as 40101, among the request errors.
+     *
+     * @param  array<string, mixed>  $task
+     */
+    private function isWorthRetrying(array $task): bool
+    {
+        $code = (int) ($task['status_code'] ?? 0);
+
+        return $code >= self::SERVICE_ERROR || $code === self::SEARCH_ENGINE_ERROR;
     }
 
     /**

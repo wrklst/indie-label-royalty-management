@@ -112,7 +112,7 @@ class AirplayResearch
             ->concat($own->whereNull('station')->whereNotNull('region')->whereNotIn('region', $markets)->unique('region')->take(self::MAX_AIRPLAY_SEARCHES)
                 ->map(fn (Airplay $airplay): array => ['query' => "{$subject} radio playlist", 'region' => $airplay->region ?? $markets[0], 'depth' => self::GENERAL_DEPTH, 'airplay' => $airplay]));
 
-        $found = $this->run($searches, $track->label_id, $track->id, $stations);
+        $found = $this->run($searches, $track->label_id, $track->id, $stations, [$artist, $track->name]);
 
         // ponytail: researched once any search worked; a country that failed is tried again with the next research.
         $track->forceFill(['researched_at' => now()])->save();
@@ -142,7 +142,7 @@ class AirplayResearch
         $searches = collect($queries)->unique()->values()
             ->map(fn (string $query, int $index): array => ['query' => $query, 'region' => $region, 'depth' => $index === 0 ? self::GENERAL_DEPTH : 10, 'airplay' => $airplay]);
 
-        return $this->run($searches, $airplay->label_id, $airplay->track_id, collect($station === null ? [] : [$station]));
+        return $this->run($searches, $airplay->label_id, $airplay->track_id, collect($station === null ? [] : [$station]), [$airplay->artist_name, $airplay->track_name]);
     }
 
     /**
@@ -150,10 +150,11 @@ class AirplayResearch
      *
      * @param  iterable<int, array{query: string, region: string, depth: int, airplay: Airplay|null}>  $searches
      * @param  Collection<int, string>  $stations  Stations the label already knows.
+     * @param  list<string|null>  $names  Artist and title; a page has to mention one of them.
      *
      * @throws RuntimeException when no search could be run
      */
-    private function run(iterable $searches, int $labelId, ?int $trackId, Collection $stations): int
+    private function run(iterable $searches, int $labelId, ?int $trackId, Collection $stations, array $names): int
     {
         $found = 0;
         $succeeded = 0;
@@ -181,7 +182,7 @@ class AirplayResearch
             $new = 0;
 
             foreach ($results as $result) {
-                $new += $this->store($labelId, $trackId, $result, $search['query'], $search['airplay'], $stations) ? 1 : 0;
+                $new += $this->store($labelId, $trackId, $result, $search['query'], $search['airplay'], $stations, $names) ? 1 : 0;
             }
 
             $found += $new;
@@ -198,8 +199,9 @@ class AirplayResearch
     /**
      * @param  array{title: string, url: string, description: string|null, domain: string|null}  $result
      * @param  Collection<int, string>  $stations  Stations the label already knows.
+     * @param  list<string|null>  $names  Artist and title; a page has to mention one of them.
      */
-    private function store(int $labelId, ?int $trackId, array $result, string $query, ?Airplay $airplay, Collection $stations): bool
+    private function store(int $labelId, ?int $trackId, array $result, string $query, ?Airplay $airplay, Collection $stations, array $names): bool
     {
         $domain = Str::lower((string) ($result['domain'] ?? parse_url($result['url'], PHP_URL_HOST)));
 
@@ -208,6 +210,11 @@ class AirplayResearch
         }
 
         $text = Str::lower("{$result['title']} {$result['description']} {$domain}");
+
+        // Google also returns pages that only share a word with the title; they say nothing about this track.
+        if (! array_any(array_filter($names), fn (string $name): bool => str_contains($text, Str::lower($name)))) {
+            return false;
+        }
         $station = $airplay->station ?? $stations->first(fn (string $station): bool => str_contains($text, Str::lower($station)));
 
         return AirplayFinding::query()->withoutGlobalScope('label')->firstOrCreate(

@@ -31,7 +31,7 @@ function fakeSearchResults(array $results): void
 {
     Http::preventStrayRequests();
     Http::fake([RESEARCH_SERP_URL => Http::response(['status_code' => 20000, 'tasks' => [['status_code' => 20000, 'result' => [[
-        'items' => array_map(fn (array $result): array => ['type' => 'organic', 'title' => 'Example Page', ...$result], $results),
+        'items' => array_map(fn (array $result): array => ['type' => 'organic', 'title' => 'Example Artist – Example Track', ...$result], $results),
     ]]]]])]);
 }
 
@@ -47,12 +47,13 @@ function researchTrack(Label $label, array $attributes = []): Track
     ]);
 }
 
-test('a research keeps pages that may show a play and leaves out shops and streaming services', function () {
+test('a research keeps pages that name the track and may show a play, and leaves out shops and streaming services', function () {
     $label = Label::factory()->create();
     $track = researchTrack($label);
     fakeSearchResults([
-        ['url' => 'https://radio.example.com/playlist', 'title' => 'Playlist of the morning show', 'domain' => 'radio.example.com'],
-        ['url' => 'https://blog.example.org/review', 'title' => 'A review', 'domain' => 'blog.example.org'],
+        ['url' => 'https://radio.example.com/playlist', 'title' => 'Playlist of the morning show', 'description' => 'Example Artist with Example Track', 'domain' => 'radio.example.com'],
+        ['url' => 'https://blog.example.org/review', 'title' => 'A review of Example Track', 'domain' => 'blog.example.org'],
+        ['url' => 'https://radio.example.com/other', 'title' => 'A playlist with other music', 'domain' => 'radio.example.com'],
         ['url' => 'https://open.spotify.com/track/1', 'title' => 'Example Track', 'domain' => 'open.spotify.com'],
     ]);
 
@@ -73,7 +74,7 @@ test('a research also searches for each station a statement named and ties the f
     Http::preventStrayRequests();
     Http::fake([RESEARCH_SERP_URL => fn (Request $request) => Http::response(['status_code' => 20000, 'tasks' => [['status_code' => 20000, 'result' => [[
         'items' => str_ends_with($request[0]['keyword'], 'Example Radio')
-            ? [['type' => 'organic', 'title' => 'Programme', 'url' => 'https://example.com/programme', 'domain' => 'example.com']]
+            ? [['type' => 'organic', 'title' => 'Programme with Example Track', 'url' => 'https://example.com/programme', 'domain' => 'example.com']]
             : [],
     ]]]]])]);
 
@@ -109,10 +110,10 @@ test('every search is logged with what it returned, and a failed one does not lo
     config(['services.dataforseo.markets' => ['DE', 'GB']]);
     $label = Label::factory()->create();
     $track = researchTrack($label);
-    $failing = ['status_code' => 20000, 'tasks' => [['status_code' => 50000, 'status_message' => 'Internal SE Server Error.']]];
+    $failing = ['status_code' => 20000, 'tasks' => [['status_code' => 40101, 'status_message' => 'Internal SE Server Error.']]];
     Http::preventStrayRequests();
     Http::fake([RESEARCH_SERP_URL => fn (Request $request) => Http::response($request[0]['location_name'] === 'Germany' ? $failing : ['status_code' => 20000, 'tasks' => [['status_code' => 20000, 'result' => [[
-        'items' => [['type' => 'organic', 'title' => 'Playlist', 'url' => 'https://radio.example.com/playlist', 'domain' => 'radio.example.com']],
+        'items' => [['type' => 'organic', 'title' => 'Playlist with Example Track', 'url' => 'https://radio.example.com/playlist', 'domain' => 'radio.example.com']],
     ]]]]])]);
 
     app(AirplayResearch::class)->research($track);
@@ -129,7 +130,7 @@ test('every search is logged with what it returned, and a failed one does not lo
 test('a closer look at one play searches for it at its station and ties the findings to it', function () {
     $label = Label::factory()->create();
     $airplay = Airplay::factory()->create(['label_id' => $label->id, 'track_name' => 'Example Track', 'artist_name' => 'Example Artist', 'station' => 'Example Radio', 'region' => 'GB']);
-    fakeSearchResults([['url' => 'https://example.com/show', 'title' => 'The evening show', 'domain' => 'example.com']]);
+    fakeSearchResults([['url' => 'https://example.com/show', 'title' => 'The evening show played Example Track', 'domain' => 'example.com']]);
 
     $found = app(AirplayResearch::class)->researchAirplay($airplay);
 

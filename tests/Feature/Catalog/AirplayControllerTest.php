@@ -176,8 +176,8 @@ test('a web search that fails inside the search service is tried again and parti
     $airplay = Airplay::factory()->create(['label_id' => $label->id]);
     Http::preventStrayRequests();
     Http::fake([SERP_URL => Http::sequence()
-        ->push(['status_code' => 20000, 'tasks' => [['status_code' => 50000, 'status_message' => 'Internal SE Server Error.']]])
-        ->push(['status_code' => 20000, 'tasks' => [['status_code' => 50000, 'status_message' => 'Internal SE Server Error.']]])
+        ->push(['status_code' => 20000, 'tasks' => [['status_code' => 40101, 'status_message' => 'Internal SE Server Error.']]])
+        ->push(['status_code' => 20000, 'tasks' => [['status_code' => 40101, 'status_message' => 'Internal SE Server Error.']]])
         ->push(['status_code' => 20000, 'tasks' => [['status_code' => 20100, 'status_message' => 'Task completed with partial results.', 'result' => [['items' => [
             ['type' => 'organic', 'title' => 'Playlist', 'url' => 'https://example.com/playlist'],
         ]]]]]])]);
@@ -201,7 +201,7 @@ test('a failed web search reports why', function (Closure $arrange, string $mess
     expect(AirplaySearch::query()->withoutGlobalScope('label')->sole()->only(['succeeded', 'error']))->toBe(['succeeded' => false, 'error' => $message]);
 })->with([
     'when the search service keeps failing' => [
-        fn () => Http::fake([SERP_URL => Http::response(['status_code' => 20000, 'tasks' => [['status_code' => 50000, 'status_message' => 'Internal SE Server Error.']]])]),
+        fn () => Http::fake([SERP_URL => Http::response(['status_code' => 20000, 'tasks' => [['status_code' => 40101, 'status_message' => 'Internal SE Server Error.']]])]),
         'The search failed: Internal SE Server Error.',
     ],
     'when the service refuses the task' => [
