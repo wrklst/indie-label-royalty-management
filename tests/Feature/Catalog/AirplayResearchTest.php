@@ -315,7 +315,7 @@ test('a research is not queued', function (Closure $arrange, array $input, strin
             return $input;
         },
         ['scope' => 'all'],
-        'Web search is not set up: DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD are missing.',
+        'Web search is not set up. Enter the DataForSEO login under Settings → Label.',
     ],
 ]);
 

@@ -36,6 +36,8 @@ function trackWithAudio(Release $release, Track $track): ReleaseFile
 
 const AUDIO_IS_PLAYING = '(() => { const audio = document.querySelector("audio"); return audio !== null && !audio.paused && audio.currentTime > 0; })()';
 
+const TOAST_IS_ABOVE_THE_PLAYER = '(() => { const toast = document.querySelector("[data-sonner-toast]"); const dock = document.querySelector("[data-player=\\"dock\\"]"); return toast !== null && dock !== null && toast.getBoundingClientRect().bottom <= dock.getBoundingClientRect().top; })()';
+
 const PRESS_SPACE_ON_THE_PAGE = 'document.body.dispatchEvent(new KeyboardEvent("keydown", { code: "Space", key: " ", bubbles: true, cancelable: true }))';
 
 test('the player keeps playing across pages, takes a queue and comes back paused after a reload', function () {
@@ -160,6 +162,8 @@ test('a release is played and queued as a whole from the release list', function
         ->click("[aria-label=\"Add release {$name} to queue\"]")
         ->assertSee('2 tracks added to the queue.')
         ->assertSeeIn('[data-player="count"]', '2')
+        ->wait(1)
+        ->assertScript(TOAST_IS_ABOVE_THE_PLAYER)
         ->click("[aria-label=\"Play release {$name}\"]")
         ->assertSeeIn('[data-player="title"]', 'Example Track')
         ->assertSeeIn('[data-player="count"]', '2')

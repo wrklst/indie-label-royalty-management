@@ -21,12 +21,6 @@ class ResearchAirplay extends Command
 {
     public function handle(AirplayResearch $research, WebSearch $search, CurrentLabel $currentLabel): int
     {
-        if (! $search->isConfigured()) {
-            $this->warn('Web search is not set up: DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD are missing.');
-
-            return self::SUCCESS;
-        }
-
         $currentLabel->set(null);
         $labels = Label::query()->when($this->option('label') !== null, fn ($query) => $query
             ->where(ctype_digit((string) $this->option('label')) ? 'id' : 'slug', $this->option('label')))->get();
@@ -38,6 +32,12 @@ class ResearchAirplay extends Command
         }
 
         foreach ($labels as $label) {
+            if (! $search->for($label)->isConfigured()) {
+                $this->warn("{$label->name}: ".WebSearch::NOT_SET_UP);
+
+                continue;
+            }
+
             $trackIds = $research->stale(Track::query()->where('label_id', $label->id), (int) $this->option('days'))
                 ->orderByRaw('researched_at is null desc')->orderBy('researched_at')->orderBy('id')
                 ->limit((int) $this->option('limit'))->pluck('id');

@@ -105,7 +105,9 @@ class AirplayResearch
 
         $artist = ArtistCredits::display($track) ?? ($track->release ? ArtistCredits::display($track->release) : null);
         $subject = collect([$artist, $track->name])->filter()->map(fn (string $part): string => "\"{$part}\"")->implode(' ');
-        $markets = Label::query()->findOrFail($track->label_id)->airplayMarkets();
+        $label = Label::query()->findOrFail($track->label_id);
+        $this->search->for($label);
+        $markets = $label->airplayMarkets();
 
         $airplays = Airplay::query()->withoutGlobalScope('label')->where('label_id', $track->label_id)->get(['id', 'track_id', 'station', 'region']);
         $stations = $airplays->pluck('station')->filter()->unique(fn (string $station): string => Str::lower($station))->values();
@@ -147,7 +149,9 @@ class AirplayResearch
     {
         $station = $airplay->station;
         $driver = $this->drivers->forName($station);
-        $region = $airplay->region ?? $driver?->region() ?? Label::query()->findOrFail($airplay->label_id)->airplayMarkets()[0];
+        $label = Label::query()->findOrFail($airplay->label_id);
+        $this->search->for($label);
+        $region = $airplay->region ?? $driver?->region() ?? $label->airplayMarkets()[0];
         $artist = $airplay->artist_name === null ? null : "\"{$airplay->artist_name}\"";
         $title = "\"{$airplay->track_name}\"";
 

@@ -7,6 +7,10 @@ use App\Models\Label;
 use App\Models\Payee;
 use App\Models\Territory;
 use App\Models\User;
+use App\Services\Airplay\WebSearch;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('the label settings page shows the stored settings and territories', function () {
@@ -29,6 +33,7 @@ test('the label settings page shows the stored settings and territories', functi
                 'accounts_mechanicals' => true, 'accounts_ppd' => false, 'accounts_reserves' => true,
                 'bandcamp_disable_fee' => true, 'bandcamp_exclude_physical' => false,
                 'airplay_markets' => ['DE', 'GB', 'US'],
+                'dataforseo_login' => null, 'dataforseo_password_set' => false,
             ])
             ->where('territories', [
                 ['id' => $first->id, 'name' => 'GSA', 'countries' => ['DE', 'AT', 'CH']],
@@ -115,6 +120,63 @@ test('airplay research countries that are no country codes are rejected', functi
     'a country name' => ['Germany', 'airplay_markets.0'],
     'nothing' => ['', 'airplay_markets'],
 ]);
+
+test('a DataForSEO login is proven against the service and stored encrypted without ever being sent back', function () {
+    Http::preventStrayRequests();
+    Http::fake(['https://api.dataforseo.com/v3/appendix/user_data' => Http::response(['status_code' => 20000])]);
+    $label = Label::factory()->create(['name' => 'Example Records', 'currency' => 'EUR']);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('label-settings.update'), ['name' => 'Example Records', 'currency' => 'EUR', 'dataforseo_login' => 'example-login', 'dataforseo_password' => 'example-password'])
+        ->assertSessionHasNoErrors();
+
+    Http::assertSent(fn (Request $request): bool => $request->hasHeader('Authorization', 'Basic '.base64_encode('example-login:example-password')));
+    expect($label->refresh()->dataforseo_password)->toBe('example-password')
+        ->and(DB::table('labels')->where('id', $label->id)->value('dataforseo_password'))->not->toContain('example-password');
+
+    $this->get(route('label-settings.edit'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('settings.dataforseo_login', 'example-login')
+            ->where('settings.dataforseo_password_set', true)
+            ->missing('settings.dataforseo_password'))
+        ->assertDontSee('example-password');
+});
+
+test('a DataForSEO login the service refuses is not stored', function () {
+    Http::preventStrayRequests();
+    Http::fake(['https://api.dataforseo.com/v3/appendix/user_data' => Http::response(['status_code' => 40100], 401)]);
+    $label = Label::factory()->create(['name' => 'Example Records', 'currency' => 'EUR']);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('label-settings.update'), ['name' => 'Example Records', 'currency' => 'EUR', 'dataforseo_login' => 'example-login', 'dataforseo_password' => 'wrong'])
+        ->assertSessionHasErrors(['dataforseo_login' => 'DataForSEO does not accept this login and password.']);
+
+    expect($label->refresh()->dataforseo_login)->toBeNull();
+});
+
+test('an empty DataForSEO password keeps the stored one and an empty login removes both', function () {
+    Http::preventStrayRequests();
+    $label = Label::factory()->create(['name' => 'Example Records', 'currency' => 'EUR', 'dataforseo_login' => 'example-login', 'dataforseo_password' => 'example-password']);
+    $this->actingAs(labelAdmin($label));
+
+    $this->put(route('label-settings.update'), ['name' => 'Example Records', 'currency' => 'EUR', 'dataforseo_login' => 'example-login', 'dataforseo_password' => ''])
+        ->assertSessionHasNoErrors();
+    expect($label->refresh()->dataforseo_password)->toBe('example-password');
+
+    $this->put(route('label-settings.update'), ['name' => 'Example Records', 'currency' => 'EUR', 'dataforseo_login' => '', 'dataforseo_password' => ''])
+        ->assertSessionHasNoErrors();
+    expect($label->refresh()->only(['dataforseo_login', 'dataforseo_password']))->toBe(['dataforseo_login' => null, 'dataforseo_password' => null]);
+});
+
+test('a research uses the login of its label', function () {
+    Http::preventStrayRequests();
+    Http::fake(['https://api.dataforseo.com/v3/serp/*' => Http::response(['status_code' => 20000, 'tasks' => [['status_code' => 20000, 'result' => [['items' => []]]]]])]);
+    $label = Label::factory()->create(['dataforseo_login' => 'label-login', 'dataforseo_password' => 'label-password']);
+
+    app(WebSearch::class)->for($label)->search('"Example Artist" "Example Track"', 'DE');
+
+    Http::assertSent(fn (Request $request): bool => $request->hasHeader('Authorization', 'Basic '.base64_encode('label-login:label-password')));
+});
 
 test('invalid label settings are rejected', function (string $field, mixed $value) {
     $label = Label::factory()->create(['name' => 'Example Records', 'currency' => 'EUR']);

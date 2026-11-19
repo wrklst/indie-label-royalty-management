@@ -41,6 +41,8 @@ class LabelSettingsRequest extends LabelFormRequest
             'mechanicals_usd_rate' => ['nullable', 'numeric', 'decimal:0,10', 'gt:0', 'max:999999'],
             'mechanicals_include_physical' => ['boolean'],
             'ignore_negative_quantities' => ['boolean'],
+            'dataforseo_login' => ['nullable', 'string', 'max:255'],
+            'dataforseo_password' => ['nullable', 'string', 'max:255'],
             'airplay_markets' => ['array', 'min:1', 'max:10'],
             'airplay_markets.*' => ['string', 'size:2', 'alpha:ascii'],
         ];

@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\CarbonImmutable;
 use Database\Factories\LabelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -23,11 +24,14 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property array<string, mixed>|null $importer_settings
  * @property array<string, mixed>|null $royalty_tool_settings
  * @property list<string>|null $airplay_markets
+ * @property string|null $dataforseo_login
+ * @property string|null $dataforseo_password
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Pivot&object{role: string, payee_id: int|null} $pivot Membership of the user when loaded through User::labels().
  */
-#[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings', 'royalty_tool_settings', 'airplay_markets'])]
+#[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings', 'royalty_tool_settings', 'airplay_markets', 'dataforseo_login', 'dataforseo_password'])]
+#[Hidden(['dataforseo_login', 'dataforseo_password'])]
 class Label extends Model
 {
     /** @use HasFactory<LabelFactory> */
@@ -45,6 +49,8 @@ class Label extends Model
             'importer_settings' => 'array',
             'royalty_tool_settings' => 'array',
             'airplay_markets' => 'array',
+            'dataforseo_login' => 'encrypted',
+            'dataforseo_password' => 'encrypted',
         ];
     }
 

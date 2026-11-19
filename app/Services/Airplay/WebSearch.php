@@ -2,6 +2,8 @@
 
 namespace App\Services\Airplay;
 
+use App\Models\Label;
+use App\Support\CurrentLabel;
 use Illuminate\Support\Facades\Http;
 use Locale;
 use RuntimeException;
@@ -10,9 +12,18 @@ use Throwable;
 /**
  * Google results through the DataForSEO SERP API. Every search is billed
  * by DataForSEO, so it only runs when a user asks for it.
+ *
+ * The login is the label's own, entered in its settings. An installation
+ * can set one for all labels in the environment instead.
  */
 class WebSearch
 {
+    public const string NOT_SET_UP = 'Web search is not set up. Enter the DataForSEO login under Settings → Label.';
+
+    private const string ACCOUNT_URL = 'https://api.dataforseo.com/v3/appendix/user_data';
+
+    private ?Label $label = null;
+
     private const string URL = 'https://api.dataforseo.com/v3/serp/google/organic/live/advanced';
 
     private const int OK = 20000;
@@ -37,9 +48,46 @@ class WebSearch
         'NL' => 'nl', 'PT' => 'pt', 'BR' => 'pt', 'FI' => 'fi', 'SE' => 'sv', 'NO' => 'no', 'DK' => 'da', 'PL' => 'pl', 'JP' => 'ja',
     ];
 
+    /**
+     * Search for this label from here on. Without it the label of the
+     * current request is used.
+     */
+    public function for(Label $label): static
+    {
+        $this->label = $label;
+
+        return $this;
+    }
+
     public function isConfigured(): bool
     {
-        return filled(config('services.dataforseo.login')) && filled(config('services.dataforseo.password'));
+        return $this->credentials() !== null;
+    }
+
+    /**
+     * Whether DataForSEO accepts this login. Asking costs nothing.
+     */
+    public function accepts(string $login, string $password): bool
+    {
+        try {
+            $response = Http::withBasicAuth($login, $password)->acceptJson()->connectTimeout(10)->timeout(20)->get(self::ACCOUNT_URL);
+        } catch (Throwable $exception) {
+            throw new RuntimeException('The search service could not be reached.', previous: $exception);
+        }
+
+        return $response->successful() && $response->json('status_code') === self::OK;
+    }
+
+    /**
+     * @return array{string, string}|null
+     */
+    private function credentials(): ?array
+    {
+        $label = $this->label ?? app(CurrentLabel::class)->get();
+        $login = $label?->dataforseo_login ?: config('services.dataforseo.login');
+        $password = $label?->dataforseo_password ?: config('services.dataforseo.password');
+
+        return filled($login) && filled($password) ? [(string) $login, (string) $password] : null;
     }
 
     /**
@@ -51,13 +99,11 @@ class WebSearch
      */
     public function search(string $query, string $region, int $depth = 10): array
     {
-        if (! $this->isConfigured()) {
-            throw new RuntimeException('Web search is not set up: DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD are missing.');
-        }
+        $credentials = $this->credentials() ?? throw new RuntimeException(self::NOT_SET_UP);
 
         // The service's own search engine fails often ("Internal SE Server Error"); failed tries are not billed.
         for ($attempt = 1; $attempt <= self::ATTEMPTS; $attempt++) {
-            $task = $this->task($query, $depth, $region);
+            $task = $this->task($credentials, $query, $depth, $region);
 
             if (! $this->isWorthRetrying($task)) {
                 break;
@@ -104,16 +150,17 @@ class WebSearch
     /**
      * Run one search task and return what the service says about it.
      *
+     * @param  array{string, string}  $credentials
      * @return array<string, mixed>
      *
      * @throws RuntimeException when the service cannot be reached or refuses the request
      */
-    private function task(string $query, int $depth, string $region): array
+    private function task(array $credentials, string $query, int $depth, string $region): array
     {
         $region = strtoupper($region);
 
         try {
-            $response = Http::withBasicAuth(config('services.dataforseo.login'), config('services.dataforseo.password'))
+            $response = Http::withBasicAuth(...$credentials)
                 ->acceptJson()->connectTimeout(10)->timeout(70)
                 ->post(self::URL, [[
                     'keyword' => mb_substr($query, 0, 700),

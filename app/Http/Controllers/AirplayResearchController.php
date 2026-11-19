@@ -36,7 +36,7 @@ class AirplayResearchController extends Controller
         ]);
 
         if (! $search->isConfigured()) {
-            throw ValidationException::withMessages(['scope' => __('Web search is not set up: DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD are missing.')]);
+            throw ValidationException::withMessages(['scope' => __(WebSearch::NOT_SET_UP)]);
         }
 
         if ($selection['scope'] === 'release') {
@@ -64,7 +64,7 @@ class AirplayResearchController extends Controller
     public function airplay(Airplay $airplay, WebSearch $search): RedirectResponse
     {
         if (! $search->isConfigured()) {
-            Inertia::flash('toast', ['type' => 'error', 'message' => __('Web search is not set up: DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD are missing.')]);
+            Inertia::flash('toast', ['type' => 'error', 'message' => __(WebSearch::NOT_SET_UP)]);
 
             return back();
         }
