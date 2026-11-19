@@ -300,7 +300,7 @@ export default function ShowPeriod({
                         {audit.missing_contract > 0 && (
                             <li>
                                 <Badge
-                                    variant="outline"
+                                    variant="warning"
                                     className="mr-2 tabular-nums"
                                 >
                                     {audit.missing_contract.toLocaleString(
@@ -465,7 +465,7 @@ export default function ShowPeriod({
                                         </Link>
                                         {row.unrecouped && (
                                             <Badge
-                                                variant="outline"
+                                                variant="warning"
                                                 className="ml-2"
                                             >
                                                 unrecouped ledger

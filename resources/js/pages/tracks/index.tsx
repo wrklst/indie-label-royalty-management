@@ -174,7 +174,7 @@ export default function Tracks({
                                                 (release)
                                             </span>
                                         ) : (
-                                            <Badge variant="outline">
+                                            <Badge variant="warning">
                                                 none
                                             </Badge>
                                         )}

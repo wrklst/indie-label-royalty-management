@@ -38,11 +38,9 @@ export default function ShowStatement({ statement, portal: isPortal }: Props) {
                         (statement.archived ? (
                             <Badge variant="outline">Archived revision</Badge>
                         ) : statement.published ? (
-                            <Badge variant="secondary">
-                                Published to payee
-                            </Badge>
+                            <Badge variant="success">Published to payee</Badge>
                         ) : (
-                            <Badge variant="outline">
+                            <Badge variant="warning">
                                 Draft – not visible to the payee
                             </Badge>
                         ))}

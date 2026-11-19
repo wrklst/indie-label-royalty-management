@@ -35,7 +35,7 @@ function LedgerTable({
                 <span className="flex items-center gap-2">
                     {ledger.ledger_name}
                     {ledger.unrecouped && (
-                        <Badge variant="destructive">Unrecouped</Badge>
+                        <Badge variant="warning">Unrecouped</Badge>
                     )}
                 </span>
             }
@@ -485,7 +485,7 @@ export function StatementView({ data }: { data: StatementData }) {
                                             {row.ledger_name}
                                             {row.unrecouped && (
                                                 <Badge
-                                                    variant="destructive"
+                                                    variant="warning"
                                                     className="ml-2"
                                                 >
                                                     Unrecouped

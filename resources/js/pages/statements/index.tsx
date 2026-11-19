@@ -134,17 +134,17 @@ export default function Statements({
                                                     Archived
                                                 </Badge>
                                             ) : statement.published ? (
-                                                <Badge variant="secondary">
+                                                <Badge variant="success">
                                                     Published
                                                 </Badge>
                                             ) : (
-                                                <Badge variant="outline">
+                                                <Badge variant="warning">
                                                     Draft
                                                 </Badge>
                                             )}
                                             {statement.revision_of_id &&
                                                 !statement.archived && (
-                                                    <Badge variant="outline">
+                                                    <Badge variant="info">
                                                         Revised
                                                     </Badge>
                                                 )}

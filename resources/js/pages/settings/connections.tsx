@@ -43,6 +43,7 @@ type Props = {
     };
     ai: {
         connected: boolean;
+        provider: string | null;
         service: string | null;
         key_hint: string | null;
         endpoint_label: string | null;
@@ -81,7 +82,9 @@ function ConnectionCard({
     disconnect,
     disconnectLabel,
     confirm,
+    children,
 }: {
+    children?: ReactNode;
     title: string;
     facts: [string, ReactNode][];
     note?: ReactNode;
@@ -97,7 +100,7 @@ function ConnectionCard({
             <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{title}</span>
-                    <Badge variant="outline">Connected</Badge>
+                    <Badge variant="success">Connected</Badge>
                 </div>
                 <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
                     {facts.map(([label, value]) => (
@@ -110,6 +113,7 @@ function ConnectionCard({
                 {note && (
                     <p className="text-xs text-muted-foreground">{note}</p>
                 )}
+                {children}
             </div>
             {disconnect && (
                 <Button
@@ -131,6 +135,9 @@ function ConnectionCard({
 }
 
 function WebSearch({ search }: { search: Props['search'] }) {
+    // A login from the environment is in use until an own one is asked for.
+    const [open, setOpen] = useState(!search.from_environment);
+
     return (
         <section className="space-y-6">
             <Heading
@@ -152,57 +159,80 @@ function WebSearch({ search }: { search: Props['search'] }) {
             ) : (
                 <>
                     {search.from_environment && (
-                        <p className="text-sm text-muted-foreground">
-                            A login from the server&apos;s environment file is
-                            in use. Connect your own here to use that instead.
-                        </p>
+                        <ConnectionCard
+                            title="DataForSEO"
+                            facts={[['Login', 'set on the server']]}
+                            note="This is the connection from the server's environment file. It stays in use until you connect your own login here."
+                        >
+                            {!open && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setOpen(true)}
+                                >
+                                    Connect a different login
+                                </Button>
+                            )}
+                        </ConnectionCard>
                     )}
-                    <Form
-                        {...ConnectionsController.search.form()}
-                        options={{ preserveScroll: true }}
-                        className="grid gap-6"
-                    >
-                        {({ errors, processing }) => (
-                            <>
-                                <Field
-                                    label="DataForSEO API login"
-                                    htmlFor="search_login"
-                                    error={errors.login}
-                                    hint="In your DataForSEO dashboard under API Access."
-                                    required
-                                >
-                                    <Input
-                                        id="search_login"
-                                        name="login"
-                                        autoComplete="off"
+                    {open && (
+                        <Form
+                            {...ConnectionsController.search.form()}
+                            options={{ preserveScroll: true }}
+                            className="grid gap-6"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <Field
+                                        label="DataForSEO API login"
+                                        htmlFor="search_login"
+                                        error={errors.login}
+                                        hint="In your DataForSEO dashboard under API Access."
                                         required
-                                    />
-                                </Field>
-                                <Field
-                                    label="DataForSEO API password"
-                                    htmlFor="search_password"
-                                    error={errors.password}
-                                    hint="The API password shown there, not the one you sign in to their website with."
-                                    required
-                                >
-                                    <Input
-                                        id="search_password"
-                                        name="password"
-                                        type="password"
-                                        autoComplete="new-password"
+                                    >
+                                        <Input
+                                            id="search_login"
+                                            name="login"
+                                            autoComplete="off"
+                                            required
+                                        />
+                                    </Field>
+                                    <Field
+                                        label="DataForSEO API password"
+                                        htmlFor="search_password"
+                                        error={errors.password}
+                                        hint="The API password shown there, not the one you sign in to their website with."
                                         required
-                                    />
-                                </Field>
-                                <div>
-                                    <Button disabled={processing}>
-                                        {processing
-                                            ? 'Testing the login…'
-                                            : 'Test and connect'}
-                                    </Button>
-                                </div>
-                            </>
-                        )}
-                    </Form>
+                                    >
+                                        <Input
+                                            id="search_password"
+                                            name="password"
+                                            type="password"
+                                            autoComplete="new-password"
+                                            required
+                                        />
+                                    </Field>
+                                    <div className="flex gap-2">
+                                        <Button disabled={processing}>
+                                            {processing
+                                                ? 'Testing the login…'
+                                                : 'Test and connect'}
+                                        </Button>
+                                        {search.from_environment && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                onClick={() => setOpen(false)}
+                                            >
+                                                Cancel
+                                            </Button>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </Form>
+                    )}
                 </>
             )}
         </section>
@@ -217,15 +247,24 @@ function ModelPicker({
     service,
     models,
     error,
+    current,
 }: {
     service: Service;
     models: Model[];
     error?: string;
+    /** The model in use, when one of a connected service is being changed. */
+    current?: string | null;
 }) {
     // The cheapest model that answers in a fixed format is the sensible start.
     const recommended =
         models.find((model) => model.fixed_format) ?? models[0] ?? null;
-    const [chosen, setChosen] = useState(recommended?.id ?? 'other');
+    const [chosen, setChosen] = useState(
+        current
+            ? models.some((model) => model.id === current)
+                ? current
+                : 'other'
+            : (recommended?.id ?? 'other'),
+    );
     const model = models.find((entry) => entry.id === chosen);
 
     if (models.length === 0) {
@@ -331,6 +370,66 @@ function ModelPicker({
     );
 }
 
+/**
+ * Another model for the connected service, without entering the key
+ * again. The new model is tested before it replaces the one in use.
+ */
+function ChangeModel({ ai }: { ai: Props['ai'] }) {
+    const [open, setOpen] = useState(false);
+    const service = ai.services.find((entry) => entry.value === ai.provider);
+
+    if (!service) {
+        return null;
+    }
+
+    if (!open) {
+        return (
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setOpen(true)}
+            >
+                Change model
+            </Button>
+        );
+    }
+
+    return (
+        <Form
+            {...ConnectionsController.aiModel.form()}
+            options={{ preserveScroll: true }}
+            onSuccess={() => setOpen(false)}
+            className="grid gap-4 border-t pt-4"
+        >
+            {({ errors, processing }) => (
+                <>
+                    <ModelPicker
+                        service={service}
+                        models={ai.catalogue[service.value] ?? []}
+                        error={errors.model}
+                        current={ai.model}
+                    />
+                    <div className="flex gap-2">
+                        <Button disabled={processing}>
+                            {processing
+                                ? 'Reading a sample receipt…'
+                                : 'Test and switch'}
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                    </div>
+                </>
+            )}
+        </Form>
+    );
+}
+
 function ReceiptReading({ ai }: { ai: Props['ai'] }) {
     const [provider, setProvider] = useState('');
     const service = ai.services.find((entry) => entry.value === provider);
@@ -365,7 +464,9 @@ function ReceiptReading({ ai }: { ai: Props['ai'] }) {
                     disconnect={ConnectionsController.destroyAi.url()}
                     disconnectLabel={`Disconnect ${ai.service ?? 'the AI service'}`}
                     confirm="Disconnect the AI service? The stored key is deleted and receipts are no longer read. To connect again you enter the key anew."
-                />
+                >
+                    <ChangeModel ai={ai} />
+                </ConnectionCard>
             ) : (
                 <Form
                     {...ConnectionsController.ai.form()}
@@ -466,6 +567,8 @@ function ReceiptReading({ ai }: { ai: Props['ai'] }) {
 
 function Storage({ storage }: { storage: NonNullable<Props['storage']> }) {
     const [disk, setDisk] = useState('s3');
+    // The environment's storage is in use until another one is asked for.
+    const [open, setOpen] = useState(false);
 
     return (
         <section className="space-y-6">
@@ -475,16 +578,35 @@ function Storage({ storage }: { storage: NonNullable<Props['storage']> }) {
                 description="Where release files, receipts and statement files of every label on this installation are stored. Only you, as the installation's admin, see this section."
             />
             {storage.from_environment ? (
-                <p className="text-sm text-muted-foreground">
-                    In use now:{' '}
-                    <Badge variant="outline">
-                        {storage.disk === 's3'
-                            ? `bucket ${storage.bucket ?? ''}`
-                            : 'this server'}
-                    </Badge>{' '}
-                    as set in the server&apos;s environment file. Connect a
-                    storage here to use that instead.
-                </p>
+                <ConnectionCard
+                    title={
+                        storage.disk === 's3'
+                            ? 'S3-compatible bucket'
+                            : 'This server'
+                    }
+                    facts={
+                        storage.disk === 's3'
+                            ? [
+                                  ['Bucket', storage.bucket ?? '–'],
+                                  ['Endpoint', storage.endpoint ?? 'Amazon S3'],
+                                  ['Region', storage.region ?? '–'],
+                                  ['Access key', storage.key_hint ?? 'stored'],
+                              ]
+                            : [['New files', 'are stored on this server']]
+                    }
+                    note="This is the connection from the server's environment file. It stays in use until you connect a different storage here."
+                >
+                    {!open && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setOpen(true)}
+                        >
+                            Connect a different storage
+                        </Button>
+                    )}
+                </ConnectionCard>
             ) : (
                 <ConnectionCard
                     title={
@@ -508,7 +630,7 @@ function Storage({ storage }: { storage: NonNullable<Props['storage']> }) {
                     confirm="Disconnect this file storage? The server's environment file decides again where new files go. Files already stored are not touched, but files in this bucket are unreachable while another storage is in use."
                 />
             )}
-            {storage.from_environment && (
+            {storage.from_environment && open && (
                 <Form
                     {...ConnectionsController.storage.form()}
                     options={{ preserveScroll: true }}
@@ -613,13 +735,20 @@ function Storage({ storage }: { storage: NonNullable<Props['storage']> }) {
                                     />
                                 </>
                             )}
-                            <div>
+                            <div className="flex gap-2">
                                 <Button disabled={processing}>
                                     {processing
                                         ? 'Testing the storage…'
                                         : disk === 's3'
                                           ? 'Test and connect'
                                           : 'Use this server'}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={() => setOpen(false)}
+                                >
+                                    Cancel
                                 </Button>
                             </div>
                         </>
@@ -677,7 +806,7 @@ export default function Connections({ search, ai, bandcamp, storage }: Props) {
                         />
                     ) : (
                         <p className="flex flex-wrap items-center gap-3 text-sm">
-                            <Badge variant="outline">Not connected</Badge>
+                            <Badge variant="warning">Not connected</Badge>
                             <Link
                                 href={editBandcamp()}
                                 className="underline underline-offset-4"

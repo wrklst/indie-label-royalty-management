@@ -52,17 +52,17 @@ export function ImportStatusBadge({
     }
 
     if (status === 'review') {
-        return <Badge variant="destructive">Duplicates to review</Badge>;
+        return <Badge variant="warning">Duplicates to review</Badge>;
     }
 
     if (status === 'pending') {
-        return <Badge variant="outline">Pending</Badge>;
+        return <Badge variant="info">Pending</Badge>;
     }
 
     return needsCleanup ? (
-        <Badge variant="destructive">Needs cleanup</Badge>
+        <Badge variant="warning">Needs cleanup</Badge>
     ) : (
-        <Badge variant="secondary">Imported</Badge>
+        <Badge variant="success">Imported</Badge>
     );
 }
 

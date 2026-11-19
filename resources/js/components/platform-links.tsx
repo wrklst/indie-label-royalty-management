@@ -191,7 +191,7 @@ export function PlatformLinks({
                                 <ExternalLink className="size-3.5 shrink-0" />
                             </a>
                             {ORIGINS[link.origin] && (
-                                <Badge variant="outline" className="shrink-0">
+                                <Badge variant="info" className="shrink-0">
                                     {ORIGINS[link.origin]}
                                 </Badge>
                             )}

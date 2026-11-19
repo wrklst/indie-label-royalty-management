@@ -59,5 +59,28 @@ test('the connections page offers the models of a service with their prices and 
         ->assertDontSee('example-key-9f3a')
         ->assertMissing('#ai_key')
         ->assertPresent('[aria-label="Disconnect Infomaniak AI Tools"]')
+        ->press('Change model')
+        ->assertValue('#ai_model', 'example/small-vision')
+        ->select('#ai_model', 'example/large-vision')
+        ->assertSeeIn('[data-model-details]', 'Large Vision')
+        ->assertSee('Test and switch')
+        ->press('Cancel')
+        ->assertMissing('[data-model-details]')
+        ->assertNoJavaScriptErrors();
+});
+
+test('the storage from the environment file is shown as the connection in use, with a button to connect a different one', function () {
+    Cache::put('receipt-models', []);
+    $admin = labelAdmin(Label::factory()->create(['name' => 'Example Records']));
+    $admin->forceFill(['installation_admin' => true])->save();
+    $this->actingAs($admin);
+
+    visit('/settings/connections')
+        ->assertSeeIn('[data-connection="This server"]', "from the server's environment file")
+        ->assertMissing('#storage_bucket')
+        ->press('Connect a different storage')
+        ->assertPresent('#storage_bucket')
+        ->press('Cancel')
+        ->assertMissing('#storage_bucket')
         ->assertNoJavaScriptErrors();
 });

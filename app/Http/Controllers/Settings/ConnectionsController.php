@@ -43,6 +43,7 @@ class ConnectionsController extends Controller
             ],
             'ai' => [
                 'connected' => AiConnection::isConfigured($label),
+                'provider' => $label->ai_provider,
                 'service' => AiConnection::SERVICES[$label->ai_provider ?? '']['name'] ?? null,
                 'key_hint' => filled($label->ai_key) ? '••••'.mb_substr((string) $label->ai_key, -4) : null,
                 'endpoint_label' => AiConnection::SERVICES[$label->ai_provider ?? '']['endpoint'] ?? null,
@@ -158,6 +159,36 @@ class ConnectionsController extends Controller
             default => __('Receipt reading set up, but the model got :fields wrong on the sample receipt (:seconds seconds). Another model may read better.', [
                 'fields' => implode(', ', $trial['missed']), 'seconds' => $trial['seconds'],
             ]),
+        });
+    }
+
+    /**
+     * Switch the model of the connected AI service. The key stays; the
+     * new model is tried on the sample receipt before it replaces the old one.
+     */
+    public function aiModel(Request $request, CurrentLabel $currentLabel): RedirectResponse
+    {
+        $label = $this->label($currentLabel);
+        abort_unless(AiConnection::isConfigured($label), 404);
+
+        $model = $request->validate(['model' => ['required', 'string', 'max:255']])['model'];
+
+        try {
+            $trial = SampleReceipt::isAvailable() ? AiConnection::trial((string) $label->ai_provider, (string) $label->ai_key, $label->ai_endpoint, $model) : null;
+
+            if ($trial === null) {
+                AiConnection::prove((string) $label->ai_provider, (string) $label->ai_key, $label->ai_endpoint, $model);
+            }
+        } catch (RuntimeException $exception) {
+            throw ValidationException::withMessages(['model' => __('This model could not read the sample receipt: :error', ['error' => $exception->getMessage()])]);
+        }
+
+        $label->update(['ai_model' => $model, 'ai_trial' => $trial === null ? null : [...$trial, 'at' => now()->toIso8601String()]]);
+
+        return $this->saved(match (true) {
+            $trial === null => __('Model changed.'),
+            $trial['missed'] === [] => __('Model changed. It read the sample receipt correctly in :seconds seconds.', ['seconds' => $trial['seconds']]),
+            default => __('Model changed, but it got :fields wrong on the sample receipt (:seconds seconds).', ['fields' => implode(', ', $trial['missed']), 'seconds' => $trial['seconds']]),
         });
     }
 

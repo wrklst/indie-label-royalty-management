@@ -93,6 +93,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('settings/connections', [ConnectionsController::class, 'edit'])->name('connections.edit');
             Route::put('settings/connections/search', [ConnectionsController::class, 'search'])->name('connections.search');
             Route::put('settings/connections/ai', [ConnectionsController::class, 'ai'])->name('connections.ai');
+            Route::put('settings/connections/ai/model', [ConnectionsController::class, 'aiModel'])->name('connections.ai.model');
             Route::put('settings/connections/storage', [ConnectionsController::class, 'storage'])->name('connections.storage');
             Route::delete('settings/connections/search', [ConnectionsController::class, 'destroySearch'])->name('connections.search.destroy');
             Route::delete('settings/connections/ai', [ConnectionsController::class, 'destroyAi'])->name('connections.ai.destroy');

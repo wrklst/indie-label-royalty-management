@@ -292,7 +292,7 @@ export default function Releases({
                                                 {release.contract.name}
                                             </RecordLink>
                                         ) : (
-                                            <Badge variant="outline">
+                                            <Badge variant="warning">
                                                 none
                                             </Badge>
                                         )}

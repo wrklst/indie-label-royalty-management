@@ -125,7 +125,7 @@ export default function Team({
                                 <Badge
                                     variant={
                                         member.role === 'admin'
-                                            ? 'secondary'
+                                            ? 'info'
                                             : 'outline'
                                     }
                                 >

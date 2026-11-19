@@ -147,7 +147,7 @@ function OverviewSection({ overview }: { overview: Overview }) {
                                         <span className="flex items-center gap-2">
                                             {ledger.name}
                                             {ledger.unrecouped && (
-                                                <Badge variant="destructive">
+                                                <Badge variant="warning">
                                                     Unrecouped
                                                 </Badge>
                                             )}

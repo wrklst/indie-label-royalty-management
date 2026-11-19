@@ -167,7 +167,7 @@ export default function Contracts({
                                                     From child contracts
                                                 </span>
                                             ) : contract.splits.length === 0 ? (
-                                                <Badge variant="outline">
+                                                <Badge variant="warning">
                                                     no splits
                                                 </Badge>
                                             ) : (

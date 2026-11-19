@@ -347,8 +347,11 @@ export default function Transactions({
                                         <Badge
                                             variant={
                                                 transaction.type === 'income'
-                                                    ? 'secondary'
-                                                    : 'outline'
+                                                    ? 'success'
+                                                    : transaction.type ===
+                                                        'transfer'
+                                                      ? 'info'
+                                                      : 'outline'
                                             }
                                             className="capitalize"
                                         >

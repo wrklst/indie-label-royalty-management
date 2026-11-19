@@ -61,6 +61,10 @@ Names, prices and descriptions come from [models.dev](https://models.dev), a pub
 
 or which fields it got wrong, in which case another model may read better. A model that cannot take pictures fails this test and is not stored; the message says what the service answered.
 
+### Changing the model
+
+The card of a connected service has **Change model**. It opens the same list, with the model in use selected. **Test and switch** has the new model read the sample receipt; it replaces the old one only when it answers. The key and the rest of the connection stay as they are.
+
 ### What is sent
 
 - An image receipt is sent as the image.
@@ -79,7 +83,7 @@ Shows whether the label is connected to Bandcamp and links to the connection, wh
 
 This section is shown only to the **admin of the installation**: the first account that was created with `php artisan royalties:create-user`. It decides where the files of every label on the installation go.
 
-While nothing is connected here, the server's `.env` decides, as described in [Configuration](03-configuration.md), and the section says what is in use.
+While nothing is connected here, the server's `.env` decides, as described in [Configuration](03-configuration.md). The section then shows that connection as a card, marked as coming from the environment file, and offers **Connect a different storage**, which opens the form.
 
 | Choice                         | Meaning                                                                                        |
 | ------------------------------ | ---------------------------------------------------------------------------------------------- |

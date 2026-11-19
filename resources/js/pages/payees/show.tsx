@@ -258,7 +258,7 @@ export default function ShowPayee({
                                             {ledger.ledger_name}
                                             {ledger.unrecouped && (
                                                 <Badge
-                                                    variant="destructive"
+                                                    variant="warning"
                                                     className="ml-2"
                                                 >
                                                     Unrecouped
@@ -417,11 +417,11 @@ export default function ShowPayee({
                                         </TableCell>
                                         <TableCell>
                                             {statement.published ? (
-                                                <Badge variant="secondary">
+                                                <Badge variant="success">
                                                     Published
                                                 </Badge>
                                             ) : (
-                                                <Badge variant="outline">
+                                                <Badge variant="warning">
                                                     Draft
                                                 </Badge>
                                             )}

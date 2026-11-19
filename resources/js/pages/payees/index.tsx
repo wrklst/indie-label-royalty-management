@@ -210,7 +210,7 @@ export default function Payees({
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
                                         {payee.splits_count === 0 ? (
-                                            <Badge variant="outline">
+                                            <Badge variant="warning">
                                                 no splits
                                             </Badge>
                                         ) : (

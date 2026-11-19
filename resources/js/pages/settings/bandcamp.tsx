@@ -210,7 +210,7 @@ function SyncStatus({ connection }: { connection: Connection }) {
                             variant={
                                 connection.last_sync_status === 'failed'
                                     ? 'destructive'
-                                    : 'secondary'
+                                    : 'success'
                             }
                         >
                             {connection.last_sync_status === 'failed'

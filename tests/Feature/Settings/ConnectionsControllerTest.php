@@ -182,6 +182,39 @@ test('an AI connection that cannot work is not stored', function (array $input, 
     'no model' => [['model' => ''], [['data' => []]], fn () => ReceiptReader::fake([sampleReading()]), 'model', 'Name the model to read receipts with.'],
 ]);
 
+test('the model of a connected service is changed without entering the key again, after the new one read the sample receipt', function () {
+    ReceiptReader::fake([sampleReading()]);
+    $label = Label::factory()->create(['ai_provider' => 'infomaniak', 'ai_key' => 'example-key', 'ai_endpoint' => '12345', 'ai_model' => 'example/small-vision']);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('connections.ai.model'), ['model' => 'example/large-vision'])
+        ->assertSessionHasNoErrors();
+
+    ReceiptReader::assertPrompted(fn ($prompt): bool => $prompt->attachments->count() === 1);
+    $label->refresh();
+
+    expect($label->only(['ai_provider', 'ai_key', 'ai_endpoint', 'ai_model']))
+        ->toBe(['ai_provider' => 'infomaniak', 'ai_key' => 'example-key', 'ai_endpoint' => '12345', 'ai_model' => 'example/large-vision'])
+        ->and($label->ai_trial['missed'])->toBe([]);
+});
+
+test('a model that cannot read the sample receipt does not replace the one in use', function () {
+    ReceiptReader::fake(fn () => throw new RuntimeException('This model does not support image input.'));
+    $label = Label::factory()->create(['ai_provider' => 'infomaniak', 'ai_key' => 'example-key', 'ai_endpoint' => '12345', 'ai_model' => 'example/small-vision']);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('connections.ai.model'), ['model' => 'example/text-only'])
+        ->assertSessionHasErrors(['model' => 'This model could not read the sample receipt: This model does not support image input.']);
+
+    expect($label->refresh()->ai_model)->toBe('example/small-vision');
+});
+
+test('there is no model to change while no service is connected', function () {
+    $this->actingAs(labelAdmin(Label::factory()->create()))
+        ->put(route('connections.ai.model'), ['model' => 'example/large-vision'])
+        ->assertNotFound();
+});
+
 test('disconnecting the AI service deletes the stored key and what belongs to it', function () {
     $label = Label::factory()->create(['ai_provider' => 'infomaniak', 'ai_key' => 'example-key', 'ai_endpoint' => '12345', 'ai_model' => 'example/small-vision', 'ai_trial' => ['seconds' => 3.2, 'missed' => [], 'at' => '2026-11-19T12:00:00+00:00']]);
 

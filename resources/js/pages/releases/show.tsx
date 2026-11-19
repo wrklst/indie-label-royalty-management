@@ -131,9 +131,9 @@ type Props = {
 };
 
 const STATUS = {
-    todo: { label: 'To do', variant: 'destructive' },
-    in_progress: { label: 'In progress', variant: 'outline' },
-    done: { label: 'Done', variant: 'secondary' },
+    todo: { label: 'To do', variant: 'warning' },
+    in_progress: { label: 'In progress', variant: 'info' },
+    done: { label: 'Done', variant: 'success' },
 } as const;
 
 export function ReleaseStatusBadge({
@@ -707,7 +707,7 @@ export default function ShowRelease({
                                                 Release contract
                                             </span>
                                         ) : (
-                                            <Badge variant="outline">
+                                            <Badge variant="warning">
                                                 none
                                             </Badge>
                                         )}

@@ -882,7 +882,7 @@ export default function LabelCosts({
                                         {cost.source ?? cost.memo ?? '–'}
                                         {cost.recurring && (
                                             <Badge
-                                                variant="outline"
+                                                variant="info"
                                                 className="ml-2"
                                             >
                                                 recurring

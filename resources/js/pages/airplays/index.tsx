@@ -665,7 +665,7 @@ function Findings({ findings }: { findings: Finding[] }) {
                                 {finding.station ? (
                                     <Badge>{finding.station}</Badge>
                                 ) : finding.is_radio ? (
-                                    <Badge variant="secondary">
+                                    <Badge variant="success">
                                         Looks like radio
                                     </Badge>
                                 ) : (
@@ -1100,10 +1100,10 @@ export default function Airplays({
                                                 variant={
                                                     airplay.origin ===
                                                     'statement'
-                                                        ? 'default'
+                                                        ? 'success'
                                                         : airplay.origin ===
                                                             'search'
-                                                          ? 'secondary'
+                                                          ? 'info'
                                                           : 'outline'
                                                 }
                                             >
