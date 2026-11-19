@@ -1,11 +1,14 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, router } from '@inertiajs/react';
+import { X } from 'lucide-react';
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import ConnectionsController from '@/actions/App/Http/Controllers/Settings/ConnectionsController';
 import { CheckField, Field, SelectInput } from '@/components/field';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { date } from '@/lib/format';
 import { edit as editBandcamp } from '@/routes/bandcamp';
 import { edit } from '@/routes/connections';
 
@@ -18,18 +21,36 @@ type Service = {
     model: string | null;
 };
 
+type Model = {
+    id: string;
+    name: string;
+    description: string | null;
+    /** US dollars per million tokens. */
+    input_price: number;
+    output_price: number;
+    /** US dollars for about a hundred receipts. */
+    per_hundred: number;
+    fixed_format: boolean;
+    reasoning: boolean;
+    released: string | null;
+};
+
 type Props = {
     search: {
+        connected: boolean;
         login: string | null;
-        password_set: boolean;
         from_environment: boolean;
     };
     ai: {
-        provider: string | null;
-        key_set: boolean;
+        connected: boolean;
+        service: string | null;
+        key_hint: string | null;
+        endpoint_label: string | null;
         endpoint: string | null;
         model: string | null;
+        trial: { at: string; seconds: number; missed: string[] } | null;
         services: Service[];
+        catalogue: Record<string, Model[]>;
     };
     bandcamp: {
         connected: boolean;
@@ -42,339 +63,569 @@ type Props = {
         bucket: string | null;
         region: string | null;
         endpoint: string | null;
-        path_style: boolean;
-        key_set: boolean;
+        key_hint: string | null;
     } | null;
 };
 
-const stored = (isSet: boolean) =>
-    isSet ? 'Stored. Leave empty to keep it.' : undefined;
+const dollars = (amount: number) =>
+    `$${amount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/**
+ * A stored connection: what it is, with secrets cut down to a hint, and
+ * a cross to disconnect. A new one can be entered once it is gone.
+ */
+function ConnectionCard({
+    title,
+    facts,
+    note,
+    disconnect,
+    disconnectLabel,
+    confirm,
+}: {
+    title: string;
+    facts: [string, ReactNode][];
+    note?: ReactNode;
+    disconnect?: string;
+    disconnectLabel?: string;
+    confirm?: string;
+}) {
+    return (
+        <div
+            data-connection={title}
+            className="flex items-start justify-between gap-4 rounded-xl border bg-card p-4"
+        >
+            <div className="min-w-0 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{title}</span>
+                    <Badge variant="outline">Connected</Badge>
+                </div>
+                <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
+                    {facts.map(([label, value]) => (
+                        <div key={label} className="contents">
+                            <dt className="text-muted-foreground">{label}</dt>
+                            <dd className="min-w-0 wrap-anywhere">{value}</dd>
+                        </div>
+                    ))}
+                </dl>
+                {note && (
+                    <p className="text-xs text-muted-foreground">{note}</p>
+                )}
+            </div>
+            {disconnect && (
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    title={disconnectLabel}
+                    aria-label={disconnectLabel}
+                    onClick={() =>
+                        window.confirm(confirm) &&
+                        router.delete(disconnect, { preserveScroll: true })
+                    }
+                >
+                    <X />
+                </Button>
+            )}
+        </div>
+    );
+}
 
 function WebSearch({ search }: { search: Props['search'] }) {
     return (
-        <section className="space-y-6" aria-labelledby="web-search">
+        <section className="space-y-6">
             <Heading
                 variant="small"
                 title="Web search"
-                description="The airplay research looks tracks up on Google through DataForSEO. Its API login and password are in your DataForSEO dashboard under API Access; every search is billed to that account."
+                description="The airplay research looks tracks up on Google through DataForSEO. Every search is billed to your DataForSEO account."
             />
-            {search.from_environment && (
-                <p className="text-sm text-muted-foreground">
-                    A login from the server&apos;s environment file is in use.
-                    Enter one here to use your own instead.
-                </p>
+            {search.connected ? (
+                <ConnectionCard
+                    title="DataForSEO"
+                    facts={[
+                        ['API login', search.login],
+                        ['API password', 'stored, not shown'],
+                    ]}
+                    disconnect={ConnectionsController.destroySearch.url()}
+                    disconnectLabel="Disconnect DataForSEO"
+                    confirm="Disconnect DataForSEO? The stored login is deleted. To connect again you enter it anew."
+                />
+            ) : (
+                <>
+                    {search.from_environment && (
+                        <p className="text-sm text-muted-foreground">
+                            A login from the server&apos;s environment file is
+                            in use. Connect your own here to use that instead.
+                        </p>
+                    )}
+                    <Form
+                        {...ConnectionsController.search.form()}
+                        options={{ preserveScroll: true }}
+                        className="grid gap-6"
+                    >
+                        {({ errors, processing }) => (
+                            <>
+                                <Field
+                                    label="DataForSEO API login"
+                                    htmlFor="search_login"
+                                    error={errors.login}
+                                    hint="In your DataForSEO dashboard under API Access."
+                                    required
+                                >
+                                    <Input
+                                        id="search_login"
+                                        name="login"
+                                        autoComplete="off"
+                                        required
+                                    />
+                                </Field>
+                                <Field
+                                    label="DataForSEO API password"
+                                    htmlFor="search_password"
+                                    error={errors.password}
+                                    hint="The API password shown there, not the one you sign in to their website with."
+                                    required
+                                >
+                                    <Input
+                                        id="search_password"
+                                        name="password"
+                                        type="password"
+                                        autoComplete="new-password"
+                                        required
+                                    />
+                                </Field>
+                                <div>
+                                    <Button disabled={processing}>
+                                        {processing
+                                            ? 'Testing the login…'
+                                            : 'Test and connect'}
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                    </Form>
+                </>
             )}
-            <Form
-                {...ConnectionsController.search.form()}
-                options={{ preserveScroll: true }}
-                resetOnSuccess={['password']}
-                className="grid gap-6"
-            >
-                {({ errors, processing }) => (
-                    <>
-                        <Field
-                            label="DataForSEO API login"
-                            htmlFor="search_login"
-                            error={errors.login}
-                            hint="Leave empty to remove the login."
-                        >
-                            <Input
-                                id="search_login"
-                                name="login"
-                                defaultValue={search.login ?? ''}
-                                autoComplete="off"
-                            />
-                        </Field>
-                        <Field
-                            label="DataForSEO API password"
-                            htmlFor="search_password"
-                            error={errors.password}
-                            hint={stored(search.password_set)}
-                        >
-                            <Input
-                                id="search_password"
-                                name="password"
-                                type="password"
-                                autoComplete="new-password"
-                            />
-                        </Field>
-                        <div>
-                            <Button disabled={processing}>
-                                Save web search
-                            </Button>
-                        </div>
-                    </>
-                )}
-            </Form>
         </section>
     );
 }
 
+/**
+ * The models of a service that can read a receipt, with what they cost
+ * and what to expect, or a free field when the catalogue knows none.
+ */
+function ModelPicker({
+    service,
+    models,
+    error,
+}: {
+    service: Service;
+    models: Model[];
+    error?: string;
+}) {
+    // The cheapest model that answers in a fixed format is the sensible start.
+    const recommended =
+        models.find((model) => model.fixed_format) ?? models[0] ?? null;
+    const [chosen, setChosen] = useState(recommended?.id ?? 'other');
+    const model = models.find((entry) => entry.id === chosen);
+
+    if (models.length === 0) {
+        return (
+            <Field
+                label="Model"
+                htmlFor="ai_model"
+                error={error}
+                hint={
+                    service.model
+                        ? `Leave empty to use ${service.model}.`
+                        : 'The exact name of a model that understands images, as the service writes it.'
+                }
+                required={!service.model}
+            >
+                <Input
+                    id="ai_model"
+                    name="model"
+                    autoComplete="off"
+                    required={!service.model}
+                />
+            </Field>
+        );
+    }
+
+    return (
+        <>
+            <Field
+                label="Model"
+                htmlFor="ai_model"
+                error={error}
+                hint="Only models that take pictures are listed, cheapest first. Prices are the public list prices in US dollars; a receipt is counted as about 3,000 tokens in and 150 out."
+                required
+            >
+                <SelectInput
+                    id="ai_model"
+                    name={chosen === 'other' ? undefined : 'model'}
+                    value={chosen}
+                    onChange={(event) => setChosen(event.target.value)}
+                >
+                    {models.map((entry) => (
+                        <option key={entry.id} value={entry.id}>
+                            {entry.name} · about {dollars(entry.per_hundred)}{' '}
+                            per 100 receipts
+                            {entry.id === recommended?.id
+                                ? ' · recommended'
+                                : ''}
+                        </option>
+                    ))}
+                    <option value="other">Another model…</option>
+                </SelectInput>
+            </Field>
+            {model && (
+                <div
+                    data-model-details
+                    className="space-y-1 rounded-lg border bg-muted/40 p-3 text-sm"
+                >
+                    <p className="font-medium">{model.name}</p>
+                    {model.description && <p>{model.description}.</p>}
+                    <ul className="list-disc space-y-0.5 ps-5 text-muted-foreground">
+                        <li>
+                            {dollars(model.input_price)} per million tokens in,{' '}
+                            {dollars(model.output_price)} out: about{' '}
+                            {dollars(model.per_hundred)} per 100 receipts.
+                        </li>
+                        <li>
+                            {model.fixed_format
+                                ? 'Answers in a fixed format, so the fields arrive reliably.'
+                                : 'A fixed answer format is not confirmed for it: now and then a receipt may have to be read again.'}
+                        </li>
+                        <li>
+                            {model.reasoning
+                                ? 'Works a document through before answering: slower, more careful with unclear receipts.'
+                                : 'Answers directly: fast, best on clean invoices.'}
+                        </li>
+                        {model.released && (
+                            <li>Released {date(model.released)}.</li>
+                        )}
+                    </ul>
+                    <p className="text-xs text-muted-foreground">
+                        These are the catalogue&apos;s figures. Connecting has
+                        the model read a sample receipt and tells you how it did
+                        and how long it took.
+                    </p>
+                </div>
+            )}
+            {chosen === 'other' && (
+                <Field
+                    label="Model name"
+                    htmlFor="ai_model_other"
+                    hint="Exactly as the service writes it."
+                    required
+                >
+                    <Input
+                        id="ai_model_other"
+                        name="model"
+                        autoComplete="off"
+                        required
+                    />
+                </Field>
+            )}
+        </>
+    );
+}
+
 function ReceiptReading({ ai }: { ai: Props['ai'] }) {
-    const [provider, setProvider] = useState(ai.provider ?? '');
+    const [provider, setProvider] = useState('');
     const service = ai.services.find((entry) => entry.value === provider);
 
     return (
-        <section className="space-y-6" aria-labelledby="receipt-reading">
+        <section className="space-y-6">
             <Heading
                 variant="small"
                 title="Receipt reading"
                 description="An AI service reads vendor, date, amount and category off receipts you upload under Label costs. The receipts are sent to the service you choose and billed to your account there. Without a service, receipts are stored and booked by hand."
             />
-            <Form
-                {...ConnectionsController.ai.form()}
-                options={{ preserveScroll: true }}
-                resetOnSuccess={['key']}
-                className="grid gap-6"
-            >
-                {({ errors, processing }) => (
-                    <>
-                        <Field
-                            label="AI service"
-                            htmlFor="ai_provider"
-                            error={errors.provider}
-                        >
-                            <SelectInput
-                                id="ai_provider"
-                                name="provider"
-                                value={provider}
-                                onChange={(event) =>
-                                    setProvider(event.target.value)
-                                }
+            {ai.connected ? (
+                <ConnectionCard
+                    title={ai.service ?? 'AI service'}
+                    facts={[
+                        ['Model', ai.model ?? '–'],
+                        ...(ai.endpoint_label
+                            ? ([[ai.endpoint_label, ai.endpoint ?? '–']] as [
+                                  string,
+                                  ReactNode,
+                              ][])
+                            : []),
+                        ['API key', ai.key_hint ?? 'stored'],
+                    ]}
+                    note={
+                        ai.trial
+                            ? ai.trial.missed.length === 0
+                                ? `Tested ${date(ai.trial.at.slice(0, 10))}: read the sample receipt correctly in ${ai.trial.seconds} seconds.`
+                                : `Tested ${date(ai.trial.at.slice(0, 10))}: got ${ai.trial.missed.join(', ')} wrong on the sample receipt (${ai.trial.seconds} seconds). Another model may read better.`
+                            : undefined
+                    }
+                    disconnect={ConnectionsController.destroyAi.url()}
+                    disconnectLabel={`Disconnect ${ai.service ?? 'the AI service'}`}
+                    confirm="Disconnect the AI service? The stored key is deleted and receipts are no longer read. To connect again you enter the key anew."
+                />
+            ) : (
+                <Form
+                    {...ConnectionsController.ai.form()}
+                    options={{ preserveScroll: true }}
+                    className="grid gap-6"
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <Field
+                                label="AI service"
+                                htmlFor="ai_provider"
+                                error={errors.provider}
+                                required
                             >
-                                <option value="">
-                                    None: do not read receipts
-                                </option>
-                                {ai.services.map((entry) => (
-                                    <option
-                                        key={entry.value}
-                                        value={entry.value}
-                                    >
-                                        {entry.name}
-                                    </option>
-                                ))}
-                            </SelectInput>
-                        </Field>
-                        {service && (
-                            <>
-                                <Field
-                                    label="API key"
-                                    htmlFor="ai_key"
-                                    error={errors.key}
-                                    hint={
-                                        provider === ai.provider
-                                            ? stored(ai.key_set)
-                                            : provider === 'infomaniak'
-                                              ? 'An API token from the Infomaniak Manager with the scope for AI Tools.'
-                                              : undefined
+                                <SelectInput
+                                    id="ai_provider"
+                                    name="provider"
+                                    value={provider}
+                                    onChange={(event) =>
+                                        setProvider(event.target.value)
                                     }
+                                    required
                                 >
-                                    <Input
-                                        id="ai_key"
-                                        name="key"
-                                        type="password"
-                                        autoComplete="new-password"
-                                    />
-                                </Field>
-                                {service.endpoint && (
+                                    <option value="">Choose a service…</option>
+                                    {ai.services.map((entry) => (
+                                        <option
+                                            key={entry.value}
+                                            value={entry.value}
+                                        >
+                                            {entry.name}
+                                        </option>
+                                    ))}
+                                </SelectInput>
+                            </Field>
+                            {service && (
+                                <>
                                     <Field
-                                        label={service.endpoint}
-                                        htmlFor="ai_endpoint"
-                                        error={errors.endpoint}
+                                        label="API key"
+                                        htmlFor="ai_key"
+                                        error={errors.key}
                                         hint={
                                             provider === 'infomaniak'
-                                                ? 'The number of your AI Tools product, shown in the Infomaniak Manager under AI Tools.'
-                                                : 'The address the service answers at, up to and without /chat/completions.'
+                                                ? 'An API token from the Infomaniak Manager with access to AI Tools.'
+                                                : undefined
                                         }
                                         required
                                     >
                                         <Input
-                                            id="ai_endpoint"
-                                            name="endpoint"
-                                            defaultValue={
-                                                provider === ai.provider
-                                                    ? (ai.endpoint ?? '')
-                                                    : ''
-                                            }
-                                            autoComplete="off"
+                                            id="ai_key"
+                                            name="key"
+                                            type="password"
+                                            autoComplete="new-password"
                                             required
                                         />
                                     </Field>
-                                )}
-                                <Field
-                                    label="Model"
-                                    htmlFor="ai_model"
-                                    error={errors.model}
-                                    hint={
-                                        service.model
-                                            ? `Leave empty to use ${service.model}.`
-                                            : 'The exact name of a model that understands images, as the service writes it. Saving asks the model one short question to prove it answers.'
-                                    }
-                                    required={!service.model}
-                                >
-                                    <Input
-                                        id="ai_model"
-                                        name="model"
-                                        defaultValue={
-                                            provider === ai.provider
-                                                ? (ai.model ?? '')
-                                                : ''
-                                        }
-                                        autoComplete="off"
-                                        required={!service.model}
+                                    {service.endpoint && (
+                                        <Field
+                                            label={service.endpoint}
+                                            htmlFor="ai_endpoint"
+                                            error={errors.endpoint}
+                                            hint={
+                                                provider === 'infomaniak'
+                                                    ? 'The number of your AI Tools product, shown in the Infomaniak Manager under AI Tools.'
+                                                    : 'The address the service answers at, up to and without /chat/completions.'
+                                            }
+                                            required
+                                        >
+                                            <Input
+                                                id="ai_endpoint"
+                                                name="endpoint"
+                                                autoComplete="off"
+                                                required
+                                            />
+                                        </Field>
+                                    )}
+                                    <ModelPicker
+                                        key={provider}
+                                        service={service}
+                                        models={ai.catalogue[provider] ?? []}
+                                        error={errors.model}
                                     />
-                                </Field>
-                            </>
-                        )}
-                        <div>
-                            <Button disabled={processing}>
-                                Save receipt reading
-                            </Button>
-                        </div>
-                    </>
-                )}
-            </Form>
+                                    <div>
+                                        <Button disabled={processing}>
+                                            {processing
+                                                ? 'Reading a sample receipt…'
+                                                : 'Test and connect'}
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                        </>
+                    )}
+                </Form>
+            )}
         </section>
     );
 }
 
 function Storage({ storage }: { storage: NonNullable<Props['storage']> }) {
-    const [disk, setDisk] = useState(
-        storage.from_environment ? 'environment' : storage.disk,
-    );
+    const [disk, setDisk] = useState('s3');
 
     return (
-        <section className="space-y-6" aria-labelledby="file-storage">
+        <section className="space-y-6">
             <Heading
                 variant="small"
                 title="File storage"
                 description="Where release files, receipts and statement files of every label on this installation are stored. Only you, as the installation's admin, see this section."
             />
-            <p className="text-sm text-muted-foreground">
-                In use now:{' '}
-                <Badge variant="outline">
-                    {storage.disk === 's3'
-                        ? `bucket ${storage.bucket ?? ''}`
-                        : 'this server'}
-                </Badge>{' '}
-                {storage.from_environment && 'as set in the environment file.'}
-            </p>
-            <Form
-                {...ConnectionsController.storage.form()}
-                options={{ preserveScroll: true }}
-                resetOnSuccess={['key', 'secret']}
-                className="grid gap-6"
-            >
-                {({ errors, processing }) => (
-                    <>
-                        <Field
-                            label="Store new files"
-                            htmlFor="storage_disk"
-                            error={errors.disk}
-                            hint="Changing this affects new files only. Files stored before stay where they are; move them with php artisan royalties:move-files."
-                        >
-                            <SelectInput
-                                id="storage_disk"
-                                name="disk"
-                                value={disk}
-                                onChange={(event) =>
-                                    setDisk(event.target.value)
-                                }
+            {storage.from_environment ? (
+                <p className="text-sm text-muted-foreground">
+                    In use now:{' '}
+                    <Badge variant="outline">
+                        {storage.disk === 's3'
+                            ? `bucket ${storage.bucket ?? ''}`
+                            : 'this server'}
+                    </Badge>{' '}
+                    as set in the server&apos;s environment file. Connect a
+                    storage here to use that instead.
+                </p>
+            ) : (
+                <ConnectionCard
+                    title={
+                        storage.disk === 's3'
+                            ? 'S3-compatible bucket'
+                            : 'This server'
+                    }
+                    facts={
+                        storage.disk === 's3'
+                            ? [
+                                  ['Bucket', storage.bucket ?? '–'],
+                                  ['Endpoint', storage.endpoint ?? 'Amazon S3'],
+                                  ['Region', storage.region ?? '–'],
+                                  ['Access key', storage.key_hint ?? 'stored'],
+                              ]
+                            : [['New files', 'are stored on this server']]
+                    }
+                    note="Applies to new files. Files stored before stay where they are; move them with php artisan royalties:move-files."
+                    disconnect={ConnectionsController.destroyStorage.url()}
+                    disconnectLabel="Disconnect this file storage"
+                    confirm="Disconnect this file storage? The server's environment file decides again where new files go. Files already stored are not touched, but files in this bucket are unreachable while another storage is in use."
+                />
+            )}
+            {storage.from_environment && (
+                <Form
+                    {...ConnectionsController.storage.form()}
+                    options={{ preserveScroll: true }}
+                    className="grid gap-6"
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <Field
+                                label="Store new files"
+                                htmlFor="storage_disk"
+                                error={errors.disk}
+                                hint="Applies to new files only. Files stored before stay where they are; move them with php artisan royalties:move-files."
                             >
-                                <option value="environment">
-                                    As the environment file says
-                                </option>
-                                <option value="local">On this server</option>
-                                <option value="s3">
-                                    In an S3-compatible bucket
-                                </option>
-                            </SelectInput>
-                        </Field>
-                        {disk === 's3' && (
-                            <>
-                                <Field
-                                    label="Bucket"
-                                    htmlFor="storage_bucket"
-                                    error={errors.bucket}
-                                    hint="Saving writes, reads and deletes a small test file in it. Pointing at a different bucket than the one in use makes the files in the old one unreachable until they are copied over."
-                                    required
+                                <SelectInput
+                                    id="storage_disk"
+                                    name="disk"
+                                    value={disk}
+                                    onChange={(event) =>
+                                        setDisk(event.target.value)
+                                    }
                                 >
-                                    <Input
-                                        id="storage_bucket"
-                                        name="bucket"
-                                        defaultValue={storage.bucket ?? ''}
-                                        autoComplete="off"
+                                    <option value="s3">
+                                        In an S3-compatible bucket
+                                    </option>
+                                    <option value="local">
+                                        On this server
+                                    </option>
+                                </SelectInput>
+                            </Field>
+                            {disk === 's3' && (
+                                <>
+                                    <Field
+                                        label="Bucket"
+                                        htmlFor="storage_bucket"
+                                        error={errors.bucket}
+                                        hint="A different bucket than the one in use makes the files in the old one unreachable until they are copied over. Copy first."
                                         required
+                                    >
+                                        <Input
+                                            id="storage_bucket"
+                                            name="bucket"
+                                            autoComplete="off"
+                                            required
+                                        />
+                                    </Field>
+                                    <Field
+                                        label="Endpoint"
+                                        htmlFor="storage_endpoint"
+                                        error={errors.endpoint}
+                                        hint="For every provider other than Amazon, e.g. https://fsn1.your-objectstorage.com."
+                                    >
+                                        <Input
+                                            id="storage_endpoint"
+                                            name="endpoint"
+                                            type="url"
+                                            autoComplete="off"
+                                        />
+                                    </Field>
+                                    <Field
+                                        label="Region"
+                                        htmlFor="storage_region"
+                                        error={errors.region}
+                                    >
+                                        <Input
+                                            id="storage_region"
+                                            name="region"
+                                            autoComplete="off"
+                                        />
+                                    </Field>
+                                    <Field
+                                        label="Access key"
+                                        htmlFor="storage_key"
+                                        error={errors.key}
+                                        required
+                                    >
+                                        <Input
+                                            id="storage_key"
+                                            name="key"
+                                            autoComplete="off"
+                                            required
+                                        />
+                                    </Field>
+                                    <Field
+                                        label="Secret key"
+                                        htmlFor="storage_secret"
+                                        error={errors.secret}
+                                        required
+                                    >
+                                        <Input
+                                            id="storage_secret"
+                                            name="secret"
+                                            type="password"
+                                            autoComplete="new-password"
+                                            required
+                                        />
+                                    </Field>
+                                    <CheckField
+                                        name="path_style"
+                                        value="1"
+                                        label="Path-style addresses"
+                                        hint="Needed by some self-hosted storage such as MinIO."
                                     />
-                                </Field>
-                                <Field
-                                    label="Endpoint"
-                                    htmlFor="storage_endpoint"
-                                    error={errors.endpoint}
-                                    hint="For every provider other than Amazon, e.g. https://fsn1.your-objectstorage.com."
-                                >
-                                    <Input
-                                        id="storage_endpoint"
-                                        name="endpoint"
-                                        type="url"
-                                        defaultValue={storage.endpoint ?? ''}
-                                        autoComplete="off"
-                                    />
-                                </Field>
-                                <Field
-                                    label="Region"
-                                    htmlFor="storage_region"
-                                    error={errors.region}
-                                >
-                                    <Input
-                                        id="storage_region"
-                                        name="region"
-                                        defaultValue={storage.region ?? ''}
-                                        autoComplete="off"
-                                    />
-                                </Field>
-                                <Field
-                                    label="Access key"
-                                    htmlFor="storage_key"
-                                    error={errors.key}
-                                    hint={stored(storage.key_set)}
-                                >
-                                    <Input
-                                        id="storage_key"
-                                        name="key"
-                                        autoComplete="off"
-                                    />
-                                </Field>
-                                <Field
-                                    label="Secret key"
-                                    htmlFor="storage_secret"
-                                    error={errors.secret}
-                                    hint={stored(storage.key_set)}
-                                >
-                                    <Input
-                                        id="storage_secret"
-                                        name="secret"
-                                        type="password"
-                                        autoComplete="new-password"
-                                    />
-                                </Field>
-                                <CheckField
-                                    name="path_style"
-                                    value="1"
-                                    defaultChecked={storage.path_style}
-                                    label="Path-style addresses"
-                                    hint="Needed by some self-hosted storage such as MinIO."
-                                />
-                            </>
-                        )}
-                        <div>
-                            <Button disabled={processing}>
-                                Save file storage
-                            </Button>
-                        </div>
-                    </>
-                )}
-            </Form>
+                                </>
+                            )}
+                            <div>
+                                <Button disabled={processing}>
+                                    {processing
+                                        ? 'Testing the storage…'
+                                        : disk === 's3'
+                                          ? 'Test and connect'
+                                          : 'Use this server'}
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </Form>
+            )}
         </section>
     );
 }
@@ -389,29 +640,52 @@ export default function Connections({ search, ai, bandcamp, storage }: Props) {
                 <WebSearch search={search} />
                 <ReceiptReading ai={ai} />
 
-                <section className="space-y-4">
+                <section className="space-y-6">
                     <Heading
                         variant="small"
                         title="Bandcamp"
                         description="Fetches your Bandcamp sales every week instead of you uploading sales reports."
                     />
-                    <p className="flex flex-wrap items-center gap-3 text-sm">
-                        <Badge variant="outline">
-                            {bandcamp.connected
-                                ? bandcamp.enabled
-                                    ? 'Connected, weekly sync on'
-                                    : 'Connected, weekly sync off'
-                                : 'Not connected'}
-                        </Badge>
-                        <Link
-                            href={editBandcamp()}
-                            className="underline underline-offset-4"
-                        >
-                            {bandcamp.connected
-                                ? 'Open the Bandcamp connection'
-                                : 'Connect your Bandcamp account'}
-                        </Link>
-                    </p>
+                    {bandcamp.connected ? (
+                        <ConnectionCard
+                            title="Bandcamp"
+                            facts={[
+                                [
+                                    'Weekly sync',
+                                    bandcamp.enabled ? 'on' : 'off',
+                                ],
+                                [
+                                    'Last sync',
+                                    bandcamp.last_sync_at
+                                        ? date(
+                                              bandcamp.last_sync_at.slice(
+                                                  0,
+                                                  10,
+                                              ),
+                                          )
+                                        : 'not yet',
+                                ],
+                            ]}
+                            note={
+                                <Link
+                                    href={editBandcamp()}
+                                    className="underline underline-offset-4"
+                                >
+                                    Account, start date, sync and disconnect
+                                </Link>
+                            }
+                        />
+                    ) : (
+                        <p className="flex flex-wrap items-center gap-3 text-sm">
+                            <Badge variant="outline">Not connected</Badge>
+                            <Link
+                                href={editBandcamp()}
+                                className="underline underline-offset-4"
+                            >
+                                Connect your Bandcamp account
+                            </Link>
+                        </p>
+                    )}
                 </section>
 
                 {storage && <Storage storage={storage} />}

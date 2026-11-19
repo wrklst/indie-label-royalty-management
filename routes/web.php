@@ -94,6 +94,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('settings/connections/search', [ConnectionsController::class, 'search'])->name('connections.search');
             Route::put('settings/connections/ai', [ConnectionsController::class, 'ai'])->name('connections.ai');
             Route::put('settings/connections/storage', [ConnectionsController::class, 'storage'])->name('connections.storage');
+            Route::delete('settings/connections/search', [ConnectionsController::class, 'destroySearch'])->name('connections.search.destroy');
+            Route::delete('settings/connections/ai', [ConnectionsController::class, 'destroyAi'])->name('connections.ai.destroy');
+            Route::delete('settings/connections/storage', [ConnectionsController::class, 'destroyStorage'])->name('connections.storage.destroy');
 
             Route::get('settings/team', [TeamController::class, 'index'])->name('team.index');
             Route::post('settings/team', [TeamController::class, 'store'])->middleware('throttle:30,60')->name('team.store');

@@ -2,7 +2,12 @@
 
 The outside services a label works with are set up under **Settings → Connections**, by an admin of the label: the web search for the airplay research, the AI service that reads receipts, and Bandcamp. The installation's own admin also chooses the file storage there. Nothing on this page needs access to the server.
 
-Every secret you enter is stored encrypted and is never shown again. An empty secret field keeps the stored one.
+## How every connection works
+
+- **Not connected**: a form. **Test and connect** tests what you entered against the service and stores it only when the test passes.
+- **Connected**: a card that names the service and shows a hint of what is stored, such as the last four characters of a key. The cross on the card disconnects: the stored secrets are deleted, and the form comes back for a new connection.
+
+Secrets are stored encrypted and never shown again. To change a connection, disconnect it and connect anew.
 
 ## Web search
 
@@ -10,9 +15,9 @@ The airplay research looks tracks up on Google through [DataForSEO](https://data
 
 1. Create an account at DataForSEO and add credit.
 2. In their dashboard open **API Access**. It shows an **API login** and an **API password**. The API password is not the one you sign in to their website with.
-3. Enter both under **Web search** and choose **Save web search**.
+3. Enter both under **Web search** and choose **Test and connect**.
 
-The login is checked with DataForSEO when you save; one it refuses is not stored. Clear the login field and save to remove the connection.
+The login is checked with DataForSEO; one it refuses is not stored.
 
 Which countries the research searches in is a setting of the label: **Settings → Label → Airplay research countries**. What the research does and costs is described in [Airplay](23-airplay.md).
 
@@ -20,11 +25,11 @@ Which countries the research searches in is a setting of the label: **Settings �
 
 An AI service can read vendor, date, amount and category off the receipts you upload under **Royalties → Label costs**. Without a service, receipts are stored and booked by hand.
 
-| Service                                                   | What you enter                                    |
-| --------------------------------------------------------- | ------------------------------------------------- |
-| **Infomaniak AI Tools**                                   | An API token, your **Product ID** and a **Model** |
-| **OpenAI**, **Anthropic**, **Mistral**, **Google Gemini** | An API key. The model is optional.                |
-| **Other OpenAI-compatible service**                       | An API key, the **Base URL** and a **Model**      |
+| Service                                                   | What you enter                                           |
+| --------------------------------------------------------- | -------------------------------------------------------- |
+| **Infomaniak AI Tools**                                   | An API token, your **Product ID** and a **Model**        |
+| **OpenAI**, **Anthropic**, **Mistral**, **Google Gemini** | An API key and a **Model**                               |
+| **Other OpenAI-compatible service**                       | An API key, the **Base URL** and the name of a **Model** |
 
 ### Infomaniak
 
@@ -33,11 +38,28 @@ Infomaniak runs open models in Swiss data centres.
 1. In the Infomaniak Manager open **AI Tools** and note the number of your product: that is the **Product ID**.
 2. Create an **API token** in the Manager with access to AI Tools.
 3. Choose **Infomaniak AI Tools** as the service and enter the token and the product ID.
-4. Enter a **Model** that understands images, with its exact name as Infomaniak writes it, for example `mistralai/Mistral-Small-4-119B-2603` or `google/gemma-4-31B-it`. The names are on Infomaniak's list of open-source models.
+4. Choose a **Model** from the list.
 
-Saving checks the token and the product ID, then asks the chosen model one short question. The connection is stored only when the model answers. If it does not, the message says what Infomaniak answered.
+### Choosing a model
 
-> **Note:** The list of models a service returns can be incomplete, so it is shown as a hint only, never used to refuse a model.
+For Infomaniak, OpenAI, Anthropic, Mistral and Google Gemini the **Model** field is a list of the models that can read a receipt, that is, the ones that take pictures. It is ordered by price, and one is marked "recommended": the cheapest that answers in a fixed format.
+
+Choosing a model shows:
+
+- its description from the catalogue,
+- its list price per million tokens and what about a hundred receipts cost (a receipt is counted as 3,000 tokens in and 150 out),
+- whether it answers in a fixed format, so the fields arrive reliably,
+- whether it works a document through before answering (slower, more careful) or answers directly (fast).
+
+Names, prices and descriptions come from [models.dev](https://models.dev), a public catalogue, fetched once a day. Prices are list prices in US dollars and may differ from your own terms with the service. **Another model…** lets you type a name the list does not have. When the catalogue cannot be reached, the field is a plain text field.
+
+### The test
+
+**Test and connect** has the chosen model read an invented sample receipt, exactly as real receipts are read. The connection is stored only when the model answers. Afterwards the card says how it did:
+
+> Tested 19 Nov 2026: read the sample receipt correctly in 3.2 seconds.
+
+or which fields it got wrong, in which case another model may read better. A model that cannot take pictures fails this test and is not stored; the message says what the service answered.
 
 ### What is sent
 
@@ -45,7 +67,7 @@ Saving checks the token and the product ID, then asks the chosen model one short
 - A PDF is sent as its text. A scanned PDF, which has no text, is sent as a picture of its first page.
 - Nothing else is sent: no other data of the label goes to the service.
 
-Receipts are billed to your account with the service, per document read. Choose **None: do not read receipts** to remove the connection.
+Receipts are billed to your account with the service, per document read. The cross on the card disconnects the service; receipts are then stored unread.
 
 > **Note:** Reading PDFs needs the programs `pdftotext` and `pdftoppm` on the server (package `poppler-utils`). Images work without them.
 
@@ -57,13 +79,14 @@ Shows whether the label is connected to Bandcamp and links to the connection, wh
 
 This section is shown only to the **admin of the installation**: the first account that was created with `php artisan royalties:create-user`. It decides where the files of every label on the installation go.
 
-| Choice                           | Meaning                                                                                        |
-| -------------------------------- | ---------------------------------------------------------------------------------------------- |
-| **As the environment file says** | The server's `.env` decides, as described in [Configuration](03-configuration.md)              |
-| **On this server**               | New files go to the server's own disk                                                          |
-| **In an S3-compatible bucket**   | New files go to a bucket: Amazon S3, Hetzner Object Storage, Infomaniak, Backblaze B2, MinIO … |
+While nothing is connected here, the server's `.env` decides, as described in [Configuration](03-configuration.md), and the section says what is in use.
 
-For a bucket you enter its name, the endpoint (for every provider other than Amazon), the region, and the access key and secret key. Saving writes, reads and deletes a small test file in the bucket; a bucket that fails this is not stored.
+| Choice                         | Meaning                                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| **In an S3-compatible bucket** | New files go to a bucket: Amazon S3, Hetzner Object Storage, Infomaniak, Backblaze B2, MinIO … |
+| **On this server**             | New files go to the server's own disk                                                          |
+
+For a bucket you enter its name, the endpoint (for every provider other than Amazon), the region, and the access key and secret key. **Test and connect** writes, reads and deletes a small test file in the bucket; a bucket that fails this is not stored. The cross on the card hands the decision back to the environment file.
 
 Two things to know before changing it:
 

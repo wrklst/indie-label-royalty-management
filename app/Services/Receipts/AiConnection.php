@@ -2,9 +2,11 @@
 
 namespace App\Services\Receipts;
 
+use App\Ai\Agents\ReceiptReader;
 use App\Models\Label;
 use Illuminate\Support\Facades\Http;
 use Laravel\Ai\Ai;
+use Laravel\Ai\Files\Image;
 use Laravel\Ai\Providers\Provider;
 use RuntimeException;
 use Throwable;
@@ -118,6 +120,39 @@ class AiConnection
         } catch (Throwable $exception) {
             throw new RuntimeException(mb_substr($exception->getMessage(), 0, 300), previous: $exception);
         }
+    }
+
+    /**
+     * Have the chosen model read the sample receipt, as real receipts
+     * will be read. Proves that it takes pictures and answers in fields,
+     * and measures how long it takes.
+     *
+     * @return array{seconds: float, missed: list<string>}
+     *
+     * @throws RuntimeException with what the service answered
+     */
+    public static function trial(string $service, string $key, ?string $endpoint, ?string $model): array
+    {
+        $configuration = self::configuration($service, $key, $endpoint, $model)
+            ?? throw new RuntimeException('The connection is incomplete.');
+        $picture = SampleReceipt::picture();
+        $started = microtime(true);
+
+        try {
+            $read = (new ReceiptReader(config('royalties.categories.overhead')))->prompt(
+                'Read this receipt.',
+                [Image::fromPath($picture, 'image/png')],
+                provider: [Ai::build([...$configuration, 'name' => 'trial_'.md5(json_encode($configuration, JSON_THROW_ON_ERROR))])],
+                model: $model ?: self::SERVICES[$service]['model'],
+                timeout: 90,
+            )->toArray();
+        } catch (Throwable $exception) {
+            throw new RuntimeException(mb_substr($exception->getMessage(), 0, 300), previous: $exception);
+        } finally {
+            @unlink($picture);
+        }
+
+        return ['seconds' => round(microtime(true) - $started, 1), 'missed' => SampleReceipt::missed($read)];
     }
 
     /**

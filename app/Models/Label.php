@@ -30,11 +30,12 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property string|null $ai_key
  * @property string|null $ai_endpoint
  * @property string|null $ai_model
+ * @property array{at: string, seconds: float, missed: list<string>}|null $ai_trial
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Pivot&object{role: string, payee_id: int|null} $pivot Membership of the user when loaded through User::labels().
  */
-#[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings', 'royalty_tool_settings', 'airplay_markets', 'dataforseo_login', 'dataforseo_password', 'ai_provider', 'ai_key', 'ai_endpoint', 'ai_model'])]
+#[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings', 'royalty_tool_settings', 'airplay_markets', 'dataforseo_login', 'dataforseo_password', 'ai_provider', 'ai_key', 'ai_endpoint', 'ai_model', 'ai_trial'])]
 #[Hidden(['dataforseo_login', 'dataforseo_password', 'ai_key'])]
 class Label extends Model
 {
@@ -56,6 +57,7 @@ class Label extends Model
             'dataforseo_login' => 'encrypted',
             'dataforseo_password' => 'encrypted',
             'ai_key' => 'encrypted',
+            'ai_trial' => 'array',
         ];
     }
 
