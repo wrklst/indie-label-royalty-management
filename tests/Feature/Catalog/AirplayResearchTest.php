@@ -1,0 +1,262 @@
+<?php
+
+use App\Enums\AirplayOrigin;
+use App\Jobs\ResearchTrackAirplay;
+use App\Models\Airplay;
+use App\Models\AirplayFinding;
+use App\Models\Artist;
+use App\Models\Label;
+use App\Models\Release;
+use App\Models\Track;
+use App\Services\Airplay\AirplayResearch;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
+use Inertia\Testing\AssertableInertia as Assert;
+
+const RESEARCH_SERP_URL = 'https://api.dataforseo.com/v3/serp/google/organic/live/advanced';
+
+beforeEach(function () {
+    config(['services.dataforseo.login' => 'example-login', 'services.dataforseo.password' => 'example-password']);
+});
+
+/**
+ * Answer every search with the given organic results.
+ *
+ * @param  list<array{url: string, title?: string, description?: string, domain?: string}>  $results
+ */
+function fakeSearchResults(array $results): void
+{
+    Http::preventStrayRequests();
+    Http::fake([RESEARCH_SERP_URL => Http::response(['status_code' => 20000, 'tasks' => [['status_code' => 20000, 'result' => [[
+        'items' => array_map(fn (array $result): array => ['type' => 'organic', 'title' => 'Example Page', ...$result], $results),
+    ]]]]])]);
+}
+
+/**
+ * A track by "Example Artist" called "Example Track".
+ */
+function researchTrack(Label $label, array $attributes = []): Track
+{
+    return Track::factory()->create([
+        'label_id' => $label->id, 'name' => 'Example Track',
+        'artist_id' => Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']),
+        ...$attributes,
+    ]);
+}
+
+test('a research keeps pages that may show a play and leaves out shops and streaming services', function () {
+    $label = Label::factory()->create();
+    $track = researchTrack($label);
+    fakeSearchResults([
+        ['url' => 'https://radio.example.com/playlist', 'title' => 'Playlist of the morning show', 'domain' => 'radio.example.com'],
+        ['url' => 'https://blog.example.org/review', 'title' => 'A review', 'domain' => 'blog.example.org'],
+        ['url' => 'https://open.spotify.com/track/1', 'title' => 'Example Track', 'domain' => 'open.spotify.com'],
+    ]);
+
+    $found = app(AirplayResearch::class)->research($track);
+
+    expect($found)->toBe(2)
+        ->and(AirplayFinding::query()->orderBy('id')->get()->map->only(['label_id', 'track_id', 'status', 'is_radio', 'url', 'query'])->all())->toBe([
+            ['label_id' => $label->id, 'track_id' => $track->id, 'status' => 'new', 'is_radio' => true, 'url' => 'https://radio.example.com/playlist', 'query' => '"Example Artist" "Example Track" radio playlist'],
+            ['label_id' => $label->id, 'track_id' => $track->id, 'status' => 'new', 'is_radio' => false, 'url' => 'https://blog.example.org/review', 'query' => '"Example Artist" "Example Track" radio playlist'],
+        ])
+        ->and($track->refresh()->researched_at)->not->toBeNull();
+});
+
+test('a research also searches for each station a statement named and ties the findings to that play', function () {
+    $label = Label::factory()->create();
+    $track = researchTrack($label);
+    $airplay = Airplay::factory()->create(['label_id' => $label->id, 'track_id' => $track->id, 'station' => 'Example Radio']);
+    Http::preventStrayRequests();
+    Http::fake([RESEARCH_SERP_URL => fn (Request $request) => Http::response(['status_code' => 20000, 'tasks' => [['status_code' => 20000, 'result' => [[
+        'items' => str_ends_with($request[0]['keyword'], 'Example Radio')
+            ? [['type' => 'organic', 'title' => 'Programme', 'url' => 'https://example.com/programme', 'domain' => 'example.com']]
+            : [],
+    ]]]]])]);
+
+    app(AirplayResearch::class)->research($track);
+
+    expect(AirplayFinding::query()->sole()->only(['airplay_id', 'station', 'is_radio', 'query']))->toBe([
+        'airplay_id' => $airplay->id, 'station' => 'Example Radio', 'is_radio' => true, 'query' => '"Example Artist" "Example Track" Example Radio',
+    ]);
+    Http::assertSentCount(2);
+    Http::assertSent(fn (Request $request): bool => $request[0]['keyword'] === '"Example Artist" "Example Track" radio playlist' && $request[0]['depth'] === 30);
+});
+
+test('a page that was found before is not listed again, even after it was dismissed', function () {
+    $label = Label::factory()->create();
+    $track = researchTrack($label);
+    fakeSearchResults([['url' => 'https://radio.example.com/playlist', 'domain' => 'radio.example.com']]);
+
+    app(AirplayResearch::class)->research($track);
+    AirplayFinding::query()->sole()->update(['status' => AirplayFinding::DISMISSED]);
+    $found = app(AirplayResearch::class)->research($track);
+
+    expect($found)->toBe(0)
+        ->and(AirplayFinding::query()->sole()->status)->toBe('dismissed');
+});
+
+test('a track stays due when the search fails', function () {
+    $track = researchTrack(Label::factory()->create());
+    Http::preventStrayRequests();
+    Http::fake([RESEARCH_SERP_URL => Http::response(['status_code' => 40100, 'status_message' => 'You are not authorized.'], 401)]);
+
+    expect(fn () => (new ResearchTrackAirplay($track->id))->handle(app(AirplayResearch::class)))->toThrow(RuntimeException::class)
+        ->and($track->refresh()->researched_at)->toBeNull();
+});
+
+test('a research is queued for the chosen group of tracks', function (string $scope, array $expected) {
+    Queue::fake();
+    $label = Label::factory()->create();
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    $tracks = [
+        'never' => Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id]),
+        'old' => Track::factory()->create(['label_id' => $label->id, 'researched_at' => now()->subDays(32)]),
+        'recent' => Track::factory()->create(['label_id' => $label->id, 'researched_at' => now()->subDays(30)]),
+    ];
+    $foreign = Track::factory()->create();
+
+    $this->actingAs(labelAdmin($label))
+        ->post(route('airplays.research.store'), ['scope' => $scope, 'release_id' => $release->id, 'track_ids' => [$tracks['recent']->id, $foreign->id]])
+        ->assertSessionHasNoErrors();
+
+    Queue::assertPushed(ResearchTrackAirplay::class, count($expected));
+
+    foreach ($expected as $key) {
+        Queue::assertPushed(ResearchTrackAirplay::class, fn (ResearchTrackAirplay $job): bool => $job->trackId === $tracks[$key]->id);
+    }
+})->with([
+    'not researched in the last 31 days' => ['stale', ['never', 'old']],
+    'one release' => ['release', ['never']],
+    'selected tracks' => ['tracks', ['recent']],
+    'every track' => ['all', ['never', 'old', 'recent']],
+]);
+
+test('a research is not queued', function (Closure $arrange, array $input, string $message) {
+    Queue::fake();
+    $label = Label::factory()->create();
+    Track::factory()->create(['label_id' => $label->id, 'researched_at' => now()]);
+    $input = $arrange($input);
+
+    $this->actingAs(labelAdmin($label))
+        ->post(route('airplays.research.store'), $input)
+        ->assertSessionHasErrors(['scope' => $message]);
+
+    Queue::assertNothingPushed();
+})->with([
+    'when no track is due' => [fn (array $input) => $input, ['scope' => 'stale'], 'There are no tracks to research in this selection.'],
+    'when web search is not set up' => [
+        function (array $input) {
+            config(['services.dataforseo.password' => null]);
+
+            return $input;
+        },
+        ['scope' => 'all'],
+        'Web search is not set up: DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD are missing.',
+    ],
+]);
+
+test('the release of another label cannot be researched', function () {
+    Queue::fake();
+    $release = Release::factory()->create();
+    Track::factory()->create(['label_id' => $release->label_id, 'release_id' => $release->id]);
+
+    $this->actingAs(labelAdmin(Label::factory()->create()))
+        ->post(route('airplays.research.store'), ['scope' => 'release', 'release_id' => $release->id])
+        ->assertNotFound();
+
+    Queue::assertNothingPushed();
+});
+
+test('the airplay page lists new findings and how many tracks are due', function () {
+    $label = Label::factory()->create();
+    $track = Track::factory()->create(['label_id' => $label->id, 'name' => 'Example Track']);
+    $finding = AirplayFinding::factory()->create(['label_id' => $label->id, 'track_id' => $track->id]);
+    AirplayFinding::factory()->create(['label_id' => $label->id, 'track_id' => $track->id, 'status' => AirplayFinding::DISMISSED]);
+    AirplayFinding::factory()->create();
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('airplays.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('findings', 1)
+            ->where('findings.0.id', $finding->id)
+            ->where('findings.0.track', 'Example Track')
+            ->where('staleCount', 1)
+            ->where('staleDays', 31));
+});
+
+test('keeping a finding of a known play adds it to that play as a link found by search', function () {
+    $label = Label::factory()->create();
+    $track = Track::factory()->create(['label_id' => $label->id]);
+    $airplay = Airplay::factory()->create(['label_id' => $label->id, 'track_id' => $track->id, 'origin' => AirplayOrigin::Statement]);
+    $finding = AirplayFinding::factory()->create([
+        'label_id' => $label->id, 'track_id' => $track->id, 'airplay_id' => $airplay->id, 'url' => 'https://example.com/programme', 'title' => 'Programme',
+    ]);
+
+    $this->actingAs(labelAdmin($label))->post(route('airplay-findings.keep', $finding->id))->assertRedirect();
+
+    expect($airplay->refresh()->links)->toBe([['url' => 'https://example.com/programme', 'title' => 'Programme', 'description' => null, 'source' => 'search']])
+        ->and($airplay->origin)->toBe(AirplayOrigin::Statement)
+        ->and($finding->refresh()->status)->toBe('kept')
+        ->and(Airplay::query()->withoutGlobalScope('label')->count())->toBe(1);
+});
+
+test('keeping a finding of an unknown play creates an airplay that came from the search', function () {
+    $label = Label::factory()->create();
+    $track = researchTrack($label, ['isrc' => 'ZZTST2600001']);
+    $finding = AirplayFinding::factory()->create([
+        'label_id' => $label->id, 'track_id' => $track->id, 'url' => 'https://radio.example.com/playlist', 'title' => 'Playlist', 'domain' => 'radio.example.com',
+    ]);
+
+    $this->actingAs(labelAdmin($label))->post(route('airplay-findings.keep', $finding->id))->assertRedirect();
+
+    $airplay = Airplay::query()->withoutGlobalScope('label')->sole();
+
+    expect($airplay->only(['label_id', 'track_id', 'track_name', 'artist_name', 'isrc', 'station']))->toBe([
+        'label_id' => $label->id, 'track_id' => $track->id, 'track_name' => 'Example Track', 'artist_name' => 'Example Artist',
+        'isrc' => 'ZZTST2600001', 'station' => 'radio.example.com',
+    ])
+        ->and($airplay->origin)->toBe(AirplayOrigin::Search)
+        ->and($airplay->links[0]['url'])->toBe('https://radio.example.com/playlist')
+        ->and($finding->refresh()->only(['status', 'airplay_id']))->toBe(['status' => 'kept', 'airplay_id' => $airplay->id]);
+});
+
+test('a finding is dismissed, and the finding of another label cannot be reached', function () {
+    $label = Label::factory()->create();
+    $finding = AirplayFinding::factory()->create(['label_id' => $label->id, 'track_id' => Track::factory()->create(['label_id' => $label->id])]);
+    $foreign = AirplayFinding::factory()->create();
+    $admin = labelAdmin($label);
+
+    $this->actingAs($admin)->post(route('airplay-findings.dismiss', $finding->id))->assertRedirect();
+    $this->actingAs($admin)->post(route('airplay-findings.dismiss', $foreign->id))->assertNotFound();
+    $this->actingAs($admin)->post(route('airplay-findings.keep', $foreign->id))->assertNotFound();
+
+    expect($finding->refresh()->status)->toBe('dismissed')
+        ->and($foreign->refresh()->status)->toBe('new');
+});
+
+test('the command queues the tracks that are due longest, up to the limit per label', function () {
+    Queue::fake();
+    $label = Label::factory()->create();
+    $never = Track::factory()->create(['label_id' => $label->id]);
+    $oldest = Track::factory()->create(['label_id' => $label->id, 'researched_at' => now()->subDays(90)]);
+    Track::factory()->create(['label_id' => $label->id, 'researched_at' => now()->subDays(40)]);
+    Track::factory()->create(['label_id' => $label->id, 'researched_at' => now()->subDays(5)]);
+
+    $this->artisan('royalties:research-airplay', ['--limit' => 2])->assertSuccessful();
+
+    Queue::assertPushed(ResearchTrackAirplay::class, 2);
+    Queue::assertPushed(ResearchTrackAirplay::class, fn (ResearchTrackAirplay $job): bool => $job->trackId === $never->id);
+    Queue::assertPushed(ResearchTrackAirplay::class, fn (ResearchTrackAirplay $job): bool => $job->trackId === $oldest->id);
+});
+
+test('the command queues nothing when web search is not set up', function () {
+    Queue::fake();
+    config(['services.dataforseo.login' => null]);
+    Track::factory()->create();
+
+    $this->artisan('royalties:research-airplay')->assertSuccessful();
+
+    Queue::assertNothingPushed();
+});

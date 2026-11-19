@@ -15,4 +15,7 @@ Schedule::command('royalties:sync-bandcamp')
 
 Schedule::command('royalties:book-recurring-expenses')->dailyAt('04:00')->withoutOverlapping(60)->onOneServer();
 
+// Ten tracks a day keep a catalog of a few hundred tracks researched about once a month.
+Schedule::command('royalties:research-airplay')->dailyAt('06:30')->withoutOverlapping(60)->onOneServer();
+
 Schedule::command('horizon:snapshot')->everyFiveMinutes();

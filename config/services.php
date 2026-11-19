@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'dataforseo' => [
+        'login' => env('DATAFORSEO_LOGIN'),
+        'password' => env('DATAFORSEO_PASSWORD'),
+        // ponytail: one search market for every label; make it a label setting when a label needs another.
+        'location_code' => env('DATAFORSEO_LOCATION_CODE', 2276),
+        'language_code' => env('DATAFORSEO_LANGUAGE_CODE', 'de'),
+    ],
+
 ];

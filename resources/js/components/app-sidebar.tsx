@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/react';
 import {
+    Radio,
     ArrowLeftRight,
     Banknote,
     BookOpenText,
@@ -31,6 +32,7 @@ import {
     SidebarHeader,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as airplays } from '@/routes/airplays';
 import { index as artists } from '@/routes/artists';
 import { index as catalog } from '@/routes/catalog';
 import { index as contracts } from '@/routes/contracts';
@@ -83,6 +85,7 @@ const adminGroups: NavGroup[] = [
             { title: 'Releases', href: releases(), icon: Disc3 },
             { title: 'Tracks', href: tracks(), icon: ListMusic },
             { title: 'Artists', href: artists(), icon: Mic2 },
+            { title: 'Airplay', href: airplays(), icon: Radio },
             { title: 'Items', href: items(), icon: Package },
             { title: 'Contracts', href: contracts(), icon: FileSignature },
             { title: 'Payees', href: payees(), icon: Users },

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\AirplayController;
+use App\Http\Controllers\AirplayResearchController;
 use App\Http\Controllers\ArtistController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ContractController;
@@ -45,6 +47,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::resource('contracts', ContractController::class)->except(['show']);
             Route::resource('payees', PayeeController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
             Route::resource('ledgers', LedgerController::class)->only(['index', 'store', 'update', 'destroy']);
+
+            Route::resource('airplays', AirplayController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::post('airplays/{airplay}/links', [AirplayController::class, 'storeLink'])->name('airplays.links.store');
+            Route::delete('airplays/{airplay}/links', [AirplayController::class, 'destroyLink'])->name('airplays.links.destroy');
+            Route::post('airplays/research', [AirplayResearchController::class, 'store'])->name('airplays.research.store');
+            Route::post('airplay-findings/{finding}/keep', [AirplayResearchController::class, 'keep'])->name('airplay-findings.keep');
+            Route::post('airplay-findings/{finding}/dismiss', [AirplayResearchController::class, 'dismiss'])->name('airplay-findings.dismiss');
+            Route::post('airplays/{airplay}/search', [AirplayController::class, 'search'])->middleware('throttle:30,1')->name('airplays.search');
 
             Route::resource('transactions', TransactionController::class)->except(['show']);
 

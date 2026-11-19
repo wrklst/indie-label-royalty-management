@@ -4,12 +4,14 @@ namespace App\Services\Imports;
 
 use App\Enums\ImportStatus;
 use App\Enums\TransactionType;
+use App\Models\Airplay;
 use App\Models\Contract;
 use App\Models\DataImport;
 use App\Models\Item;
 use App\Models\Label;
 use App\Models\Payee;
 use App\Models\Transaction;
+use App\Services\Imports\Importers\RightzAudioImporter;
 use App\Services\Imports\Readers\ReaderFactory;
 use App\Support\Decimal;
 use App\Support\Formats;
@@ -51,6 +53,10 @@ class ImportRunner
 
             DB::transaction(function () use ($import, $label, $importer, $reader): void {
                 $this->process($import, $label, fn (): iterable => $importer->rows($reader, $label, $import->options ?? []));
+
+                if ($importer instanceof RightzAudioImporter) {
+                    RightzAudioImporter::recordAirplays($import);
+                }
             });
         } catch (ImportException $exception) {
             $import->update([
@@ -278,6 +284,8 @@ class ImportRunner
     {
         DB::transaction(function () use ($import): void {
             Transaction::query()->where('data_import_id', $import->id)->delete();
+            // ponytail: plays someone added links or notes to stay, with the amount as imported.
+            Airplay::query()->where('data_import_id', $import->id)->whereNull('links')->whereNull('notes')->delete();
             $import->update(['status' => ImportStatus::Deleted, 'needs_cleanup' => false]);
         });
     }
