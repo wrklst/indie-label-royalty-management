@@ -5,6 +5,12 @@ Import the statements your distributor sends, split the income by contract,
 give your artists statements they can read, and keep every release together
 with its metadata, cover and audio.
 
+Label Royalties comes from the management of
+[Never Not Now](https://nevernotnow.net), an independent label in Berlin,
+Germany, and is the software the label runs on: its royalty accounting, its
+catalogue and its release files are kept in it, in production. It was built
+for the day-to-day work of an indie label and is used for exactly that.
+
 Self-hosted, open source (MIT), built with Laravel, Inertia and React.
 
 - [What it does](#what-it-does)
