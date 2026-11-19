@@ -49,7 +49,7 @@ class PlayableAudio
             ->whereNotNull('track_id')->orderBy('id')->get()->groupBy('track_id');
 
         return $releases->mapWithKeys(fn (Release $release): array => [
-            $release->id => $release->tracks->sortBy([['disc_number', 'asc'], ['track_number', 'asc'], ['id', 'asc']])
+            $release->id => array_values($release->tracks->sortBy([['disc_number', 'asc'], ['track_number', 'asc'], ['id', 'asc']])
                 ->map(fn (Track $track): ?array => ($file = self::pick($audio->get($track->id))) === null ? null : [
                     'id' => $track->id,
                     'fileId' => $file->id,
@@ -58,7 +58,7 @@ class PlayableAudio
                     'artistId' => $track->artist_id ?? $release->artist_id,
                     'release' => ['id' => $release->id, 'name' => $release->name],
                     'coverFileId' => $release->cover?->id,
-                ])->filter()->values()->all(),
+                ])->filter()->all()),
         ])->all();
     }
 }
