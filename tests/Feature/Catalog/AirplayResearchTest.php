@@ -201,6 +201,52 @@ test('a research that fails says so on the track, and one that died without a wo
     expect($died->refresh()->research_state)->toBe('running');
 });
 
+test('a found page is opened: it confirms the track and the station driver reads the show from it', function () {
+    $label = Label::factory()->create();
+    $track = researchTrack($label);
+    Http::preventStrayRequests();
+    Http::fake([
+        RESEARCH_SERP_URL => Http::response(['status_code' => 20000, 'tasks' => [['status_code' => 20000, 'result' => [['items' => [
+            ['type' => 'organic', 'title' => 'Playlist with Example Track', 'url' => 'https://www.br.de/radio/bayern2/playlist-1.html', 'domain' => 'www.br.de'],
+            ['type' => 'organic', 'title' => 'Example Artist on air', 'url' => 'https://www.bbc.co.uk/programmes/example', 'domain' => 'www.bbc.co.uk'],
+            ['type' => 'organic', 'title' => 'Example Track mentioned', 'url' => 'https://blog.example.org/gone', 'domain' => 'blog.example.org'],
+        ]]]]]]),
+        'https://www.br.de/*' => Http::response('<html><head><title>Playlist: Example Host | Playlisten | Example Show | Bayern 2 | Radio</title><script>var a = "Example Track";</script></head><body><p>Other Artist Other Song.</p><p>Example Artist Example Track Album: Example Album.</p></body></html>'),
+        'https://www.bbc.co.uk/*' => Http::response('<html><head><title>BBC Radio 6 Music - Example Programme, Example Episode</title></head><body>Music played: Example Artist with another song.</body></html>'),
+        'https://blog.example.org/*' => Http::response('', 404),
+    ]);
+
+    app(AirplayResearch::class)->research($track);
+
+    expect(AirplayFinding::query()->withoutGlobalScope('label')->orderBy('id')->get()->map->only(['station', 'verification', 'show', 'page_title', 'excerpt'])->all())->toBe([
+        [
+            'station' => 'Bayern 2', 'verification' => 'confirmed', 'show' => 'Example Show (Example Host)',
+            'page_title' => 'Playlist: Example Host | Playlisten | Example Show | Bayern 2 | Radio',
+            'excerpt' => 'Other Artist Other Song. Example Artist Example Track Album: Example Album.',
+        ],
+        [
+            'station' => 'BBC Radio 6 Music', 'verification' => 'partial', 'show' => 'Example Programme, Example Episode',
+            'page_title' => 'BBC Radio 6 Music - Example Programme, Example Episode',
+            'excerpt' => 'Music played: Example Artist with another song.',
+        ],
+        ['station' => null, 'verification' => 'unreachable', 'show' => null, 'page_title' => null, 'excerpt' => null],
+    ]);
+});
+
+test('a closer look at a play uses the searches of its station driver', function () {
+    $label = Label::factory()->create();
+    $airplay = Airplay::factory()->create(['label_id' => $label->id, 'track_name' => 'Example Track', 'artist_name' => 'Example Artist', 'station' => 'BR Bayern 2', 'region' => null]);
+    fakeSearchResults([]);
+
+    app(AirplayResearch::class)->researchAirplay($airplay);
+
+    expect(Http::recorded()->map(fn (array $pair): string => $pair[0][0]['keyword'].' @'.$pair[0][0]['location_name'])->all())->toBe([
+        '"Example Artist" "Example Track" Bayern 2 @Germany',
+        '"Example Artist" Bayern 2 playlist @Germany',
+        '"Example Track" Bayern 2 playlist @Germany',
+    ]);
+});
+
 test('a page that was found before is not listed again, even after it was dismissed', function () {
     $label = Label::factory()->create();
     $track = researchTrack($label);
@@ -311,11 +357,12 @@ test('keeping a finding of a known play adds it to that play as a link found by 
     $airplay = Airplay::factory()->create(['label_id' => $label->id, 'track_id' => $track->id, 'origin' => AirplayOrigin::Statement]);
     $finding = AirplayFinding::factory()->create([
         'label_id' => $label->id, 'track_id' => $track->id, 'airplay_id' => $airplay->id, 'url' => 'https://example.com/programme', 'title' => 'Programme',
+        'page_title' => 'Example Show playlist', 'show' => 'Example Show', 'excerpt' => 'Example Artist Example Track',
     ]);
 
     $this->actingAs(labelAdmin($label))->post(route('airplay-findings.keep', $finding->id))->assertRedirect();
 
-    expect($airplay->refresh()->links)->toBe([['url' => 'https://example.com/programme', 'title' => 'Programme', 'description' => null, 'source' => 'search']])
+    expect($airplay->refresh()->links)->toBe([['url' => 'https://example.com/programme', 'title' => 'Example Show playlist', 'description' => 'Show: Example Show. Example Artist Example Track', 'source' => 'search']])
         ->and($airplay->origin)->toBe(AirplayOrigin::Statement)
         ->and($finding->refresh()->status)->toBe('kept')
         ->and(Airplay::query()->withoutGlobalScope('label')->count())->toBe(1);

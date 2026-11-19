@@ -6,6 +6,8 @@ use App\Models\Airplay;
 use App\Models\AirplayFinding;
 use App\Models\AirplaySearch;
 use App\Models\Track;
+use App\Services\Airplay\Stations\StationDriver;
+use App\Services\Airplay\Stations\StationRegistry;
 use App\Services\Releases\ArtistCredits;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,12 +31,8 @@ class AirplayResearch
     /** Seconds after which no further search is started, to stay inside the queue job's time limit. */
     private const int TIME_BUDGET = 420;
 
-    /**
-     * Broadcasters that publish what they played on pages Google indexes, by country.
-     *
-     * @var array<string, string>
-     */
-    private const array BROADCASTERS = ['GB' => 'BBC'];
+    /** The first results are streaming services; plays and mentions come after them. Every ten results are billed. */
+    private const int GENERAL_DEPTH = 30;
 
     /**
      * Shops, streaming services and lyric sites list a track without anyone having played it.
@@ -49,13 +47,20 @@ class AirplayResearch
         'rateyourmusic.com',
     ];
 
-    /** The first results are streaming services; plays and mentions come after them. Every ten results are billed. */
-    private const int GENERAL_DEPTH = 30;
+    /** Opening a page takes seconds; the first findings of a run are checked, the rest are left unchecked. */
+    private const int MAX_PAGE_CHECKS = 15;
 
     // ponytail: a word list, not a classifier; findings are reviewed by a person anyway.
     private const string RADIO_WORDS = '/\b(radio|playlists?|tracklists?|airplay|sendung|gespielt|fm|broadcast|charts?|bbc|nts|kexp|kcrw|npr|rinse)\b/iu';
 
-    public function __construct(private readonly WebSearch $search) {}
+    /** Pages opened so far in this run. */
+    private int $pagesChecked = 0;
+
+    public function __construct(
+        private readonly WebSearch $search,
+        private readonly StationRegistry $drivers,
+        private readonly PageCheck $pages,
+    ) {}
 
     /**
      * The tracks of the current label a research may be started for.
@@ -84,7 +89,7 @@ class AirplayResearch
 
     /**
      * Search for the track and store what is new: in every configured
-     * country, for the broadcasters known to list what they play, for each
+     * country, at the stations whose driver asks for it, for each
      * station a statement named, and in the country of each play whose
      * station is unknown.
      *
@@ -107,10 +112,16 @@ class AirplayResearch
 
         $searches = collect($markets)
             ->map(fn (string $region): array => ['query' => "{$subject} radio playlist", 'region' => $region, 'depth' => self::GENERAL_DEPTH, 'airplay' => null])
-            ->concat(collect(self::BROADCASTERS)->only($markets)
-                ->map(fn (string $broadcaster, string $region): array => ['query' => "{$subject} {$broadcaster}", 'region' => $region, 'depth' => 10, 'airplay' => null])->values())
+            ->concat(collect($this->drivers->all())
+                ->filter(fn (StationDriver $driver): bool => $driver->searchesEveryTrack() && in_array($driver->region(), $markets, true))
+                ->map(fn (StationDriver $driver): array => ['query' => $driver->queries($artist, $track->name)[0], 'region' => $driver->region(), 'depth' => 10, 'airplay' => null])->values())
             ->concat($own->whereNotNull('station')->unique(fn (Airplay $airplay): string => Str::lower($airplay->station))->take(self::MAX_AIRPLAY_SEARCHES)
-                ->map(fn (Airplay $airplay): array => ['query' => "{$subject} {$airplay->station}", 'region' => $airplay->region ?? $markets[0], 'depth' => 10, 'airplay' => $airplay]))
+                ->map(fn (Airplay $airplay): array => [
+                    'query' => $this->drivers->forName($airplay->station)?->queries($artist, $track->name)[0] ?? "{$subject} {$airplay->station}",
+                    'region' => $airplay->region ?? $this->drivers->forName($airplay->station)?->region() ?? $markets[0],
+                    'depth' => 10,
+                    'airplay' => $airplay,
+                ]))
             ->concat($own->whereNull('station')->whereNotNull('region')->whereNotIn('region', $markets)->unique('region')->take(self::MAX_AIRPLAY_SEARCHES)
                 ->map(fn (Airplay $airplay): array => ['query' => "{$subject} radio playlist", 'region' => $airplay->region ?? $markets[0], 'depth' => self::GENERAL_DEPTH, 'airplay' => $airplay]));
 
@@ -133,14 +144,17 @@ class AirplayResearch
      */
     public function researchAirplay(Airplay $airplay, ?Closure $progress = null): int
     {
-        $region = $airplay->region ?? $this->search->markets()[0];
+        $station = $airplay->station;
+        $driver = $this->drivers->forName($station);
+        $region = $airplay->region ?? $driver?->region() ?? $this->search->markets()[0];
         $artist = $airplay->artist_name === null ? null : "\"{$airplay->artist_name}\"";
         $title = "\"{$airplay->track_name}\"";
-        $station = $airplay->station;
 
-        $queries = $station === null
-            ? [trim("{$artist} {$title} radio playlist"), trim("{$artist} {$title} radio show tracklist")]
-            : [trim("{$artist} {$title} {$station}"), trim("{$artist} {$station} playlist"), "{$title} {$station} playlist"];
+        $queries = match (true) {
+            $station === null => [trim("{$artist} {$title} radio playlist"), trim("{$artist} {$title} radio show tracklist")],
+            $driver !== null => [...$driver->queries($airplay->artist_name, $airplay->track_name), "{$title} {$driver->name()} playlist"],
+            default => [trim("{$artist} {$title} {$station}"), trim("{$artist} {$station} playlist"), "{$title} {$station} playlist"],
+        };
 
         $searches = collect($queries)->unique()->values()
             ->map(fn (string $query, int $index): array => ['query' => $query, 'region' => $region, 'depth' => $index === 0 ? self::GENERAL_DEPTH : 10, 'airplay' => $airplay]);
@@ -224,20 +238,42 @@ class AirplayResearch
         if (! array_any(array_filter($names), fn (string $name): bool => str_contains($text, Str::lower($name)))) {
             return false;
         }
-        $station = $airplay->station ?? $stations->first(fn (string $station): bool => str_contains($text, Str::lower($station)));
+        $key = ['label_id' => $labelId, 'track_id' => $trackId, 'url_hash' => sha1($result['url'])];
 
-        return AirplayFinding::query()->withoutGlobalScope('label')->firstOrCreate(
-            ['label_id' => $labelId, 'track_id' => $trackId, 'url_hash' => sha1($result['url'])],
-            [
-                'airplay_id' => $airplay?->id,
-                'is_radio' => $station !== null || preg_match(self::RADIO_WORDS, $text) === 1,
-                'station' => $station,
-                'url' => mb_substr($result['url'], 0, 2000),
-                'title' => mb_substr($result['title'], 0, 500),
-                'description' => $result['description'],
-                'domain' => $domain ?: null,
-                'query' => $query,
-            ],
-        )->wasRecentlyCreated;
+        if (AirplayFinding::query()->withoutGlobalScope('label')->where($key)->exists()) {
+            return false;
+        }
+
+        $driver = $this->drivers->forDomain($domain);
+        $page = null;
+        $described = [];
+
+        if ($this->pagesChecked < self::MAX_PAGE_CHECKS) {
+            $this->pagesChecked++;
+            [$artist, $title] = [$names[0] ?? null, (string) ($names[1] ?? '')];
+            $page = $this->pages->check($result['url'], $artist, $title);
+            $described = $driver?->describe((string) $page['page_title'], $page['text']) ?? [];
+        }
+
+        $station = $described['station'] ?? $airplay->station ?? $driver?->name()
+            ?? $stations->first(fn (string $station): bool => str_contains($text, Str::lower($station)));
+
+        AirplayFinding::query()->withoutGlobalScope('label')->create([
+            ...$key,
+            'airplay_id' => $airplay?->id,
+            'is_radio' => $station !== null || preg_match(self::RADIO_WORDS, $text) === 1,
+            'station' => $station,
+            'url' => mb_substr($result['url'], 0, 2000),
+            'title' => mb_substr($result['title'], 0, 500),
+            'description' => $result['description'],
+            'domain' => $domain ?: null,
+            'query' => $query,
+            'verification' => $page['verification'] ?? null,
+            'page_title' => $page['page_title'] ?? null,
+            'show' => isset($described['show']) ? mb_substr($described['show'], 0, 500) : null,
+            'excerpt' => $page['excerpt'] ?? null,
+        ]);
+
+        return true;
     }
 }

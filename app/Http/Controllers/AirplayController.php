@@ -31,9 +31,9 @@ class AirplayController extends Controller
 
         return Inertia::render('airplays/index', [
             'findings' => AirplayFinding::query()->where('status', AirplayFinding::NEW)->with(['track:id,name', 'airplay:id,track_name,station'])
-                ->orderByDesc('is_radio')->latest()->limit(200)->get()
+                ->orderByRaw("verification = 'confirmed' desc")->orderByDesc('is_radio')->latest()->limit(200)->get()
                 ->map(fn (AirplayFinding $finding): array => [
-                    ...$finding->only(['id', 'is_radio', 'station', 'url', 'title', 'description', 'domain', 'query', 'airplay_id']),
+                    ...$finding->only(['id', 'is_radio', 'station', 'url', 'title', 'description', 'domain', 'query', 'airplay_id', 'verification', 'page_title', 'show', 'excerpt']),
                     'track' => $finding->track->name ?? $finding->airplay?->track_name,
                     'airplay_station' => $finding->airplay_id === null ? null : ($finding->airplay->station ?? __('Unidentified')),
                 ]),

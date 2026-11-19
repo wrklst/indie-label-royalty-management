@@ -11,6 +11,7 @@ use App\Models\Release;
 use App\Models\Track;
 use App\Services\Airplay\AirplayResearch;
 use App\Services\Airplay\ResearchState;
+use App\Services\Airplay\Stations\StationRegistry;
 use App\Services\Airplay\WebSearch;
 use App\Services\Releases\ArtistCredits;
 use Illuminate\Http\RedirectResponse;
@@ -79,9 +80,9 @@ class AirplayResearchController extends Controller
     /**
      * Keep a finding: as a link of the play it was searched for, or as a new play.
      */
-    public function keep(AirplayFinding $finding): RedirectResponse
+    public function keep(AirplayFinding $finding, StationRegistry $stations): RedirectResponse
     {
-        DB::transaction(function () use ($finding): void {
+        DB::transaction(function () use ($finding, $stations): void {
             $airplay = $finding->airplay;
 
             if ($airplay === null) {
@@ -94,10 +95,15 @@ class AirplayResearchController extends Controller
                     'artist_name' => ArtistCredits::display($track),
                     'isrc' => $track->isrc,
                     'station' => $finding->station ?? $finding->domain,
+                    'region' => $stations->forName($finding->station)?->region(),
                 ]);
             }
 
-            $airplay->addLink($finding->only(['url', 'title', 'description']), AirplayOrigin::Search);
+            $airplay->addLink([
+                'url' => $finding->url,
+                'title' => $finding->page_title ?? $finding->title,
+                'description' => trim(($finding->show === null ? '' : __('Show: :show.', ['show' => $finding->show]).' ').($finding->excerpt ?? $finding->description)) ?: null,
+            ], AirplayOrigin::Search);
             $airplay->save();
 
             $finding->update(['status' => AirplayFinding::KEPT, 'airplay_id' => $airplay->id]);

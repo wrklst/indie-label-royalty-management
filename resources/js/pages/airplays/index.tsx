@@ -73,6 +73,18 @@ type Finding = {
     airplay_id: number | null;
     airplay_station: string | null;
     track: string | null;
+    verification: 'confirmed' | 'partial' | 'absent' | 'unreachable' | null;
+    page_title: string | null;
+    show: string | null;
+    excerpt: string | null;
+};
+
+/** What opening the found page itself showed. */
+const VERIFICATIONS: Record<string, string> = {
+    confirmed: 'Artist and title are on the page',
+    partial: 'Only artist or title is on the page',
+    absent: 'Page does not name the track',
+    unreachable: 'Page could not be opened',
 };
 
 type Airplay = {
@@ -632,9 +644,14 @@ function Findings({ findings }: { findings: Finding[] }) {
                                 <p className="text-xs text-muted-foreground">
                                     {finding.domain}
                                 </p>
-                                {finding.description && (
-                                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                                        {finding.description}
+                                {finding.show && (
+                                    <p className="mt-1 text-xs font-medium">
+                                        Show: {finding.show}
+                                    </p>
+                                )}
+                                {(finding.excerpt ?? finding.description) && (
+                                    <p className="mt-1 line-clamp-3 text-xs text-muted-foreground">
+                                        {finding.excerpt ?? finding.description}
                                     </p>
                                 )}
                             </TableCell>
@@ -648,6 +665,17 @@ function Findings({ findings }: { findings: Finding[] }) {
                                 ) : (
                                     <Badge variant="outline">Mention</Badge>
                                 )}
+                                <p
+                                    className={
+                                        finding.verification === 'confirmed'
+                                            ? 'mt-1 text-xs font-medium text-green-700 dark:text-green-400'
+                                            : 'mt-1 text-xs text-muted-foreground'
+                                    }
+                                >
+                                    {finding.verification
+                                        ? VERIFICATIONS[finding.verification]
+                                        : 'Page not checked'}
+                                </p>
                                 <p className="mt-1 text-xs text-muted-foreground">
                                     {finding.airplay_station &&
                                         `For the play on ${finding.airplay_station}. `}

@@ -28,10 +28,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $description
  * @property string|null $domain
  * @property string $query
+ * @property string|null $verification
+ * @property string|null $page_title
+ * @property string|null $show
+ * @property string|null $excerpt
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['label_id', 'track_id', 'airplay_id', 'status', 'is_radio', 'station', 'url', 'url_hash', 'title', 'description', 'domain', 'query'])]
+#[Fillable(['label_id', 'track_id', 'airplay_id', 'status', 'is_radio', 'station', 'url', 'url_hash', 'title', 'description', 'domain', 'query', 'verification', 'page_title', 'show', 'excerpt'])]
 class AirplayFinding extends Model
 {
     /** @use HasFactory<AirplayFindingFactory> */
