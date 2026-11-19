@@ -13,6 +13,7 @@ use App\Services\Airplay\AirplayResearch;
 use App\Services\Airplay\ResearchState;
 use App\Services\Airplay\WebSearch;
 use App\Services\Releases\ArtistCredits;
+use App\Support\CurrentLabel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -137,15 +138,16 @@ class AirplayController extends Controller
     /**
      * Look the play up on the web. Each call is billed by the search service.
      */
-    public function search(Request $request, Airplay $airplay, WebSearch $search): JsonResponse
+    public function search(Request $request, Airplay $airplay, WebSearch $search, CurrentLabel $currentLabel): JsonResponse
     {
         $query = $request->validate(['query' => ['nullable', 'string', 'max:300']])['query'] ?? null;
 
         $query = $query ?: $airplay->searchQuery();
-        $log = ['track_id' => $airplay->track_id, 'airplay_id' => $airplay->id, 'query' => $query, 'region' => $airplay->region ?? $search->markets()[0]];
+        $region = $airplay->region ?? $currentLabel->get()->airplayMarkets()[0];
+        $log = ['track_id' => $airplay->track_id, 'airplay_id' => $airplay->id, 'query' => $query, 'region' => $region];
 
         try {
-            $results = $search->search($query, region: $airplay->region);
+            $results = $search->search($query, $region);
             AirplaySearch::query()->create([...$log, 'succeeded' => true, 'results' => $results]);
 
             return response()->json(['results' => $results]);

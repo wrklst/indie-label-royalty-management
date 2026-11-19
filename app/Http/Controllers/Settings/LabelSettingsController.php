@@ -28,6 +28,7 @@ class LabelSettingsController extends Controller
                 ...$label->only(['name', 'currency', 'contact_email', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves']),
                 'bandcamp_disable_fee' => (bool) $label->importerSetting('bandcamp.disable_fee', false),
                 'bandcamp_exclude_physical' => (bool) $label->importerSetting('bandcamp.exclude_physical', false),
+                'airplay_markets' => $label->airplayMarkets(),
             ],
             'royaltyTools' => [
                 'mechanicals_usd_rate' => $tools->usdRate === null ? null : MechanicalsTool::plain($tools->usdRate),
@@ -55,6 +56,7 @@ class LabelSettingsController extends Controller
                 'disable_fee' => $request->boolean('bandcamp_disable_fee'),
                 'exclude_physical' => $request->boolean('bandcamp_exclude_physical'),
             ]]),
+            'airplay_markets' => $request->validated('airplay_markets', $label->airplay_markets),
             // A form that does not send the tool settings leaves them alone.
             'royalty_tool_settings' => [
                 'usd_rate' => $request->has('mechanicals_usd_rate') ? $request->validated('mechanicals_usd_rate') : $tools->usdRate,

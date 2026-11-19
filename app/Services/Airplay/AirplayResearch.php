@@ -5,6 +5,7 @@ namespace App\Services\Airplay;
 use App\Models\Airplay;
 use App\Models\AirplayFinding;
 use App\Models\AirplaySearch;
+use App\Models\Label;
 use App\Models\Track;
 use App\Services\Airplay\Stations\StationDriver;
 use App\Services\Airplay\Stations\StationRegistry;
@@ -104,7 +105,7 @@ class AirplayResearch
 
         $artist = ArtistCredits::display($track) ?? ($track->release ? ArtistCredits::display($track->release) : null);
         $subject = collect([$artist, $track->name])->filter()->map(fn (string $part): string => "\"{$part}\"")->implode(' ');
-        $markets = $this->search->markets();
+        $markets = Label::query()->findOrFail($track->label_id)->airplayMarkets();
 
         $airplays = Airplay::query()->withoutGlobalScope('label')->where('label_id', $track->label_id)->get(['id', 'track_id', 'station', 'region']);
         $stations = $airplays->pluck('station')->filter()->unique(fn (string $station): string => Str::lower($station))->values();
@@ -146,7 +147,7 @@ class AirplayResearch
     {
         $station = $airplay->station;
         $driver = $this->drivers->forName($station);
-        $region = $airplay->region ?? $driver?->region() ?? $this->search->markets()[0];
+        $region = $airplay->region ?? $driver?->region() ?? Label::query()->findOrFail($airplay->label_id)->airplayMarkets()[0];
         $artist = $airplay->artist_name === null ? null : "\"{$airplay->artist_name}\"";
         $title = "\"{$airplay->track_name}\"";
 
@@ -192,7 +193,7 @@ class AirplayResearch
             $log = ['label_id' => $labelId, 'track_id' => $trackId, 'airplay_id' => $search['airplay']?->id, 'query' => $search['query'], 'region' => $search['region']];
 
             try {
-                $results = $this->search->search($search['query'], $search['depth'], $search['region']);
+                $results = $this->search->search($search['query'], $search['region'], $search['depth']);
             } catch (RuntimeException $exception) {
                 // The search service fails often; one failed search should not lose the others.
                 $failure = $exception;

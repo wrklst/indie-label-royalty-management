@@ -19,7 +19,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 const RESEARCH_SERP_URL = 'https://api.dataforseo.com/v3/serp/google/organic/live/advanced';
 
 beforeEach(function () {
-    config(['services.dataforseo.login' => 'example-login', 'services.dataforseo.password' => 'example-password', 'services.dataforseo.markets' => ['DE']]);
+    config(['services.dataforseo.login' => 'example-login', 'services.dataforseo.password' => 'example-password']);
 });
 
 /**
@@ -48,7 +48,7 @@ function researchTrack(Label $label, array $attributes = []): Track
 }
 
 test('a research keeps pages that name the track and may show a play, and leaves out shops and streaming services', function () {
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $track = researchTrack($label);
     fakeSearchResults([
         ['url' => 'https://radio.example.com/playlist', 'title' => 'Playlist of the morning show', 'description' => 'Example Artist with Example Track', 'domain' => 'radio.example.com'],
@@ -68,7 +68,7 @@ test('a research keeps pages that name the track and may show a play, and leaves
 });
 
 test('a research also searches for each station a statement named and ties the findings to that play', function () {
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $track = researchTrack($label);
     $airplay = Airplay::factory()->create(['label_id' => $label->id, 'track_id' => $track->id, 'station' => 'Example Radio']);
     Http::preventStrayRequests();
@@ -88,8 +88,7 @@ test('a research also searches for each station a statement named and ties the f
 });
 
 test('a research looks in every configured country, asks for the national broadcaster and follows unidentified plays abroad', function () {
-    config(['services.dataforseo.markets' => ['DE', 'GB']]);
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE', 'GB']]);
     $track = researchTrack($label);
     Airplay::factory()->create(['label_id' => $label->id, 'track_id' => $track->id, 'station' => null, 'region' => 'FI']);
     fakeSearchResults([]);
@@ -107,8 +106,7 @@ test('a research looks in every configured country, asks for the national broadc
 });
 
 test('every search is logged with what it returned, and a failed one does not lose the others', function () {
-    config(['services.dataforseo.markets' => ['DE', 'GB']]);
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE', 'GB']]);
     $track = researchTrack($label);
     $failing = ['status_code' => 20000, 'tasks' => [['status_code' => 40101, 'status_message' => 'Internal SE Server Error.']]];
     Http::preventStrayRequests();
@@ -128,7 +126,7 @@ test('every search is logged with what it returned, and a failed one does not lo
 });
 
 test('a closer look at one play searches for it at its station and ties the findings to it', function () {
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $airplay = Airplay::factory()->create(['label_id' => $label->id, 'track_name' => 'Example Track', 'artist_name' => 'Example Artist', 'station' => 'Example Radio', 'region' => 'GB']);
     fakeSearchResults([['url' => 'https://example.com/show', 'title' => 'The evening show played Example Track', 'domain' => 'example.com']]);
 
@@ -148,7 +146,7 @@ test('a closer look at one play searches for it at its station and ties the find
 
 test('a closer look at one play is queued from its row', function () {
     Queue::fake();
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $airplay = Airplay::factory()->create(['label_id' => $label->id]);
     $foreign = Airplay::factory()->create();
     $admin = labelAdmin($label);
@@ -162,7 +160,7 @@ test('a closer look at one play is queued from its row', function () {
 
 test('a queued research shows as waiting, reports each search while it runs and clears when done', function () {
     Queue::fake();
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $airplay = Airplay::factory()->create(['label_id' => $label->id, 'track_name' => 'Example Track', 'artist_name' => 'Example Artist', 'station' => 'Example Radio', 'region' => 'GB']);
     $this->actingAs(labelAdmin($label))->post(route('airplays.research.airplay', $airplay->id));
 
@@ -184,7 +182,7 @@ test('a queued research shows as waiting, reports each search while it runs and 
 });
 
 test('a research that fails says so on the track, and one that died without a word is not shown as running', function () {
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $failed = researchTrack($label);
     $died = Track::factory()->create(['label_id' => $label->id, 'research_state' => 'running', 'research_state_at' => now()->subMinutes(20)]);
     $waiting = Track::factory()->create(['label_id' => $label->id, 'name' => 'Sample Track', 'research_state' => 'queued', 'research_state_at' => now()->subHours(3)]);
@@ -202,7 +200,7 @@ test('a research that fails says so on the track, and one that died without a wo
 });
 
 test('a found page is opened: it confirms the track and the station driver reads the show from it', function () {
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $track = researchTrack($label);
     Http::preventStrayRequests();
     Http::fake([
@@ -234,7 +232,7 @@ test('a found page is opened: it confirms the track and the station driver reads
 });
 
 test('a closer look at a play uses the searches of its station driver', function () {
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $airplay = Airplay::factory()->create(['label_id' => $label->id, 'track_name' => 'Example Track', 'artist_name' => 'Example Artist', 'station' => 'BR Bayern 2', 'region' => null]);
     fakeSearchResults([]);
 
@@ -248,7 +246,7 @@ test('a closer look at a play uses the searches of its station driver', function
 });
 
 test('a page that was found before is not listed again, even after it was dismissed', function () {
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $track = researchTrack($label);
     fakeSearchResults([['url' => 'https://radio.example.com/playlist', 'domain' => 'radio.example.com']]);
 
@@ -271,7 +269,7 @@ test('a track stays due when the search fails', function () {
 
 test('a research is queued for the chosen group of tracks', function (string $scope, array $expected) {
     Queue::fake();
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $release = Release::factory()->create(['label_id' => $label->id]);
     $tracks = [
         'never' => Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id]),
@@ -299,7 +297,7 @@ test('a research is queued for the chosen group of tracks', function (string $sc
 
 test('a research is not queued', function (Closure $arrange, array $input, string $message) {
     Queue::fake();
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     Track::factory()->create(['label_id' => $label->id, 'researched_at' => now()]);
     $input = $arrange($input);
 
@@ -334,7 +332,7 @@ test('the release of another label cannot be researched', function () {
 });
 
 test('the airplay page lists new findings and how many tracks are due', function () {
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $track = Track::factory()->create(['label_id' => $label->id, 'name' => 'Example Track']);
     $finding = AirplayFinding::factory()->create(['label_id' => $label->id, 'track_id' => $track->id]);
     AirplayFinding::factory()->create(['label_id' => $label->id, 'track_id' => $track->id, 'status' => AirplayFinding::DISMISSED]);
@@ -352,7 +350,7 @@ test('the airplay page lists new findings and how many tracks are due', function
 });
 
 test('keeping a finding of a known play adds it to that play as a link found by search', function () {
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $track = Track::factory()->create(['label_id' => $label->id]);
     $airplay = Airplay::factory()->create(['label_id' => $label->id, 'track_id' => $track->id, 'origin' => AirplayOrigin::Statement]);
     $finding = AirplayFinding::factory()->create([
@@ -369,7 +367,7 @@ test('keeping a finding of a known play adds it to that play as a link found by 
 });
 
 test('keeping a finding of an unknown play creates an airplay that came from the search', function () {
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $track = researchTrack($label, ['isrc' => 'ZZTST2600001']);
     $finding = AirplayFinding::factory()->create([
         'label_id' => $label->id, 'track_id' => $track->id, 'url' => 'https://radio.example.com/playlist', 'title' => 'Playlist', 'domain' => 'radio.example.com',
@@ -389,7 +387,7 @@ test('keeping a finding of an unknown play creates an airplay that came from the
 });
 
 test('a finding is dismissed, and the finding of another label cannot be reached', function () {
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $finding = AirplayFinding::factory()->create(['label_id' => $label->id, 'track_id' => Track::factory()->create(['label_id' => $label->id])]);
     $foreign = AirplayFinding::factory()->create();
     $admin = labelAdmin($label);
@@ -404,7 +402,7 @@ test('a finding is dismissed, and the finding of another label cannot be reached
 
 test('the command queues the tracks that are due longest, up to the limit per label', function () {
     Queue::fake();
-    $label = Label::factory()->create();
+    $label = Label::factory()->create(['airplay_markets' => ['DE']]);
     $never = Track::factory()->create(['label_id' => $label->id]);
     $oldest = Track::factory()->create(['label_id' => $label->id, 'researched_at' => now()->subDays(90)]);
     Track::factory()->create(['label_id' => $label->id, 'researched_at' => now()->subDays(40)]);

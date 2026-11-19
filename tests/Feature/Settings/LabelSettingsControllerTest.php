@@ -28,6 +28,7 @@ test('the label settings page shows the stored settings and territories', functi
                 'name' => 'Example Records', 'currency' => 'EUR', 'contact_email' => 'office@example.com',
                 'accounts_mechanicals' => true, 'accounts_ppd' => false, 'accounts_reserves' => true,
                 'bandcamp_disable_fee' => true, 'bandcamp_exclude_physical' => false,
+                'airplay_markets' => ['DE', 'GB', 'US'],
             ])
             ->where('territories', [
                 ['id' => $first->id, 'name' => 'GSA', 'countries' => ['DE', 'AT', 'CH']],
@@ -81,6 +82,39 @@ test('the bandcamp options can be switched off again', function () {
 
     expect($label->refresh()->importer_settings)->toBe(['bandcamp' => ['disable_fee' => false, 'exclude_physical' => true]]);
 });
+
+test('the airplay research countries are stored split, upper-cased and deduplicated', function () {
+    $label = Label::factory()->create(['name' => 'Example Records', 'currency' => 'EUR']);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('label-settings.update'), ['name' => 'Example Records', 'currency' => 'EUR', 'airplay_markets' => 'de, gb us DE'])
+        ->assertSessionHasNoErrors();
+
+    expect($label->refresh()->airplay_markets)->toBe(['DE', 'GB', 'US']);
+});
+
+test('a form without the airplay research countries leaves them alone', function () {
+    $label = Label::factory()->create(['name' => 'Example Records', 'currency' => 'EUR', 'airplay_markets' => ['FR']]);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('label-settings.update'), ['name' => 'Example Records', 'currency' => 'EUR'])
+        ->assertSessionHasNoErrors();
+
+    expect($label->refresh()->airplay_markets)->toBe(['FR']);
+});
+
+test('airplay research countries that are no country codes are rejected', function (string $value, string $error) {
+    $label = Label::factory()->create(['name' => 'Example Records', 'currency' => 'EUR', 'airplay_markets' => ['FR']]);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('label-settings.update'), ['name' => 'Example Records', 'currency' => 'EUR', 'airplay_markets' => $value])
+        ->assertSessionHasErrors($error);
+
+    expect($label->refresh()->airplay_markets)->toBe(['FR']);
+})->with([
+    'a country name' => ['Germany', 'airplay_markets.0'],
+    'nothing' => ['', 'airplay_markets'],
+]);
 
 test('invalid label settings are rejected', function (string $field, mixed $value) {
     $label = Label::factory()->create(['name' => 'Example Records', 'currency' => 'EUR']);

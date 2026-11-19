@@ -38,8 +38,6 @@ return [
     'dataforseo' => [
         'login' => env('DATAFORSEO_LOGIN'),
         'password' => env('DATAFORSEO_PASSWORD'),
-        // Countries a research looks in, as ISO codes. Each one is a billed search per track.
-        'markets' => array_values(array_filter(array_map('trim', explode(',', (string) env('DATAFORSEO_MARKETS', 'DE,GB,US'))))),
     ],
 
 ];

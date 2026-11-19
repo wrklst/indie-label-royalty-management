@@ -43,23 +43,13 @@ class WebSearch
     }
 
     /**
-     * The countries a research looks in.
-     *
-     * @return non-empty-list<string>
-     */
-    public function markets(): array
-    {
-        return config('services.dataforseo.markets') ?: ['DE'];
-    }
-
-    /**
+     * @param  string  $region  ISO code of the country to search from.
      * @param  int  $depth  How many results to ask for; every ten are billed as one search.
-     * @param  string|null  $region  ISO code of the country to search from; the first configured market by default.
      * @return list<array{title: string, url: string, description: string|null, domain: string|null}>
      *
      * @throws RuntimeException when the search could not be run
      */
-    public function search(string $query, int $depth = 10, ?string $region = null): array
+    public function search(string $query, string $region, int $depth = 10): array
     {
         if (! $this->isConfigured()) {
             throw new RuntimeException('Web search is not set up: DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD are missing.');
@@ -118,9 +108,9 @@ class WebSearch
      *
      * @throws RuntimeException when the service cannot be reached or refuses the request
      */
-    private function task(string $query, int $depth, ?string $region): array
+    private function task(string $query, int $depth, string $region): array
     {
-        $region = strtoupper($region ?? $this->markets()[0]);
+        $region = strtoupper($region);
 
         try {
             $response = Http::withBasicAuth(config('services.dataforseo.login'), config('services.dataforseo.password'))

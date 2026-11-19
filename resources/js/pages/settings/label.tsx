@@ -18,6 +18,7 @@ type Props = {
         accounts_reserves: boolean;
         bandcamp_disable_fee: boolean;
         bandcamp_exclude_physical: boolean;
+        airplay_markets: string[];
     };
     royaltyTools: {
         mechanicals_usd_rate: string | null;
@@ -147,6 +148,29 @@ export default function LabelSettings({
                                     }
                                 />
                             </div>
+
+                            <Field
+                                label="Airplay research countries"
+                                htmlFor="airplay_markets"
+                                error={
+                                    errors.airplay_markets ??
+                                    Object.entries(errors).find(([key]) =>
+                                        key.startsWith('airplay_markets.'),
+                                    )?.[1]
+                                }
+                                hint="Two-letter country codes separated by spaces or commas. Every track is searched once per country, and each search is billed."
+                            >
+                                <Input
+                                    id="airplay_markets"
+                                    name="airplay_markets"
+                                    defaultValue={settings.airplay_markets.join(
+                                        ' ',
+                                    )}
+                                    placeholder="DE GB US"
+                                    className="font-mono uppercase"
+                                    required
+                                />
+                            </Field>
 
                             <div className="grid gap-3">
                                 <p className="text-sm font-medium">
