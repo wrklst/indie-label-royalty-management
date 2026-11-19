@@ -59,11 +59,20 @@ Emails, audio conversions, the airplay research and the Bandcamp sync all depend
 
 | Symptom                                              | Cause                                                         | Fix                                                                                             |
 | ---------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| "Web search is not set up"                           | The label has no DataForSEO login.                            | Enter it under **Settings → Label**.                                                            |
+| "Web search is not set up"                           | The label has no DataForSEO login.                            | Enter it under **Settings → Connections**.                                                      |
 | "DataForSEO does not accept this login and password" | The website password was entered instead of the API password. | Use the API password from the DataForSEO dashboard under **API Access**.                        |
 | "Internal SE Server Error" in the research log       | DataForSEO's own search failed.                               | Nothing to fix. It is retried up to three times and not billed; start the research again later. |
 | "Payment Required"                                   | The DataForSEO account has no credit.                         | Top it up.                                                                                      |
 | No findings                                          | Nothing on the web names the track, or the pages are gone.    | Normal for older plays. The research log shows what was searched.                               |
+
+## Receipts
+
+| Symptom                                                   | Cause                                                   | Fix                                                                                                                    |
+| --------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| A receipt stays "Being read…"                             | The queue worker does not run.                          | `php artisan horizon:status`; see "Background work" above.                                                             |
+| "Could not be read: … could not be turned into a picture" | A scanned PDF, and `pdftoppm` is missing on the server. | Install `poppler-utils`, then use **Read again**.                                                                      |
+| "The AI service does not accept this key"                 | Wrong key, or for Infomaniak a wrong product ID.        | Check both under **Settings → Connections**.                                                                           |
+| The amounts read are wrong                                | The model misread the document.                         | The values are a proposal: correct them in **Book as cost**. A model that understands images better helps with photos. |
 
 ## Where to look
 

@@ -21,8 +21,7 @@ The connection itself (client ID and secret) is on its own page: follow the link
 
 ## Airplay research
 
-- **DataForSEO API login** and **API password**: the login of your DataForSEO account for the web research. Both are in your DataForSEO dashboard under **API Access**. On saving, the login is checked with DataForSEO; a login it refuses is not stored. The password is stored encrypted and never shown again: leave the field empty to keep the stored one.
-- Clear the login to switch the research off.
+- The login for the web search itself is a connection: **Settings → Connections**. See [Connections](42-connections.md).
 - **Airplay research countries**: two-letter country codes separated by spaces or commas, for example `DE GB US`. Every track is searched once per country, and each search is billed.
 
 See [Airplay](23-airplay.md) for what the research does and what it costs.
@@ -53,14 +52,15 @@ A territory that contract splits refer to cannot be deleted: without it those sp
 
 ## Other settings pages
 
-| Page                                                 | What is there                                                                                          |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Settings → Team**                                  | Who has access to the label, and as what. See [Team, roles and sign-in](40-team-roles-and-sign-in.md). |
-| **Settings → Bandcamp**                              | The Bandcamp connection and its sync.                                                                  |
-| **Settings → Profile**, **Security**, **Appearance** | Your own account: name, email, password, passkeys, two-factor authentication, light or dark mode.      |
+| Page                                                 | What is there                                                                                                          |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Settings → Team**                                  | Who has access to the label, and as what. See [Team, roles and sign-in](40-team-roles-and-sign-in.md).                 |
+| **Settings → Connections**                           | Web search, receipt reading and, for the installation's admin, the file storage. See [Connections](42-connections.md). |
+| **Settings → Bandcamp**                              | The Bandcamp connection and its sync.                                                                                  |
+| **Settings → Profile**, **Security**, **Appearance** | Your own account: name, email, password, passkeys, two-factor authentication, light or dark mode.                      |
 
 ## Good to know
 
-- Settings belong to one label. In an installation with several labels each has its own currency, its own Bandcamp connection and its own DataForSEO login.
+- Settings belong to one label. In an installation with several labels each has its own currency and its own connections.
 - Categories and formats are the same for every label of an installation; they are not editable here.
 - What the server itself needs (database, mail, file storage) is not in the interface: see [Configuration](03-configuration.md).

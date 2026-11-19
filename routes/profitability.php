@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\LabelCostController;
 use App\Http\Controllers\ProfitabilityController;
+use App\Http\Controllers\ReceiptController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified', 'label', 'label.admin'])->group(function () {
@@ -13,4 +14,10 @@ Route::middleware(['auth', 'verified', 'label', 'label.admin'])->group(function 
     Route::post('label-costs/recurring', [LabelCostController::class, 'storeRecurring'])->name('label-costs.recurring.store');
     Route::put('label-costs/recurring/{recurring_expense}', [LabelCostController::class, 'updateRecurring'])->name('label-costs.recurring.update');
     Route::delete('label-costs/recurring/{recurring_expense}', [LabelCostController::class, 'destroyRecurring'])->name('label-costs.recurring.destroy');
+
+    Route::post('receipts', [ReceiptController::class, 'store'])->name('receipts.store');
+    Route::get('receipts/{receipt}', [ReceiptController::class, 'show'])->name('receipts.show');
+    Route::put('receipts/{receipt}', [ReceiptController::class, 'update'])->name('receipts.update');
+    Route::post('receipts/{receipt}/read', [ReceiptController::class, 'read'])->name('receipts.read');
+    Route::delete('receipts/{receipt}', [ReceiptController::class, 'destroy'])->name('receipts.destroy');
 });

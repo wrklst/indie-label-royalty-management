@@ -214,6 +214,6 @@ test('a failed web search reports why', function (Closure $arrange, string $mess
     ],
     'when no login is set' => [
         fn () => config(['services.dataforseo.login' => null]),
-        'Web search is not set up. Enter the DataForSEO login under Settings → Label.',
+        'Web search is not set up. Enter the DataForSEO login under Settings → Connections.',
     ],
 ]);

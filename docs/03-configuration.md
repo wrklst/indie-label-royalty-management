@@ -89,6 +89,8 @@ Times are in the server's time zone.
 
 ## File storage
 
+The file storage can also be chosen in the interface, by the installation's admin under **Settings → Connections**; see [Connections](42-connections.md). What is set there takes precedence over the values below.
+
 Release files (covers, masters, documents) and uploaded statement files are stored either on the server or in a bucket.
 
 **On the server** (the default):
@@ -164,12 +166,16 @@ php artisan royalties:generate-previews --release=12 --force
 
 ## Web search for the airplay research
 
-The login for DataForSEO is entered per label in the interface, under **Settings → Label**. An installation that wants one login for all its labels can set it here instead; a label's own login takes precedence.
+The login for DataForSEO is entered per label in the interface, under **Settings → Connections**. An installation that wants one login for all its labels can set it here instead; a label's own login takes precedence.
 
 ```ini
 DATAFORSEO_LOGIN=you@example.com
 DATAFORSEO_PASSWORD=your-api-password
 ```
+
+## AI service for reading receipts
+
+Nothing to configure here. Each label chooses its service and enters its key under **Settings → Connections**; see [Connections](42-connections.md). Reading PDF receipts needs `pdftotext` and `pdftoppm` on the server (package `poppler-utils`).
 
 ## Bandcamp
 

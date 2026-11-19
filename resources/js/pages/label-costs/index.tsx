@@ -1,7 +1,8 @@
-import { Link } from '@inertiajs/react';
-import { Pencil, Plus, Repeat } from 'lucide-react';
-import { useState } from 'react';
+import { Form, Link, router } from '@inertiajs/react';
+import { Paperclip, Pencil, Plus, Repeat, ScanText } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import LabelCostController from '@/actions/App/Http/Controllers/LabelCostController';
+import ReceiptController from '@/actions/App/Http/Controllers/ReceiptController';
 import TransactionController from '@/actions/App/Http/Controllers/TransactionController';
 import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
@@ -49,6 +50,22 @@ type Cost = {
     currency: string;
     paid_on: string;
     recurring: boolean;
+    receipt_id: number | null;
+};
+
+type Receipt = {
+    id: number;
+    original_name: string;
+    status: 'new' | 'reading' | 'read' | 'failed';
+    vendor: string | null;
+    amount: string | null;
+    currency: string | null;
+    category: string | null;
+    summary: string | null;
+    error: string | null;
+    paid_on: string | null;
+    uploaded_on: string | null;
+    suggested_cost_id: number | null;
 };
 
 type Props = {
@@ -58,6 +75,8 @@ type Props = {
     totals: { this_year: string; last_year: string; year: number };
     recurring: Recurring[];
     costs: Cost[];
+    receipts: Receipt[];
+    receiptReading: boolean;
 };
 
 // The local date: toISOString() is UTC and gives yesterday shortly after midnight.
@@ -79,7 +98,10 @@ function AmountFields({
     labelCurrency: string;
     categories: string[];
     errors: Record<string, string>;
-    cost?: Recurring;
+    cost?: Pick<
+        Recurring,
+        'name' | 'amount' | 'currency' | 'category' | 'memo' | 'conversion_rate'
+    >;
     amountLabel: string;
 }) {
     const [currency, setCurrency] = useState(cost?.currency ?? labelCurrency);
@@ -191,6 +213,243 @@ const COST_COLUMNS = {
     amount: (row: Cost) => row.converted_total,
 };
 
+/**
+ * Uploads the chosen files one after the other, so a large scan does not
+ * hold up the rest and each file gets its own answer.
+ */
+function ReceiptUpload() {
+    const [processing, setProcessing] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
+    const upload = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        const form = event.currentTarget;
+        const input = form.elements.namedItem('files') as HTMLInputElement;
+        const problems: Record<string, string> = {};
+
+        setProcessing(true);
+
+        for (const file of Array.from(input.files ?? [])) {
+            await new Promise<void>((resolve) =>
+                router.post(
+                    ReceiptController.store.url(),
+                    { file },
+                    {
+                        forceFormData: true,
+                        preserveScroll: true,
+                        preserveState: true,
+                        onError: (response) => {
+                            problems.files = `${file.name}: ${Object.values(response).join(' ')}`;
+                        },
+                        onFinish: () => resolve(),
+                    },
+                ),
+            );
+        }
+
+        setProcessing(false);
+        setErrors(problems);
+        form.reset();
+    };
+
+    return (
+        <form onSubmit={upload} className="flex flex-wrap items-end gap-3">
+            <Field
+                label="Receipt files"
+                htmlFor="receipt_files"
+                error={errors.files}
+                hint="PDF, JPEG, PNG or WebP, up to 20 MB each."
+            >
+                <Input
+                    id="receipt_files"
+                    name="files"
+                    type="file"
+                    accept="application/pdf,image/jpeg,image/png,image/webp"
+                    multiple
+                    required
+                />
+            </Field>
+            <Button variant="outline" disabled={processing}>
+                {processing ? 'Uploading…' : 'Upload'}
+            </Button>
+        </form>
+    );
+}
+
+/**
+ * One receipt that belongs to no cost yet: what was read off it, and the
+ * ways to book it.
+ */
+function ReceiptRow({
+    receipt,
+    costs,
+    currency,
+    categories,
+    receiptReading,
+}: {
+    receipt: Receipt;
+    costs: Cost[];
+    currency: string;
+    categories: string[];
+    receiptReading: boolean;
+}) {
+    const name =
+        receipt.vendor ?? receipt.original_name.replace(/\.[^.]+$/, '');
+
+    return (
+        <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 text-sm">
+            <div className="min-w-0 flex-1">
+                <a
+                    href={ReceiptController.show.url(receipt.id)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium wrap-anywhere underline decoration-muted-foreground/40 underline-offset-4"
+                >
+                    {receipt.original_name}
+                </a>
+                <div className="text-xs text-muted-foreground">
+                    {receipt.status === 'reading' && 'Being read…'}
+                    {receipt.status === 'failed' &&
+                        `Could not be read: ${receipt.error ?? 'unknown reason'}`}
+                    {receipt.status === 'new' &&
+                        `Uploaded ${receipt.uploaded_on ? date(receipt.uploaded_on) : ''}, not read`}
+                    {receipt.status === 'read' &&
+                        [
+                            receipt.vendor,
+                            receipt.paid_on && date(receipt.paid_on),
+                            receipt.amount &&
+                                `${receipt.amount} ${receipt.currency ?? ''}`,
+                            receipt.category,
+                            receipt.summary,
+                        ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+                <FormDialog
+                    title="Book receipt as a cost"
+                    description="Check what was read off the receipt. The receipt is attached to the cost."
+                    form={LabelCostController.store.form()}
+                    submitLabel="Book cost"
+                    trigger={
+                        <Button variant="outline" size="sm">
+                            <Plus />
+                            Book as cost
+                        </Button>
+                    }
+                >
+                    {(errors) => (
+                        <>
+                            <input
+                                type="hidden"
+                                name="receipt_id"
+                                value={receipt.id}
+                            />
+                            <AmountFields
+                                labelCurrency={currency}
+                                categories={categories}
+                                errors={errors}
+                                amountLabel="Amount"
+                                cost={{
+                                    name,
+                                    amount: receipt.amount ?? '',
+                                    currency: receipt.currency ?? currency,
+                                    category: receipt.category,
+                                    memo: receipt.summary,
+                                    conversion_rate: null,
+                                }}
+                            />
+                            <Field
+                                label="Paid on"
+                                htmlFor="paid_on"
+                                error={errors.paid_on}
+                                required
+                            >
+                                <Input
+                                    id="paid_on"
+                                    name="paid_on"
+                                    type="date"
+                                    defaultValue={receipt.paid_on ?? today()}
+                                    required
+                                />
+                            </Field>
+                        </>
+                    )}
+                </FormDialog>
+                {costs.length > 0 && (
+                    <Form
+                        {...ReceiptController.update.form(receipt.id)}
+                        options={{ preserveScroll: true }}
+                        className="flex items-center gap-2"
+                    >
+                        {({ processing }) => (
+                            <>
+                                <SelectInput
+                                    name="transaction_id"
+                                    aria-label={`Cost that ${receipt.original_name} belongs to`}
+                                    defaultValue={
+                                        receipt.suggested_cost_id ?? ''
+                                    }
+                                    className="max-w-56"
+                                    required
+                                >
+                                    <option value="">Attach to a cost…</option>
+                                    {costs.map((cost) => (
+                                        <option key={cost.id} value={cost.id}>
+                                            {cost.paid_on} ·{' '}
+                                            {cost.source ?? cost.memo ?? 'Cost'}{' '}
+                                            ·{' '}
+                                            {Math.abs(
+                                                Number(cost.total),
+                                            ).toFixed(2)}{' '}
+                                            {cost.currency}
+                                            {cost.id ===
+                                            receipt.suggested_cost_id
+                                                ? ' (matches)'
+                                                : ''}
+                                        </option>
+                                    ))}
+                                </SelectInput>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={processing}
+                                >
+                                    Attach
+                                </Button>
+                            </>
+                        )}
+                    </Form>
+                )}
+                {receiptReading && receipt.status !== 'reading' && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Read again"
+                        aria-label={`Read ${receipt.original_name} again`}
+                        onClick={() =>
+                            router.post(
+                                ReceiptController.read.url(receipt.id),
+                                {},
+                                { preserveScroll: true },
+                            )
+                        }
+                    >
+                        <ScanText className="text-muted-foreground" />
+                    </Button>
+                )}
+                <DeleteButton
+                    url={ReceiptController.destroy.url(receipt.id)}
+                    title={`Delete ${receipt.original_name}?`}
+                    description="The file is removed. Costs are not touched."
+                />
+            </div>
+        </li>
+    );
+}
+
 export default function LabelCosts({
     currency,
     categories,
@@ -198,7 +457,25 @@ export default function LabelCosts({
     totals,
     recurring,
     costs,
+    receipts,
+    receiptReading,
 }: Props) {
+    // What was read off a receipt arrives while the page is open.
+    const reading = receipts.some((receipt) => receipt.status === 'reading');
+
+    useEffect(() => {
+        if (!reading) {
+            return;
+        }
+
+        const timer = window.setInterval(
+            () => router.reload({ only: ['receipts', 'costs'] }),
+            4000,
+        );
+
+        return () => window.clearInterval(timer);
+    }, [reading]);
+
     const { rows: recurringRows, sorter: recurringSorter } = useTableSort(
         recurring,
         RECURRING_COLUMNS,
@@ -526,6 +803,34 @@ export default function LabelCosts({
                 )}
             </Panel>
 
+            <Panel
+                title="Receipts"
+                description={
+                    receiptReading
+                        ? 'Upload receipts and invoices. Vendor, date, amount and category are read off them as a proposal; you book each one as a cost or attach it to a cost that exists.'
+                        : 'Upload receipts and invoices, then book each one as a cost or attach it to a cost that exists. To have them read automatically, choose an AI service under Settings → Connections.'
+                }
+            >
+                <ReceiptUpload />
+
+                {receipts.length > 0 && (
+                    <ul className="mt-4 divide-y rounded-lg border">
+                        {receipts.map((receipt) => (
+                            <ReceiptRow
+                                key={receipt.id}
+                                receipt={receipt}
+                                costs={costs.filter(
+                                    (cost) => cost.receipt_id === null,
+                                )}
+                                currency={currency}
+                                categories={categories}
+                                receiptReading={receiptReading}
+                            />
+                        ))}
+                    </ul>
+                )}
+            </Panel>
+
             {costs.length === 0 ? (
                 <EmptyState
                     title="No label costs booked yet"
@@ -564,7 +869,7 @@ export default function LabelCosts({
                                 >
                                     Amount
                                 </SortableHead>
-                                <TableHead className="w-20" />
+                                <TableHead className="w-28" />
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -602,6 +907,25 @@ export default function LabelCosts({
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex justify-end">
+                                            {cost.receipt_id && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    asChild
+                                                >
+                                                    <a
+                                                        href={ReceiptController.show.url(
+                                                            cost.receipt_id,
+                                                        )}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        title="Open receipt"
+                                                        aria-label={`Open the receipt of ${cost.source ?? cost.memo ?? 'this cost'}`}
+                                                    >
+                                                        <Paperclip className="text-muted-foreground" />
+                                                    </a>
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="ghost"
                                                 size="icon"

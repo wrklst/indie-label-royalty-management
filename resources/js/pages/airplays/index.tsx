@@ -447,7 +447,7 @@ function LinksDialog({
                     ) : (
                         <p className="text-sm text-muted-foreground">
                             Web search is not set up. Enter the DataForSEO login
-                            under Settings → Label.
+                            under Settings → Connections.
                         </p>
                     )}
                     <InputError message={search.errors.query} />

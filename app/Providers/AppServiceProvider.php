@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\Imports\ImporterRegistry;
 use App\Support\CurrentLabel;
+use App\Support\InstallationSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        InstallationSettings::apply();
+
         $this->configureDefaults();
     }
 

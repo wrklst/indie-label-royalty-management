@@ -14,6 +14,7 @@ How to get Label Royalties running: what the server needs, the installation itse
 | Database                | MySQL 8 or SQLite. PostgreSQL is supported by the framework but not tested with this application.                                                                                                                                                                 |
 | Redis                   | For the queue. Optional: see "Without Redis" in [Configuration](03-configuration.md).                                                                                                                                                                             |
 | ffmpeg                  | Built with `libmp3lame`, for the MP3 playback copies of audio masters. Optional.                                                                                                                                                                                  |
+| poppler-utils           | `pdftotext` and `pdftoppm`, for reading PDF receipts with an AI service. Optional.                                                                                                                                                                                |
 | Cron                    | One entry that runs the scheduler every minute.                                                                                                                                                                                                                   |
 | Mail                    | An SMTP account or a mail service. Sign-in codes and invitations are sent by email.                                                                                                                                                                               |
 | Storage                 | Disk space for release files, or an S3-compatible bucket. Masters are large: plan for roughly 300 MB per release with WAV masters.                                                                                                                                |
@@ -95,6 +96,6 @@ Migrations only ever add to the database; an update does not delete data. Make a
 
 ## Good to know
 
-- The application key in `.env` (`APP_KEY`) encrypts stored secrets such as the Bandcamp credentials and the DataForSEO password. If you lose it or change it, those have to be entered again. Keep it with your backups.
+- The application key in `.env` (`APP_KEY`) encrypts stored secrets such as the Bandcamp credentials, the DataForSEO password and AI service keys. If you lose it or change it, those have to be entered again. Keep it with your backups.
 - `.env` is for the basic connections of the server only: database, Redis, mail, file storage. Everything a label can change is in the interface under **Settings**.
 - Running tests never touches your data: they use an in-memory database and fake file storage.

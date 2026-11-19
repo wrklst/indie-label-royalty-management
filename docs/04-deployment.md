@@ -138,7 +138,7 @@ mysqldump --no-create-info --complete-insert --single-transaction \
 mysql new_db < data.sql
 ```
 
-3. **Application key.** Copy `APP_KEY` from the old `.env`. Without it the stored Bandcamp and DataForSEO credentials cannot be decrypted and have to be entered again.
+3. **Application key.** Copy `APP_KEY` from the old `.env`. Without it the stored Bandcamp, DataForSEO and AI service credentials and a file storage set in the interface cannot be decrypted and have to be entered again.
 4. **Passkeys** are bound to the address they were registered on. On a new domain they have to be registered again; sign in with a code or password first.
 5. Compare a few figures (number of transactions, a period total) between old and new before switching over.
 

@@ -37,7 +37,10 @@ Self-hosted, open source (MIT), built with Laravel, Inertia and React.
   revisions; payouts that cannot exceed what is payable.
 - A profitability report: what the label keeps per release after payee
   shares and its own costs.
-- Label costs that belong to no release, entered once or as recurring costs.
+- Label costs that belong to no release, entered once or as recurring costs,
+  with receipts uploaded, matched to costs and, with an AI service of your
+  choice (Infomaniak, OpenAI, Anthropic, Mistral, Gemini or any
+  OpenAI-compatible one), read automatically.
 - Optional tools for mechanicals, PPD and reserves.
 - A payee portal with passwordless sign-in by emailed one-time code.
 
@@ -92,6 +95,7 @@ Self-hosted, open source (MIT), built with Laravel, Inertia and React.
 | Database       | MySQL 8 or SQLite                                                                                                                                                                                                                                            |
 | Redis          | For the queue (optional, see [Configuration](docs/03-configuration.md))                                                                                                                                                                                      |
 | ffmpeg         | Built with `libmp3lame`, for playback copies of audio (optional)                                                                                                                                                                                             |
+| poppler-utils  | `pdftotext`, `pdftoppm`, for reading PDF receipts (optional)                                                                                                                                                                                                 |
 | Cron           | One entry for the scheduler                                                                                                                                                                                                                                  |
 | Mail           | SMTP or a mail service: sign-in codes are sent by email                                                                                                                                                                                                      |
 
@@ -140,8 +144,7 @@ script, and how to move an installation to another server:
 
 `.env` holds only the basic connections of the server: database, Redis, mail
 and file storage. Everything a label can change is in the interface under
-**Settings**: the Bandcamp connection, the DataForSEO login for the airplay
-research, the research countries, the accounting tools and territories.
+**Settings**: the Bandcamp connection, the DataForSEO login for the airplay research, the AI service that reads receipts, the file storage, the research countries, the accounting tools and territories.
 
 The settings you are most likely to touch:
 
@@ -192,6 +195,7 @@ shows in its help panel.
 
 - [Team, roles and sign-in](docs/40-team-roles-and-sign-in.md)
 - [Label settings](docs/41-label-settings.md)
+- [Connections](docs/42-connections.md)
 
 **Reference**
 

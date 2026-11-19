@@ -40,6 +40,7 @@ const EMPTY: HelpState = {
  */
 export const HELP_TOPICS: [string, string][] = [
     ['/settings/bandcamp', '11-bandcamp'],
+    ['/settings/connections', '42-connections'],
     ['/settings/label', '41-label-settings'],
     ['/settings', '40-team-roles-and-sign-in'],
     ['/data-imports', '10-importing-statements'],

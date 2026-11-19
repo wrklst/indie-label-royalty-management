@@ -133,6 +133,29 @@ It goes through every label of the installation and prints a line for each label
 
 Every entry under **Booked costs** is an ordinary expense. The edit button opens it in the transaction form, the delete button removes it. A deleted payment of a recurring cost is not booked again for that date.
 
+## Receipts
+
+Under **Royalties → Label costs**, the panel **Receipts** collects the receipts and invoices behind your costs.
+
+1. Choose one or more files (PDF, JPEG, PNG or WebP, up to 20 MB each) and choose **Upload**.
+2. Each receipt waits in the list until it belongs to a cost. For each one you either
+    - choose **Book as cost**: a new cost is booked and the receipt is attached to it, or
+    - pick a cost under **Attach to a cost…** and choose **Attach**, for a cost that is booked already, such as a payment of a recurring cost.
+3. A cost with a receipt shows a paperclip in **Booked costs**; it opens the file.
+
+### Having receipts read
+
+When the label has an AI service under **Settings → Connections**, every uploaded receipt is read in the background: the vendor, the date, the total, the currency, a category and a short summary. See [Connections](42-connections.md) for the setup.
+
+- What was read is shown under the file name and fills in **Book as cost**. It is a proposal: check it before you book.
+- A read receipt is compared with the costs that have no receipt yet. A cost of the same amount, paid within ten days of the receipt's date, is preselected under **Attach to a cost…** and marked "(matches)".
+- **Read again** (the scan icon) sends the receipt to the service once more, for example after you changed the model.
+- A receipt that could not be read says why and can still be booked by hand.
+
+Example: Example Records pays 49.90 EUR a month for hosting, booked as a recurring cost. You upload the March invoice. It is read as "Example Hosting GmbH · 14 Mar 2026 · 49.90 EUR · Hosting", and the payment booked on 15 March is preselected. One click on **Attach** files the invoice with it.
+
+Deleting a cost does not delete its receipt: the receipt goes back to the list. Deleting a receipt removes the file and leaves the cost alone.
+
 ## Good to know
 
 - Label costs appear in the profitability report by date like everything else. A yearly cost shows up in full on its payment date; it is not spread over twelve months.

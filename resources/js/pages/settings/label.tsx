@@ -20,8 +20,6 @@ type Props = {
         bandcamp_disable_fee: boolean;
         bandcamp_exclude_physical: boolean;
         airplay_markets: string[];
-        dataforseo_login: string | null;
-        dataforseo_password_set: boolean;
     };
     royaltyTools: {
         mechanicals_usd_rate: string | null;
@@ -162,55 +160,6 @@ export default function LabelSettings({
                                 />
                             </div>
 
-                            <div className="grid gap-1">
-                                <p className="text-sm font-medium">
-                                    Airplay research
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    The research looks tracks up on Google
-                                    through DataForSEO. Its API login and
-                                    password are in your DataForSEO dashboard
-                                    under API Access; every search is billed to
-                                    that account.
-                                </p>
-                            </div>
-                            <Field
-                                label="DataForSEO API login"
-                                htmlFor="dataforseo_login"
-                                error={errors.dataforseo_login}
-                                hint="Leave empty to switch the research off."
-                            >
-                                <Input
-                                    id="dataforseo_login"
-                                    name="dataforseo_login"
-                                    defaultValue={
-                                        settings.dataforseo_login ?? ''
-                                    }
-                                    autoComplete="off"
-                                />
-                            </Field>
-                            <Field
-                                label="DataForSEO API password"
-                                htmlFor="dataforseo_password"
-                                error={errors.dataforseo_password}
-                                hint={
-                                    settings.dataforseo_password_set
-                                        ? 'A password is stored. Leave empty to keep it.'
-                                        : undefined
-                                }
-                            >
-                                <Input
-                                    id="dataforseo_password"
-                                    name="dataforseo_password"
-                                    type="password"
-                                    autoComplete="new-password"
-                                    placeholder={
-                                        settings.dataforseo_password_set
-                                            ? '••••••••'
-                                            : ''
-                                    }
-                                />
-                            </Field>
                             <Field
                                 label="Airplay research countries"
                                 htmlFor="airplay_markets"
@@ -220,7 +169,7 @@ export default function LabelSettings({
                                         key.startsWith('airplay_markets.'),
                                     )?.[1]
                                 }
-                                hint="Two-letter country codes separated by spaces or commas. Every track is searched once per country, and each search is billed."
+                                hint="Two-letter country codes separated by spaces or commas. Every track is searched once per country, and each search is billed. The search login is under Settings → Connections."
                             >
                                 <Input
                                     id="airplay_markets"

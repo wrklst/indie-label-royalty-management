@@ -16,6 +16,7 @@ use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\PeriodController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ReleaseController;
+use App\Http\Controllers\Settings\ConnectionsController;
 use App\Http\Controllers\Settings\LabelSettingsController;
 use App\Http\Controllers\Settings\TeamController;
 use App\Http\Controllers\StatementController;
@@ -82,6 +83,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('settings/label', [LabelSettingsController::class, 'update'])->name('label-settings.update');
             Route::post('settings/territories', [LabelSettingsController::class, 'storeTerritory'])->name('territories.store');
             Route::delete('settings/territories/{territory}', [LabelSettingsController::class, 'destroyTerritory'])->name('territories.destroy');
+
+            Route::get('settings/connections', [ConnectionsController::class, 'edit'])->name('connections.edit');
+            Route::put('settings/connections/search', [ConnectionsController::class, 'search'])->name('connections.search');
+            Route::put('settings/connections/ai', [ConnectionsController::class, 'ai'])->name('connections.ai');
+            Route::put('settings/connections/storage', [ConnectionsController::class, 'storage'])->name('connections.storage');
 
             Route::get('settings/team', [TeamController::class, 'index'])->name('team.index');
             Route::post('settings/team', [TeamController::class, 'store'])->middleware('throttle:30,60')->name('team.store');

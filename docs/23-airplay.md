@@ -38,10 +38,10 @@ A research looks a track up on Google through [DataForSEO](https://dataforseo.co
 
 ### Setting it up
 
-Open **Settings → Label** and fill in the section **Airplay research**:
+Two things are needed:
 
-- **DataForSEO API login** and **API password**: from your DataForSEO dashboard under **API Access**. This is the API password, not the one you sign in to their website with. The login is checked when you save and stored encrypted.
-- **Airplay research countries**: two-letter country codes, for example `DE GB US`. Every track is searched once per country.
+- A **DataForSEO login**, entered under **Settings → Connections → Web search**. It is checked when you save and stored encrypted; see [Connections](42-connections.md).
+- **Airplay research countries**, under **Settings → Label**: two-letter country codes, for example `DE GB US`. Every track is searched once per country.
 
 ### What one research does
 

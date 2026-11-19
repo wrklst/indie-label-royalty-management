@@ -123,6 +123,20 @@ Optional methods:
 
 Then add `new ExampleRadio` to the registry. `Bbc` and `Bayern2` are the existing examples.
 
+## Adding an AI service
+
+Receipts are read through the [Laravel AI SDK](https://laravel.com/docs/ai-sdk), so any provider the SDK supports can be offered. The services a label can choose are the list `SERVICES` in `app/Services/Receipts/AiConnection.php`:
+
+```php
+'mistral' => ['name' => 'Mistral', 'endpoint' => null, 'model' => 'mistral-small-latest'],
+```
+
+- The key is the SDK's driver name, or a name of your own for a service reached the OpenAI way; map that one to its address in `baseUrl()`.
+- `endpoint` is the label of an extra field the service needs (a product ID, a base URL), or `null`.
+- `model` is the model used when the label names none, or `null` when one has to be named.
+
+The reading itself is the agent `App\Ai\Agents\ReceiptReader`: its instructions and the fields it returns. Tests fake it with `ReceiptReader::fake([...])`.
+
 ## Running the tests
 
 ```sh

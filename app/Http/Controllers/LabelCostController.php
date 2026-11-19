@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Enums\RecurrenceInterval;
 use App\Enums\TransactionType;
 use App\Models\Label;
+use App\Models\Receipt;
 use App\Models\RecurringExpense;
 use App\Models\Transaction;
+use App\Services\Receipts\AiConnection;
 use App\Services\Royalties\RecurringExpenseBooker;
 use App\Support\CurrentLabel;
 use App\Support\Decimal;
@@ -32,6 +34,10 @@ class LabelCostController extends Controller
 
         $costs = fn () => Transaction::query()->where('type', TransactionType::Expense)->where('recoupable', false)->whereNull('release_id');
         $year = now()->year;
+        $listed = $costs()->orderByDesc('paid_timestamp')->orderByDesc('id')->limit(200)->get();
+        $receipts = Receipt::query()->orderByDesc('id')->get();
+        $withReceipt = $receipts->whereNotNull('transaction_id')->keyBy('transaction_id');
+        $withoutReceipt = $listed->reject(fn (Transaction $cost): bool => $withReceipt->has($cost->id));
 
         return Inertia::render('label-costs/index', [
             'currency' => $label->currency,
@@ -50,11 +56,21 @@ class LabelCostController extends Controller
                 'ends_on' => $expense->ends_on?->toDateString(),
                 'next_due_on' => $expense->nextDueOn()?->toDateString(),
             ]),
-            'costs' => $costs()->orderByDesc('paid_timestamp')->orderByDesc('id')->limit(200)->get()->map(fn (Transaction $cost): array => [
+            'costs' => $listed->map(fn (Transaction $cost): array => [
                 ...$cost->only(['id', 'category', 'memo', 'source', 'total', 'converted_total', 'currency']),
                 'paid_on' => $cost->paid_timestamp->toDateString(),
                 'recurring' => $cost->recurring_expense_id !== null,
-            ]),
+                'receipt_id' => $withReceipt->get($cost->id)?->id,
+            ])->values(),
+            'receiptReading' => AiConnection::isConfigured($label),
+            // Receipts that belong to no cost yet, with what was read off them.
+            'receipts' => $receipts->whereNull('transaction_id')->map(fn (Receipt $receipt): array => [
+                ...$receipt->only(['id', 'original_name', 'status', 'vendor', 'currency', 'category', 'summary', 'error']),
+                'amount' => $receipt->amount === null ? null : Decimal::round($receipt->amount, 2),
+                'paid_on' => $receipt->paid_on?->toDateString(),
+                'uploaded_on' => $receipt->created_at?->toDateString(),
+                'suggested_cost_id' => ReceiptController::match($receipt, $withoutReceipt),
+            ])->values(),
         ]);
     }
 
@@ -67,13 +83,14 @@ class LabelCostController extends Controller
         $validated = $request->validate([
             ...$this->amountRules(),
             'paid_on' => ['required', 'date'],
+            'receipt_id' => ['nullable', 'integer', Rule::exists('receipts', 'id')->where('label_id', $label->id)->whereNull('transaction_id')],
         ]);
 
         $currency = strtoupper($validated['currency']);
         $total = Decimal::sub('0', Decimal::parse($validated['amount']));
         $rate = $currency === $label->currency ? '1' : Decimal::parse($validated['conversion_rate'] ?? null);
 
-        Transaction::query()->create([
+        $cost = Transaction::query()->create([
             'type' => TransactionType::Expense,
             'recoupable' => false,
             'timestamp' => $validated['paid_on'],
@@ -87,6 +104,10 @@ class LabelCostController extends Controller
             'importer_source' => 'manual',
             'memo' => $validated['memo'] ?? $validated['name'],
         ]);
+
+        if (isset($validated['receipt_id'])) {
+            Receipt::query()->whereKey($validated['receipt_id'])->update(['transaction_id' => $cost->id]);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Cost booked.')]);
 

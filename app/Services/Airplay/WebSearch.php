@@ -18,7 +18,7 @@ use Throwable;
  */
 class WebSearch
 {
-    public const string NOT_SET_UP = 'Web search is not set up. Enter the DataForSEO login under Settings → Label.';
+    public const string NOT_SET_UP = 'Web search is not set up. Enter the DataForSEO login under Settings → Connections.';
 
     private const string ACCOUNT_URL = 'https://api.dataforseo.com/v3/appendix/user_data';
 

@@ -31,6 +31,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $two_factor_confirmed_at
  * @property string|null $remember_token
  * @property int|null $current_label_id
+ * @property bool $installation_admin May change settings of the whole installation, such as the file storage.
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Pivot&object{role: string, payee_id: int|null} $pivot Membership of the label when loaded through Label::users().
@@ -50,6 +51,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     protected function casts(): array
     {
         return [
+            'installation_admin' => 'boolean',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
