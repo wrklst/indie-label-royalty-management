@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import LabelSettingsController from '@/actions/App/Http/Controllers/Settings/LabelSettingsController';
 import { DeleteButton } from '@/components/delete-button';
@@ -6,6 +6,7 @@ import { CheckField, Field } from '@/components/field';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { edit as editBandcamp } from '@/routes/bandcamp';
 import { edit } from '@/routes/label-settings';
 
 type Props = {
@@ -130,6 +131,16 @@ export default function LabelSettings({
                             <div className="grid gap-3">
                                 <p className="text-sm font-medium">
                                     Bandcamp imports
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    To import sales automatically,{' '}
+                                    <Link
+                                        href={editBandcamp()}
+                                        className="underline underline-offset-4"
+                                    >
+                                        connect your Bandcamp account
+                                    </Link>
+                                    .
                                 </p>
                                 <Toggle
                                     name="bandcamp_disable_fee"

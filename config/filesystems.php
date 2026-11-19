@@ -53,6 +53,8 @@ return [
             'secret' => env('AWS_SECRET_ACCESS_KEY'),
             'region' => env('AWS_DEFAULT_REGION'),
             'bucket' => env('AWS_BUCKET'),
+            // Only production works at the top of the bucket; every other environment gets its own folder, so dev cannot touch live files.
+            'root' => env('APP_ENV', 'production') === 'production' ? '' : env('APP_ENV'),
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
