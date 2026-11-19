@@ -116,3 +116,17 @@ test('the settings opened from the profile list everything that belongs to the l
         ->assertSee('Accounting currency')
         ->assertNoJavaScriptErrors();
 });
+
+test('a period draws who the income goes to and a contract draws its splits', function () {
+    $scenario = royaltyScenario();
+    $this->actingAs($scenario['admin']);
+
+    visit("/periods/{$scenario['period']->id}")
+        ->assertSee('Where the money went')
+        ->assertAttribute('[data-segmented-bar] [role="img"]', 'aria-label', 'Owed to payees 50%, Kept by the label 50%')
+        ->assertNoJavaScriptErrors();
+
+    visit('/contracts')
+        ->assertAttribute('[data-segmented-bar] [role="img"]', 'aria-label', 'Example Payee 50%, Label 50%')
+        ->assertNoJavaScriptErrors();
+});

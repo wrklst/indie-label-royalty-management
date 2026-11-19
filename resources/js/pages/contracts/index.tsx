@@ -1,3 +1,4 @@
+import { SegmentedBar } from '@/components/segmented-bar';
 import { Link } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { CheckField } from '@/components/field';
@@ -172,6 +173,33 @@ export default function Contracts({
                                                 </Badge>
                                             ) : (
                                                 <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                                    <SegmentedBar
+                                                        compact
+                                                        className="w-full max-w-xs"
+                                                        format={(value) =>
+                                                            percent(value)
+                                                        }
+                                                        segments={[
+                                                            ...contract.splits.map(
+                                                                (split) => ({
+                                                                    label:
+                                                                        split.payee ??
+                                                                        'Payee',
+                                                                    value: Number(
+                                                                        split.split_amount,
+                                                                    ),
+                                                                }),
+                                                            ),
+                                                            {
+                                                                label: 'Label',
+                                                                value: Math.max(
+                                                                    0,
+                                                                    1 - paid,
+                                                                ),
+                                                                remainder: true,
+                                                            },
+                                                        ]}
+                                                    />
                                                     {contract.splits.map(
                                                         (split, position) => (
                                                             <span

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Amount } from '@/components/amount';
 import { Panel } from '@/components/page';
+import { SegmentedBar } from '@/components/segmented-bar';
 import { cn } from '@/lib/utils';
 
 export type Flow = {
@@ -91,6 +92,29 @@ export function MoneyFlow({
             description="From what customers paid to what the label keeps. Deductions are known only for statements that report them."
             flush
         >
+            {shares && Number(flow.received) > 0 && (
+                <div className="border-b p-4">
+                    <SegmentedBar
+                        format={(value) => (
+                            <Amount value={value} currency={currency} />
+                        )}
+                        segments={[
+                            {
+                                label: 'Owed to payees',
+                                value: Number(shares.payee_share),
+                            },
+                            {
+                                label: 'Costs',
+                                value: Math.abs(Number(shares.expense)),
+                            },
+                            {
+                                label: 'Kept by the label',
+                                value: Number(shares.label_share),
+                            },
+                        ]}
+                    />
+                </div>
+            )}
             <div data-money-flow className="divide-y">
                 {hasBreakdown && (
                     <>

@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TransactionType;
 use App\Http\Requests\ArtistRequest;
 use App\Models\Artist;
 use App\Models\Release;
 use App\Models\Track;
+use App\Models\Transaction;
 use App\Services\Releases\PlayableAudio;
+use App\Support\Decimal;
 use App\Support\Options;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
@@ -57,18 +60,41 @@ class ArtistController extends Controller
             ->orderByDesc('released_on')->orderBy('name')->get(['id', 'name', 'catalog_number', 'released_on', 'artist_id']);
         $albums = PlayableAudio::albums($releases);
 
+        // Everything booked on the artist's releases, plus what their tracks earned on releases
+        // of others, such as compilations. Each transaction counts once.
+        $booked = fn () => Transaction::query()->where(fn ($query) => $query
+            ->whereIn('release_id', $releases->modelKeys())->orWhereIn('track_id', $tracks->modelKeys()));
+        $byType = $booked()->selectRaw('type, SUM(converted_total) as total, SUM(quantity) as quantity, COUNT(*) as transactions')
+            ->groupBy('type')->toBase()->get()->keyBy('type');
+        $incomeByRelease = Transaction::query()->where('type', TransactionType::Income)->whereIn('release_id', $releases->modelKeys())
+            ->selectRaw('release_id, SUM(converted_total) as total')->groupBy('release_id')->toBase()->pluck('total', 'release_id');
+        $incomeByTrack = Transaction::query()->where('type', TransactionType::Income)->whereIn('track_id', $tracks->modelKeys())
+            ->selectRaw('track_id, SUM(converted_total) as total')->groupBy('track_id')->toBase()->pluck('total', 'track_id');
+        $income = Decimal::parse($byType['income']->total ?? 0) ?? '0';
+        $expense = Decimal::parse($byType['expense']->total ?? 0) ?? '0';
+
         return Inertia::render('artists/show', [
             'artist' => $artist->only(['id', 'name']),
+            'totals' => [
+                'income' => $income,
+                'expense' => $expense,
+                'net' => Decimal::add($income, $expense),
+                'units' => Decimal::parse($byType['income']->quantity ?? 0) ?? '0',
+                'transactions' => (int) $byType->sum('transactions'),
+                'airplays' => (int) $tracks->sum('airplays_count'),
+            ],
             'releases' => $releases
                 ->map(fn (Release $release): array => [
                     ...$release->only(['id', 'name', 'catalog_number']),
                     'player_tracks' => $albums[$release->id],
                     'released_on' => $release->released_on?->toDateString(),
+                    'income' => Decimal::parse($incomeByRelease[$release->id] ?? 0) ?? '0',
                 ]),
             'tracks' => $tracks->map(fn (Track $track): array => [
                 ...$track->only(['id', 'name', 'isrc']),
                 'release' => $track->release?->only(['id', 'name']),
                 'airplays_count' => $track->airplays_count,
+                'income' => Decimal::parse($incomeByTrack[$track->id] ?? 0) ?? '0',
             ]),
         ]);
     }

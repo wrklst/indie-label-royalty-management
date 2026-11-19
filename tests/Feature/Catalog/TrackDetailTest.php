@@ -75,6 +75,38 @@ test('an artist page lists the releases and tracks credited to the artist', func
             ->where('tracks.0.airplays_count', 1));
 });
 
+test('an artist page totals what the artist\'s releases and tracks earned and cost, counting each transaction once', function () {
+    $label = Label::factory()->create();
+    $artist = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
+    $release = Release::factory()->create(['label_id' => $label->id, 'artist_id' => $artist->id, 'name' => 'Example Release']);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'artist_id' => $artist->id, 'name' => 'Example Track']);
+    $compilation = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Compilation']);
+    $onCompilation = Track::factory()->create(['label_id' => $label->id, 'release_id' => $compilation->id, 'artist_id' => $artist->id, 'name' => 'Compilation Track']);
+    $booking = fn (array $attributes): Transaction => Transaction::factory()->create(['label_id' => $label->id, 'type' => 'income', 'quantity' => 10, ...$attributes]);
+    // On the artist's own release and track: counted once, although it matches both.
+    $booking(['release_id' => $release->id, 'track_id' => $track->id, 'total' => '40', 'converted_total' => '40']);
+    $booking(['release_id' => $release->id, 'track_id' => null, 'total' => '15', 'converted_total' => '15']);
+    $booking(['release_id' => $compilation->id, 'track_id' => $onCompilation->id, 'total' => '5', 'converted_total' => '5']);
+    $booking(['release_id' => $release->id, 'track_id' => null, 'type' => 'expense', 'total' => '-20', 'converted_total' => '-20', 'quantity' => null]);
+    // Someone else's track on the compilation, and another label's income.
+    $booking(['release_id' => $compilation->id, 'track_id' => Track::factory()->create(['label_id' => $label->id, 'release_id' => $compilation->id])->id, 'total' => '99', 'converted_total' => '99']);
+    Transaction::factory()->create(['type' => 'income', 'total' => '77', 'converted_total' => '77']);
+    Airplay::factory()->create(['label_id' => $label->id, 'track_id' => $track->id]);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('artists.show', $artist->id))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('totals.income', fn (string $total): bool => (float) $total === 60.0)
+            ->where('totals.expense', fn (string $total): bool => (float) $total === -20.0)
+            ->where('totals.net', fn (string $total): bool => (float) $total === 40.0)
+            ->where('totals.units', fn (string $units): bool => (float) $units === 30.0)
+            ->where('totals.transactions', 4)
+            ->where('totals.airplays', 1)
+            ->where('releases.0.income', fn (string $total): bool => (float) $total === 55.0)
+            ->where('tracks', fn ($tracks) => (float) collect($tracks)->firstWhere('id', $track->id)['income'] === 40.0
+                && (float) collect($tracks)->firstWhere('id', $onCompilation->id)['income'] === 5.0));
+});
+
 test('the artist of another label has no page', function () {
     $artist = Artist::factory()->create();
 

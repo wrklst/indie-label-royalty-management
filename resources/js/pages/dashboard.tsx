@@ -73,9 +73,9 @@ function BreakdownList({
                             <Amount value={row.total} />
                         </span>
                     </div>
-                    <div className="h-1 overflow-hidden rounded-full bg-muted">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                         <div
-                            className="h-full rounded-full bg-foreground/60"
+                            className="h-full rounded-full bg-chart-1"
                             style={{
                                 width: `${max > 0 ? Math.max((Number(row.total) / max) * 100, 0) : 0}%`,
                             }}
@@ -244,7 +244,7 @@ export default function Dashboard({
                                     })}
                                 </span>
                                 <div
-                                    className="w-full rounded-t bg-foreground/70"
+                                    className="w-full rounded-t bg-chart-1"
                                     style={{
                                         height: `${peak > 0 ? Math.max((Number(row.total) / peak) * 100, 0) * 0.8 : 0}%`,
                                         minHeight: 2,
