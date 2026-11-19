@@ -33,9 +33,11 @@ Infomaniak runs open models in Swiss data centres.
 1. In the Infomaniak Manager open **AI Tools** and note the number of your product: that is the **Product ID**.
 2. Create an **API token** in the Manager with access to AI Tools.
 3. Choose **Infomaniak AI Tools** as the service and enter the token and the product ID.
-4. Enter a **Model** that understands images. If you are not sure of the name, enter any: saving asks Infomaniak which models your product offers and lists them when yours is not among them.
+4. Enter a **Model** that understands images, with its exact name as Infomaniak writes it, for example `mistralai/Mistral-Small-4-119B-2603` or `google/gemma-4-31B-it`. The names are on Infomaniak's list of open-source models.
 
-Saving checks the token and the product ID with Infomaniak before anything is stored.
+Saving checks the token and the product ID, then asks the chosen model one short question. The connection is stored only when the model answers. If it does not, the message says what Infomaniak answered.
+
+> **Note:** The list of models a service returns can be incomplete, so it is shown as a hint only, never used to refuse a model.
 
 ### What is sent
 

@@ -208,7 +208,7 @@ function ReceiptReading({ ai }: { ai: Props['ai'] }) {
                                     hint={
                                         service.model
                                             ? `Leave empty to use ${service.model}.`
-                                            : 'The name of a model that understands images. Saving checks it against the models the service offers you and lists them if it is not among them.'
+                                            : 'The exact name of a model that understands images, as the service writes it. Saving asks the model one short question to prove it answers.'
                                     }
                                     required={!service.model}
                                 >

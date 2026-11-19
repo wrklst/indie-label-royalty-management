@@ -12,7 +12,16 @@ use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
 const DATAFORSEO_ACCOUNT_URL = 'https://api.dataforseo.com/v3/appendix/user_data';
-const INFOMANIAK_MODELS_URL = 'https://api.infomaniak.com/1/ai/12345/openai/models';
+const INFOMANIAK_MODELS_URL = 'https://api.infomaniak.com/2/ai/12345/openai/v1/models';
+const INFOMANIAK_CHAT_URL = 'https://api.infomaniak.com/2/ai/12345/openai/v1/chat/completions';
+
+/**
+ * What an OpenAI-compatible service answers to a chat request.
+ */
+function chatAnswer(string $text = 'OK'): array
+{
+    return ['id' => 'example', 'object' => 'chat.completion', 'model' => 'example-vision-model', 'choices' => [['index' => 0, 'message' => ['role' => 'assistant', 'content' => $text], 'finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => 5, 'completion_tokens' => 1, 'total_tokens' => 6]];
+}
 
 test('the connections page shows what is set up without sending any secret back', function () {
     $label = Label::factory()->create([
@@ -80,37 +89,43 @@ test('a research uses the login of its label', function () {
     Http::assertSent(fn (Request $request): bool => $request->hasHeader('Authorization', 'Basic '.base64_encode('label-login:label-password')));
 });
 
-test('an Infomaniak connection is checked against the models the account offers and stored encrypted', function () {
+test('an Infomaniak connection is proven with a question to the chosen model and stored encrypted', function () {
     Http::preventStrayRequests();
-    Http::fake([INFOMANIAK_MODELS_URL => Http::response(['data' => [['id' => 'example-vision-model'], ['id' => 'example-text-model']]])]);
+    Http::fake([
+        // The list names other models only; the model still answers, and that is what counts.
+        INFOMANIAK_MODELS_URL => Http::response(['data' => [['id' => 'whisper'], ['id' => 'flux']]]),
+        INFOMANIAK_CHAT_URL => Http::response(chatAnswer()),
+    ]);
     $label = Label::factory()->create();
 
     $this->actingAs(labelAdmin($label))
         ->put(route('connections.ai'), ['provider' => 'infomaniak', 'key' => 'example-key', 'endpoint' => '12345', 'model' => 'example-vision-model'])
         ->assertSessionHasNoErrors();
 
-    Http::assertSent(fn (Request $request): bool => $request->hasHeader('Authorization', 'Bearer example-key'));
+    Http::assertSent(fn (Request $request): bool => $request->url() === INFOMANIAK_CHAT_URL
+        && $request->hasHeader('Authorization', 'Bearer example-key') && $request['model'] === 'example-vision-model');
     expect($label->refresh()->only(['ai_provider', 'ai_key', 'ai_endpoint', 'ai_model']))
         ->toBe(['ai_provider' => 'infomaniak', 'ai_key' => 'example-key', 'ai_endpoint' => '12345', 'ai_model' => 'example-vision-model'])
         ->and(DB::table('labels')->where('id', $label->id)->value('ai_key'))->not->toContain('example-key');
 });
 
-test('an AI connection that cannot work is not stored', function (array $input, array $response, string $field, string $message) {
+test('an AI connection that cannot work is not stored', function (array $input, array $models, array $chat, string $field, string $message) {
     Http::preventStrayRequests();
-    Http::fake([INFOMANIAK_MODELS_URL => Http::response(...$response)]);
+    Http::fake([INFOMANIAK_MODELS_URL => Http::response(...$models), INFOMANIAK_CHAT_URL => Http::response(...$chat)]);
     $label = Label::factory()->create();
 
-    $this->actingAs(labelAdmin($label))
-        ->put(route('connections.ai'), ['provider' => 'infomaniak', 'key' => 'example-key', 'endpoint' => '12345', 'model' => 'example-vision-model', ...$input])
-        ->assertSessionHasErrors([$field => $message]);
+    $response = $this->actingAs(labelAdmin($label))
+        ->put(route('connections.ai'), ['provider' => 'infomaniak', 'key' => 'example-key', 'endpoint' => '12345', 'model' => 'example-vision-model', ...$input]);
 
-    expect($label->refresh()->ai_provider)->toBeNull();
+    $response->assertSessionHasErrors($field);
+    expect(session('errors')->first($field))->toContain($message)
+        ->and($label->refresh()->ai_provider)->toBeNull();
 })->with([
-    'a key the service refuses' => [[], [['error' => 'unauthorized'], 401], 'key', 'The AI service does not accept this key and product ID.'],
-    'a model the account does not have' => [['model' => 'another-model'], [['data' => [['id' => 'example-vision-model']]]], 'model', 'The service does not offer this model. It offers: example-vision-model'],
-    'no key' => [['key' => ''], [['data' => []]], 'key', 'Enter the API key of this service.'],
-    'no product id' => [['endpoint' => ''], [['data' => []]], 'endpoint', 'This service needs its Product ID.'],
-    'no model' => [['model' => ''], [['data' => []]], 'model', 'Name the model to read receipts with. It has to understand images.'],
+    'a key the service refuses' => [[], [['error' => 'unauthorized'], 401], [chatAnswer()], 'key', 'The AI service does not accept this key and product ID.'],
+    'a model that does not answer' => [[], [['data' => [['id' => 'whisper']]]], [['error' => ['message' => 'model not found']], 404], 'model', 'Models it lists: whisper'],
+    'no key' => [['key' => ''], [['data' => []]], [chatAnswer()], 'key', 'Enter the API key of this service.'],
+    'no product id' => [['endpoint' => ''], [['data' => []]], [chatAnswer()], 'endpoint', 'This service needs its Product ID.'],
+    'no model' => [['model' => ''], [['data' => []]], [chatAnswer()], 'model', 'Name the model to read receipts with.'],
 ]);
 
 test('switching the AI service asks for the key of the new one, and choosing none removes the connection', function () {

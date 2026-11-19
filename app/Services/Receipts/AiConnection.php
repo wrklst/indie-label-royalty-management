@@ -9,6 +9,8 @@ use Laravel\Ai\Providers\Provider;
 use RuntimeException;
 use Throwable;
 
+use function Laravel\Ai\agent;
+
 /**
  * The AI service a label chose for reading receipts, as a provider of
  * the Laravel AI SDK. Adding a service means adding it to SERVICES and
@@ -95,6 +97,30 @@ class AiConnection
     }
 
     /**
+     * Prove the connection the way it will be used: one short question to
+     * the chosen model. A list of models says less, because services list
+     * only some of what they serve.
+     *
+     * @throws RuntimeException with what the service answered
+     */
+    public static function prove(string $service, string $key, ?string $endpoint, ?string $model): void
+    {
+        $configuration = self::configuration($service, $key, $endpoint, $model)
+            ?? throw new RuntimeException('The connection is incomplete.');
+
+        try {
+            agent(instructions: 'Answer with the single word OK.')->prompt(
+                'Are you there?',
+                provider: [Ai::build([...$configuration, 'name' => 'probe_'.md5(json_encode($configuration, JSON_THROW_ON_ERROR))])],
+                model: $model ?: self::SERVICES[$service]['model'],
+                timeout: 45,
+            );
+        } catch (Throwable $exception) {
+            throw new RuntimeException(mb_substr($exception->getMessage(), 0, 300), previous: $exception);
+        }
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     private static function configuration(?string $service, ?string $key, ?string $endpoint, ?string $model): ?array
@@ -123,7 +149,7 @@ class AiConnection
     {
         return match (true) {
             blank($endpoint) => null,
-            $service === 'infomaniak' => 'https://api.infomaniak.com/1/ai/'.rawurlencode(trim((string) $endpoint)).'/openai',
+            $service === 'infomaniak' => 'https://api.infomaniak.com/2/ai/'.rawurlencode(trim((string) $endpoint)).'/openai/v1',
             $service === 'openai-compatible' => rtrim(trim((string) $endpoint), '/'),
             default => null,
         };

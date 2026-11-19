@@ -148,8 +148,13 @@ class ConnectionsController extends Controller
             throw ValidationException::withMessages(['key' => $exception->getMessage()]);
         }
 
-        if ($models !== null && $models !== [] && ! in_array($model, $models, true)) {
-            throw ValidationException::withMessages(['model' => __('The service does not offer this model. It offers: :models', ['models' => implode(', ', $models)])]);
+        // The list a service gives is a hint only: some list just part of what they serve.
+        // What counts is whether the chosen model answers.
+        try {
+            AiConnection::prove($service, $key, $endpoint, $model);
+        } catch (RuntimeException $exception) {
+            throw ValidationException::withMessages(['model' => __('The service did not answer with this model: :error', ['error' => $exception->getMessage()])
+                .($models === null || $models === [] ? '' : ' '.__('Models it lists: :models', ['models' => implode(', ', $models)]))]);
         }
 
         $label->update(['ai_provider' => $service, 'ai_key' => $key, 'ai_endpoint' => $endpoint, 'ai_model' => $model]);
