@@ -1,4 +1,4 @@
-import { Form, router, useHttp } from '@inertiajs/react';
+import { Form, Link, router, useHttp } from '@inertiajs/react';
 import {
     Check,
     ExternalLink,
@@ -18,6 +18,7 @@ import { Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import InputError from '@/components/input-error';
 import { EmptyState, Page, Panel } from '@/components/page';
+import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -63,6 +64,7 @@ type AirplayLink = {
 
 type Finding = {
     id: number;
+    track_id: number | null;
     is_radio: boolean;
     station: string | null;
     url: string;
@@ -89,6 +91,7 @@ const VERIFICATIONS: Record<string, string> = {
 
 type Airplay = {
     id: number;
+    artist_id: number | null;
     origin: Origin;
     track_id: number | null;
     track_name: string;
@@ -121,6 +124,7 @@ type TrackResearch = {
 
 type SearchEntry = {
     id: number;
+    track_id: number | null;
     query: string;
     region: string | null;
     succeeded: boolean;
@@ -627,7 +631,9 @@ function Findings({ findings }: { findings: Finding[] }) {
                     {findings.map((finding) => (
                         <TableRow key={finding.id}>
                             <TableCell className="align-top font-medium">
-                                {finding.track ?? '–'}
+                                <RecordLink to="track" id={finding.track_id}>
+                                    {finding.track ?? '–'}
+                                </RecordLink>
                             </TableCell>
                             <TableCell className="max-w-md align-top whitespace-normal">
                                 <a
@@ -829,7 +835,9 @@ function ResearchLog({ searches }: { searches: SearchEntry[] }) {
                                 {entry.created_at}
                             </TableCell>
                             <TableCell className="align-top">
-                                {entry.track ?? '–'}
+                                <RecordLink to="track" id={entry.track_id}>
+                                    {entry.track ?? '–'}
+                                </RecordLink>
                                 {entry.airplay_id !== null && (
                                     <p className="text-xs text-muted-foreground">
                                         Play on{' '}
@@ -899,6 +907,7 @@ export default function Airplays({
     findings,
     searches,
     trackResearch,
+    onlyTrack,
     tracks,
     releases,
     staleCount,
@@ -909,6 +918,7 @@ export default function Airplays({
     findings: Finding[];
     searches: SearchEntry[];
     trackResearch: TrackResearch[];
+    onlyTrack: Option | null;
     tracks: Option[];
     releases: Option[];
     staleCount: number;
@@ -980,6 +990,21 @@ export default function Airplays({
                 </>
             }
         >
+            {onlyTrack && (
+                <p className="text-sm">
+                    Showing only{' '}
+                    <RecordLink to="track" id={onlyTrack.id}>
+                        {onlyTrack.name}
+                    </RecordLink>
+                    .{' '}
+                    <Link
+                        href={index()}
+                        className="underline underline-offset-4"
+                    >
+                        Show all airplay
+                    </Link>
+                </p>
+            )}
             <ResearchProgress tracks={trackResearch} airplays={airplays} />
             {findings.length > 0 && <Findings findings={findings} />}
             {airplays.length === 0 ? (
@@ -1024,7 +1049,12 @@ export default function Airplays({
                             {rows.map((airplay) => (
                                 <TableRow key={airplay.id}>
                                     <TableCell className="font-medium">
-                                        {airplay.track_name}
+                                        <RecordLink
+                                            to="track"
+                                            id={airplay.track_id}
+                                        >
+                                            {airplay.track_name}
+                                        </RecordLink>
                                         {airplay.notes && (
                                             <p className="max-w-md truncate text-xs font-normal text-muted-foreground">
                                                 {airplay.notes}
@@ -1032,7 +1062,12 @@ export default function Airplays({
                                         )}
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">
-                                        {airplay.artist_name ?? '–'}
+                                        <RecordLink
+                                            to="artist"
+                                            id={airplay.artist_id}
+                                        >
+                                            {airplay.artist_name ?? '–'}
+                                        </RecordLink>
                                     </TableCell>
                                     <TableCell>
                                         {airplay.station ?? (
@@ -1052,18 +1087,29 @@ export default function Airplays({
                                         </p>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge
-                                            variant={
+                                        <RecordLink
+                                            to="import"
+                                            id={
                                                 airplay.origin === 'statement'
-                                                    ? 'default'
-                                                    : airplay.origin ===
-                                                        'search'
-                                                      ? 'secondary'
-                                                      : 'outline'
+                                                    ? airplay.data_import_id
+                                                    : null
                                             }
+                                            className="no-underline"
                                         >
-                                            {ORIGINS[airplay.origin]}
-                                        </Badge>
+                                            <Badge
+                                                variant={
+                                                    airplay.origin ===
+                                                    'statement'
+                                                        ? 'default'
+                                                        : airplay.origin ===
+                                                            'search'
+                                                          ? 'secondary'
+                                                          : 'outline'
+                                                }
+                                            >
+                                                {ORIGINS[airplay.origin]}
+                                            </Badge>
+                                        </RecordLink>
                                         <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                                             {airplay.research_state ===
                                                 'running' && <Spinner />}

@@ -1,3 +1,4 @@
+import { RecordLink } from '@/components/record-link';
 import { Link } from '@inertiajs/react';
 import { Pencil, Plus } from 'lucide-react';
 import ArtistController from '@/actions/App/Http/Controllers/ArtistController';
@@ -205,7 +206,12 @@ export default function Artists({
                                 <TableRow key={artist.id}>
                                     <TableCell>
                                         <span className="font-medium">
-                                            {artist.name}
+                                            <RecordLink
+                                                to="artist"
+                                                id={artist.id}
+                                            >
+                                                {artist.name}
+                                            </RecordLink>
                                         </span>
                                         {artist.alias_of && (
                                             <Badge

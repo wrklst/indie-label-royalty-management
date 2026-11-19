@@ -3,6 +3,7 @@ import ReservesController from '@/actions/App/Http/Controllers/RoyaltyTools/Rese
 import { Amount } from '@/components/amount';
 import { Field } from '@/components/field';
 import { Page, Panel, Stat } from '@/components/page';
+import { RecordLink } from '@/components/record-link';
 import {
     CreateTransactions,
     Notice,
@@ -352,7 +353,12 @@ export default function Reserves({
                             {balances.map((balance) => (
                                 <TableRow key={balance.release_id}>
                                     <TableCell className="font-medium">
-                                        {balance.release_name}
+                                        <RecordLink
+                                            to="release"
+                                            id={balance.release_id}
+                                        >
+                                            {balance.release_name}
+                                        </RecordLink>
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Amount

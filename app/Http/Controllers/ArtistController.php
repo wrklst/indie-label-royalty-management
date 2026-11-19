@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ArtistRequest;
 use App\Models\Artist;
+use App\Models\Release;
+use App\Models\Track;
 use App\Support\Options;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
@@ -39,6 +41,30 @@ class ArtistController extends Controller
             'artists' => $artists,
             'filters' => ['search' => $request->string('search')->value(), ...$sorting->toArray()],
             'artistOptions' => Options::artists(),
+        ]);
+    }
+
+    /**
+     * The releases and tracks of one artist, and where the tracks were played.
+     */
+    public function show(Artist $artist): Response
+    {
+        $tracks = Track::query()->where(fn ($query) => $query->where('artist_id', $artist->id)->orWhereHas('artists', fn ($query) => $query->whereKey($artist->id)))
+            ->with('release:id,name')->withCount('airplays')->orderBy('name')->get();
+
+        return Inertia::render('artists/show', [
+            'artist' => $artist->only(['id', 'name']),
+            'releases' => Release::query()->where(fn ($query) => $query->where('artist_id', $artist->id)->orWhereHas('artists', fn ($query) => $query->whereKey($artist->id)))
+                ->orderByDesc('released_on')->orderBy('name')->get(['id', 'name', 'catalog_number', 'released_on'])
+                ->map(fn (Release $release): array => [
+                    ...$release->only(['id', 'name', 'catalog_number']),
+                    'released_on' => $release->released_on?->toDateString(),
+                ]),
+            'tracks' => $tracks->map(fn (Track $track): array => [
+                ...$track->only(['id', 'name', 'isrc']),
+                'release' => $track->release?->only(['id', 'name']),
+                'airplays_count' => $track->airplays_count,
+            ]),
         ]);
     }
 

@@ -106,7 +106,7 @@ test('transactions without a quantity are listed for fixing and not counted', fu
 
     expect($report['total'])->toBe('20.000000000000000')
         ->and($report['without_quantity_count'])->toBe(1)
-        ->and($report['without_quantity'])->toBe([['id' => $missing->id, 'paid_on' => '2026-02-01', 'description' => 'Example wholesale invoice', 'release_name' => 'Example Release']])
+        ->and($report['without_quantity'])->toBe([['id' => $missing->id, 'paid_on' => '2026-02-01', 'description' => 'Example wholesale invoice', 'release_name' => 'Example Release', 'release_id' => $this->release->id]])
         ->and($report['unconverted'])->toBe(1);
 });
 

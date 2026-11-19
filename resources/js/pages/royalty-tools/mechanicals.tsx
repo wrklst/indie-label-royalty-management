@@ -6,6 +6,7 @@ import RatesController from '@/actions/App/Http/Controllers/RoyaltyTools/RatesCo
 import { Amount } from '@/components/amount';
 import { Field, SelectInput } from '@/components/field';
 import { Page, Panel, Stat } from '@/components/page';
+import { RecordLink } from '@/components/record-link';
 import {
     CreateTransactions,
     Notice,
@@ -537,10 +538,20 @@ export default function Mechanicals({
                                     {report.rows.map((row) => (
                                         <TableRow key={row.track_id}>
                                             <TableCell>
-                                                {row.release_name}
+                                                <RecordLink
+                                                    to="release"
+                                                    id={row.release_id}
+                                                >
+                                                    {row.release_name}
+                                                </RecordLink>
                                             </TableCell>
                                             <TableCell className="font-medium">
-                                                {row.track_name}
+                                                <RecordLink
+                                                    to="track"
+                                                    id={row.track_id}
+                                                >
+                                                    {row.track_name}
+                                                </RecordLink>
                                             </TableCell>
                                             <TableCell className="text-right tabular-nums">
                                                 {quantity(row.sold)}

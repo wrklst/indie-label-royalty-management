@@ -6,6 +6,7 @@ import TransactionController from '@/actions/App/Http/Controllers/TransactionCon
 import { Amount } from '@/components/amount';
 import { Field, SelectInput } from '@/components/field';
 import { Page, Panel, Stat } from '@/components/page';
+import { RecordLink } from '@/components/record-link';
 import {
     CreateTransactions,
     Notice,
@@ -58,6 +59,7 @@ type Report = {
         paid_on: string;
         description: string;
         release_name: string | null;
+        release_id: number | null;
     }[];
 };
 
@@ -319,8 +321,18 @@ export default function Ppd({
                                             {date(transaction.paid_on)} ·{' '}
                                             {transaction.description}
                                         </Link>
-                                        {transaction.release_name &&
-                                            ` (${transaction.release_name})`}
+                                        {transaction.release_name && (
+                                            <>
+                                                {' ('}
+                                                <RecordLink
+                                                    to="release"
+                                                    id={transaction.release_id}
+                                                >
+                                                    {transaction.release_name}
+                                                </RecordLink>
+                                                )
+                                            </>
+                                        )}
                                     </li>
                                 ))}
                             </ul>
@@ -414,10 +426,24 @@ export default function Ppd({
                                             key={`${row.release_id}-${row.track_id}-${row.rate_source}-${row.item_id}-${row.rate}`}
                                         >
                                             <TableCell>
-                                                {row.release_name}
+                                                <RecordLink
+                                                    to="release"
+                                                    id={row.release_id}
+                                                >
+                                                    {row.release_name}
+                                                </RecordLink>
                                             </TableCell>
                                             <TableCell>
-                                                {row.track_name ?? '–'}
+                                                {row.track_name ? (
+                                                    <RecordLink
+                                                        to="track"
+                                                        id={row.track_id}
+                                                    >
+                                                        {row.track_name}
+                                                    </RecordLink>
+                                                ) : (
+                                                    '–'
+                                                )}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground">
                                                 {row.rate_source === 'item'

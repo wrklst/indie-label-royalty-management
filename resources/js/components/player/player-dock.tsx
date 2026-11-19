@@ -30,6 +30,7 @@ import {
     usePlayer,
 } from '@/components/player/player-store';
 import type { PlayerTrack } from '@/components/player/player-store';
+import { RecordLink } from '@/components/record-link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { show as showFile } from '@/routes/release-files';
@@ -427,7 +428,9 @@ export function PlayerDock() {
                             className="truncate text-sm font-medium"
                             data-player="title"
                         >
-                            {track.title}
+                            <RecordLink to="track" id={track.id}>
+                                {track.title}
+                            </RecordLink>
                         </div>
                         {error ? (
                             <div
@@ -439,7 +442,9 @@ export function PlayerDock() {
                             </div>
                         ) : (
                             <div className="truncate text-xs text-muted-foreground">
-                                {track.artist}
+                                <RecordLink to="artist" id={track.artistId}>
+                                    {track.artist}
+                                </RecordLink>
                                 {track.artist && track.release && ' · '}
                                 {track.release && (
                                     <Link

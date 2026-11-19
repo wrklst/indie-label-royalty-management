@@ -55,7 +55,7 @@ class ReleaseController extends Controller
             ->paginate(50)
             ->withQueryString()
             ->through(fn (Release $release): array => [
-                ...$release->only(['id', 'name', 'catalog_number', 'upc', 'tracks_count']),
+                ...$release->only(['id', 'name', 'catalog_number', 'upc', 'tracks_count', 'artist_id']),
                 'released_on' => $release->released_on?->toDateString(),
                 'artist' => ArtistCredits::display($release),
                 'status' => $release->status->value,
@@ -116,7 +116,7 @@ class ReleaseController extends Controller
         return Inertia::render('releases/show', [
             'release' => [
                 ...$release->only([
-                    'id', 'name', 'catalog_number', 'upc', 'spotify_id', 'discogs_id', 'notes', 'version', 'genre', 'subgenre', 'language', 'explicit',
+                    'id', 'name', 'artist_id', 'catalog_number', 'upc', 'spotify_id', 'discogs_id', 'notes', 'version', 'genre', 'subgenre', 'language', 'explicit',
                     'p_line', 'c_line', 'press_release', 'key_facts', 'todo', 'files_url', 'blocked_services', 'blocked_territories',
                 ]),
                 'released_on' => $release->released_on?->toDateString(),

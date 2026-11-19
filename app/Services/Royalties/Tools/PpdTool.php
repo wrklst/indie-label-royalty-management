@@ -41,7 +41,7 @@ use Illuminate\Database\Eloquent\Builder;
  *     unconverted: int,
  *     unassigned: int,
  *     without_quantity_count: int,
- *     without_quantity: list<array{id: int, paid_on: string, description: string, release_name: string|null}>
+ *     without_quantity: list<array{id: int, paid_on: string, description: string, release_name: string|null, release_id: int|null}>
  * }
  */
 class PpdTool
@@ -122,12 +122,13 @@ class PpdTool
             'without_quantity_count' => $withoutQuantity()->count(),
             'without_quantity' => array_values($withoutQuantity()
                 ->orderBy('transactions.paid_timestamp')->orderBy('transactions.id')->limit(self::LISTED)
-                ->get(['transactions.id', 'transactions.paid_timestamp', 'transactions.memo', 'transactions.source', 'transactions.retailer', 'r.name as release_name'])
+                ->get(['transactions.id', 'transactions.paid_timestamp', 'transactions.memo', 'transactions.source', 'transactions.retailer', 'transactions.release_id', 'r.name as release_name'])
                 ->map(fn (Transaction $transaction): array => [
                     'id' => $transaction->id,
                     'paid_on' => $transaction->paid_timestamp->toDateString(),
                     'description' => $transaction->memo ?? $transaction->source ?? $transaction->retailer ?? "Transaction {$transaction->id}",
                     'release_name' => $transaction->getAttribute('release_name'),
+                    'release_id' => $transaction->release_id,
                 ])
                 ->all()),
         ];

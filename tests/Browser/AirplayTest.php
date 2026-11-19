@@ -3,6 +3,7 @@
 use App\Enums\AirplayOrigin;
 use App\Models\Airplay;
 use App\Models\AirplayFinding;
+use App\Models\Artist;
 use App\Models\DataImport;
 use App\Models\Label;
 use App\Models\Release;
@@ -91,4 +92,28 @@ test('an import held for a possible duplicate is merged from its review screen',
 
     expect(Transaction::query()->withoutGlobalScope('label')->find($booking->id))->toBeNull()
         ->and(Transaction::query()->withoutGlobalScope('label')->sole()->data_import_id)->toBe($import->id);
+});
+
+test('an airplay leads to its track, the track to its artist, and back to its airplay', function () {
+    $label = Label::factory()->create();
+    $artist = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release']);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'artist_id' => $artist->id, 'name' => 'Example Track']);
+    Airplay::factory()->create(['label_id' => $label->id, 'track_id' => $track->id, 'track_name' => 'Example Track', 'artist_name' => 'Example Artist', 'station' => 'Example Radio']);
+    $this->actingAs(labelAdmin($label));
+
+    visit('/airplays')
+        ->click('Example Track')
+        ->assertPathIs("/tracks/{$track->id}")
+        ->assertSee('Where this track was played and how we know.')
+        ->assertSee('Example Radio')
+        ->assertSee('Example Release')
+        ->click('Example Artist')
+        ->assertPathIs("/artists/{$artist->id}")
+        ->assertSee('Example Release')
+        ->click('Example Track')
+        ->assertPathIs("/tracks/{$track->id}")
+        ->click('Manage airplay and findings')
+        ->assertSee('Showing only')
+        ->assertNoJavaScriptErrors();
 });

@@ -39,6 +39,7 @@ use Illuminate\Support\Facades\DB;
  *     release_name: string,
  *     catalog_number: string|null,
  *     artist_name: string|null,
+ *     artist_id: int|null,
  *     income: numeric-string,
  *     expense: numeric-string,
  *     net: numeric-string,
@@ -148,13 +149,13 @@ class ProfitabilityReport
             }
 
             if ($releaseId === self::OVERHEAD_KEY) {
-                $overheads = ['release_id' => null, 'release_name' => self::OVERHEADS, 'catalog_number' => null, 'artist_name' => null, ...$this->figures($sums)];
+                $overheads = ['release_id' => null, 'release_name' => self::OVERHEADS, 'catalog_number' => null, 'artist_name' => null, 'artist_id' => null, ...$this->figures($sums)];
 
                 continue;
             }
 
             if ($releaseId === 0) {
-                $unassigned = ['release_id' => null, 'release_name' => self::UNASSIGNED, 'catalog_number' => null, 'artist_name' => null, ...$this->figures($sums)];
+                $unassigned = ['release_id' => null, 'release_name' => self::UNASSIGNED, 'catalog_number' => null, 'artist_name' => null, 'artist_id' => null, ...$this->figures($sums)];
 
                 continue;
             }
@@ -166,6 +167,7 @@ class ProfitabilityReport
                 'release_name' => $release->name ?? 'Unknown release',
                 'catalog_number' => $release?->catalog_number,
                 'artist_name' => $release?->artist?->name,
+                'artist_id' => $release?->artist?->id,
                 ...$this->figures($sums),
             ];
         }

@@ -39,6 +39,7 @@ class ContractController extends Controller
                 ...$contract->only(['id', 'name', 'memo', 'releases_count', 'tracks_count', 'items_count', 'children_count', 'parents_count']),
                 'splits' => $contract->splits->map(fn ($split): array => [
                     'payee' => $split->payee?->name,
+                    'payee_id' => $split->payee_id,
                     'split_amount' => $split->split_amount,
                     'ledger' => $split->ledger?->name,
                 ]),

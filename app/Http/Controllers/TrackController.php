@@ -3,11 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ReleaseFileKind;
+use App\Enums\TransactionType;
 use App\Http\Requests\TrackRequest;
+use App\Models\Airplay;
+use App\Models\AirplayFinding;
+use App\Models\AirplaySearch;
 use App\Models\Artist;
 use App\Models\Contract;
 use App\Models\Release;
 use App\Models\Track;
+use App\Models\Transaction;
+use App\Services\Airplay\ResearchState;
+use App\Services\Airplay\WebSearch;
 use App\Services\Imports\Identifiers;
 use App\Services\Releases\ArtistCredits;
 use App\Services\Releases\PlayableAudio;
@@ -61,6 +68,68 @@ class TrackController extends Controller
             'artistOptions' => Options::artists(),
             'contractOptions' => Options::contracts(),
             'releaseOptions' => Options::releases(),
+        ]);
+    }
+
+    /**
+     * Everything known about one track: where it belongs, what it earned and where it was played.
+     */
+    public function show(Track $track, WebSearch $search): Response
+    {
+        $track->load([
+            'artist:id,name', 'artists:id,name', 'contract:id,name', 'release:id,name,catalog_number,contract_id', 'release.contract:id,name',
+            'release.cover:id,release_id',
+            'files' => fn ($query) => $query->where('kind', ReleaseFileKind::Audio)->orderBy('id')->select(['id', 'track_id', 'mime_type']),
+        ]);
+
+        $ids = $track->recordingIds();
+        $income = Transaction::query()->whereIn('track_id', $ids)->where('type', TransactionType::Income);
+
+        return Inertia::render('tracks/show', [
+            'track' => [
+                ...$track->only(['id', 'name', 'version', 'isrc', 'iswc', 'track_number', 'duration', 'genre', 'bpm', 'musical_key']),
+                'credited_artist' => ArtistCredits::display($track),
+                'artists' => $track->artists->isNotEmpty()
+                    ? $track->artists->map->only(['id', 'name'])->values()
+                    : collect([$track->artist?->only(['id', 'name'])])->filter()->values(),
+                'release' => $track->release?->only(['id', 'name', 'catalog_number']),
+                'cover_file_id' => $track->release?->cover?->id,
+                'audio_file_id' => PlayableAudio::pick($track->files)?->id,
+                'contract' => $track->contract?->only(['id', 'name']),
+                'inherited_contract' => $track->contract ? null : $track->release?->contract?->only(['id', 'name']),
+                'researched_at' => $track->researched_at?->toDateTimeString(),
+                'research_state' => ResearchState::visible($track->research_state, $track->research_state_at),
+                'research_step' => $track->research_step,
+            ],
+            'income' => [
+                'total' => (string) ((clone $income)->sum('converted_total') ?: '0'),
+                'transactions' => (clone $income)->count(),
+                'byRetailer' => (clone $income)->selectRaw('retailer, COUNT(*) as transactions, SUM(converted_total) as total')
+                    ->groupBy('retailer')->orderByDesc('total')->limit(8)->toBase()->get()
+                    ->map(fn ($row): array => ['label' => $row->retailer ?? 'Unknown', 'transactions' => (int) $row->transactions, 'total' => (string) $row->total]),
+            ],
+            'releases' => Track::query()->whereIn('id', $ids)->with('release:id,name,catalog_number')->orderBy('id')->get()
+                ->filter(fn (Track $entry): bool => $entry->release !== null)
+                ->map(fn (Track $entry): array => [
+                    'track_id' => $entry->id,
+                    ...$entry->release->only(['id', 'name', 'catalog_number']),
+                    'income' => (string) (Transaction::query()->where('track_id', $entry->id)->where('type', TransactionType::Income)->sum('converted_total') ?: '0'),
+                ])->values(),
+            'airplays' => Airplay::query()->whereIn('track_id', $ids)->orderByRaw('station is null')->orderBy('station')->orderByDesc('period_end')->get()
+                ->map(fn (Airplay $airplay): array => [
+                    ...$airplay->only(['id', 'origin', 'station', 'media_type', 'region', 'society', 'amount', 'notes', 'data_import_id']),
+                    'period_start' => $airplay->period_start?->toDateString(),
+                    'period_end' => $airplay->period_end?->toDateString(),
+                    'links' => $airplay->links ?? [],
+                ]),
+            'openFindings' => AirplayFinding::query()->whereIn('track_id', $ids)->where('status', AirplayFinding::NEW)->count(),
+            'searches' => AirplaySearch::query()->whereIn('track_id', $ids)->latest('id')->limit(20)->get()
+                ->map(fn (AirplaySearch $entry): array => [
+                    ...$entry->only(['id', 'query', 'region', 'succeeded', 'new_findings', 'error']),
+                    'results' => count($entry->results ?? []),
+                    'created_at' => $entry->created_at?->toDateTimeString(),
+                ]),
+            'searchAvailable' => $search->isConfigured(),
         ]);
     }
 

@@ -66,6 +66,7 @@ test('a release shows what came in, what payees earn and what the label is left 
         'release_name' => 'Example Release',
         'catalog_number' => 'EX001',
         'artist_name' => 'Example Artist',
+        'artist_id' => $artist->id,
         'income' => '200.000000000000000',
         'expense' => '-40.000000000000000',
         'net' => '160.000000000000000',

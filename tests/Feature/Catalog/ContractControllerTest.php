@@ -35,7 +35,7 @@ test('the contract list shows each contract with its splits and where it is used
             ->where('contracts.data.0.items_count', 0)
             ->where('contracts.data.0.children_count', 1)
             ->where('contracts.data.0.parents_count', 0)
-            ->where('contracts.data.0.splits', [['payee' => 'Example Payee', 'split_amount' => '0.250000000', 'ledger' => 'Example Ledger']])
+            ->where('contracts.data.0.splits', [['payee' => 'Example Payee', 'payee_id' => $payee->id, 'split_amount' => '0.250000000', 'ledger' => 'Example Ledger']])
             ->where('contracts.data.1.name', 'Example Sub Deal')
             ->where('contracts.data.1.parents_count', 1));
 });

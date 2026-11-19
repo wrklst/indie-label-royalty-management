@@ -93,7 +93,7 @@ test('the payee page lists the payee\'s own splits, payouts, statements and tran
     $split = ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $payee->id, 'ledger_id' => $ledger->id, 'split_amount' => '0.25']);
     ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $other->id]);
     $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'contract_id' => $contract->id]);
-    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track', 'contract_id' => $contract->id]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track', 'contract_id' => $contract->id]);
     $shared = ['label_id' => $label->id, 'period_id' => $period->id];
     Payout::factory()->create([...$shared, 'payee_id' => $payee->id, 'total' => '20', 'paid_on' => '2026-04-10', 'memo' => 'Bank transfer']);
     Payout::factory()->create([...$shared, 'payee_id' => $payee->id, 'total' => '30', 'paid_on' => '2026-05-02']);
@@ -117,6 +117,10 @@ test('the payee page lists the payee\'s own splits, payouts, statements and tran
                 'ledger' => 'Example Ledger',
                 'territory' => null,
                 'used_by' => ['Example Release', 'Example Track'],
+                'used_by_links' => [
+                    ['to' => 'release', 'id' => $release->id, 'name' => 'Example Release'],
+                    ['to' => 'track', 'id' => $track->id, 'name' => 'Example Track'],
+                ],
             ])
             ->has('payouts', 2)
             ->where('payouts.0.paid_on', '2026-05-02')

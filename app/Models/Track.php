@@ -37,6 +37,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $p_line
  * @property array<string, list<string>>|null $credits
  * @property string|null $lyrics
+ * @property CarbonImmutable|null $researched_at
  * @property string|null $research_state
  * @property string|null $research_step
  * @property CarbonImmutable|null $research_state_at
@@ -113,6 +114,29 @@ class Track extends Model
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
+    }
+
+    /**
+     * The ids of every entry of this recording. A track that is on
+     * several releases has one entry per release, all with the same ISRC.
+     *
+     * @return list<int>
+     */
+    public function recordingIds(): array
+    {
+        if ($this->isrc === null) {
+            return [$this->id];
+        }
+
+        return array_values(self::query()->withoutGlobalScope('label')->where('label_id', $this->label_id)->where('isrc', $this->isrc)->orderBy('id')->pluck('id')->all());
+    }
+
+    /**
+     * @return HasMany<Airplay, $this>
+     */
+    public function airplays(): HasMany
+    {
+        return $this->hasMany(Airplay::class);
     }
 
     /**

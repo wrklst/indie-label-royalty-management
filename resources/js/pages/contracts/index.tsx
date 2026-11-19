@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import { CheckField } from '@/components/field';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ type Contract = {
     parents_count: number;
     splits: {
         payee: string | null;
+        payee_id: number | null;
         split_amount: string;
         ledger: string | null;
     }[];
@@ -175,7 +177,16 @@ export default function Contracts({
                                                             <span
                                                                 key={position}
                                                             >
-                                                                {split.payee}{' '}
+                                                                <RecordLink
+                                                                    to="payee"
+                                                                    id={
+                                                                        split.payee_id
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        split.payee
+                                                                    }
+                                                                </RecordLink>{' '}
                                                                 <span className="text-muted-foreground tabular-nums">
                                                                     {percent(
                                                                         split.split_amount,

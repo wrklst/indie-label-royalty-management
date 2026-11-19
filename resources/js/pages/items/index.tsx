@@ -1,4 +1,3 @@
-import { Link } from '@inertiajs/react';
 import { Link2 } from 'lucide-react';
 import { useState } from 'react';
 import ItemController from '@/actions/App/Http/Controllers/ItemController';
@@ -6,6 +5,7 @@ import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
 import { CheckField, Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
+import { RecordLink } from '@/components/record-link';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
 import { SortableHead } from '@/components/sortable-head';
@@ -24,7 +24,6 @@ import { useFilters } from '@/hooks/use-filters';
 import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
 import { index } from '@/routes/items';
-import { show as showRelease } from '@/routes/releases';
 import type { Option, Paginated, TrackOption } from '@/types';
 
 type Item = {
@@ -298,14 +297,12 @@ export default function Items({
                                     </TableCell>
                                     <TableCell>
                                         {item.release ? (
-                                            <Link
-                                                href={showRelease(
-                                                    item.release.id,
-                                                )}
-                                                className="underline decoration-muted-foreground/40 underline-offset-4"
+                                            <RecordLink
+                                                to="release"
+                                                id={item.release.id}
                                             >
                                                 {item.release.name}
-                                            </Link>
+                                            </RecordLink>
                                         ) : (
                                             <Badge variant="destructive">
                                                 Unassigned
@@ -316,7 +313,16 @@ export default function Items({
                                         {item.isrc ?? item.upc ?? '–'}
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">
-                                        {item.contract?.name ?? '–'}
+                                        {item.contract ? (
+                                            <RecordLink
+                                                to="contract"
+                                                id={item.contract.id}
+                                            >
+                                                {item.contract.name}
+                                            </RecordLink>
+                                        ) : (
+                                            '–'
+                                        )}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
                                         {item.transactions_count.toLocaleString(

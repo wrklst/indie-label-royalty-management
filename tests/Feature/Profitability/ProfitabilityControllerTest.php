@@ -63,6 +63,7 @@ test('the profitability page shows every release of the label over all time', fu
                 'release_name' => 'Example Release',
                 'catalog_number' => 'EX001',
                 'artist_name' => 'Example Artist',
+                'artist_id' => $release->artist_id,
                 'income' => '200.000000000000000',
                 'expense' => '-40.000000000000000',
                 'net' => '160.000000000000000',

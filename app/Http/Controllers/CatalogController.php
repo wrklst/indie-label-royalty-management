@@ -26,10 +26,10 @@ class CatalogController extends Controller
                 ->orderByRaw('catalog_number IS NULL')->orderBy('catalog_number')->orderBy('name')
                 ->get()
                 ->map(fn (Release $release): array => [
-                    ...$release->only(['id', 'name', 'catalog_number', 'contract_id']),
+                    ...$release->only(['id', 'name', 'catalog_number', 'contract_id', 'artist_id']),
                     'artist' => $release->artist?->name,
                     'tracks' => $release->tracks->map(fn (Track $track): array => [
-                        ...$track->only(['id', 'name', 'isrc', 'contract_id']),
+                        ...$track->only(['id', 'name', 'isrc', 'contract_id', 'artist_id']),
                         'artist' => $track->artist?->name,
                     ]),
                 ]),

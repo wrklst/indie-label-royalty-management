@@ -15,6 +15,8 @@ export type PlayerTrack = {
     fileId: number;
     title: string;
     artist: string | null;
+    /** Primary artist, to link the name; the name stays plain text without it. */
+    artistId?: number | null;
     release: { id: number; name: string } | null;
     coverFileId: number | null;
 };

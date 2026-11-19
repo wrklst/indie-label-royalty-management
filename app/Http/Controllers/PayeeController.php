@@ -65,6 +65,10 @@ class PayeeController extends Controller
                     'ledger' => $split->ledger?->name,
                     'territory' => $split->territory?->name,
                     'used_by' => [...($split->contract?->releases->pluck('name')->all() ?? []), ...($split->contract?->tracks->pluck('name')->all() ?? [])],
+                    'used_by_links' => [
+                        ...($split->contract?->releases->map(fn ($release): array => ['to' => 'release', 'id' => $release->id, 'name' => $release->name])->all() ?? []),
+                        ...($split->contract?->tracks->map(fn ($track): array => ['to' => 'track', 'id' => $track->id, 'name' => $track->name])->all() ?? []),
+                    ],
                 ]),
             'payouts' => Payout::query()->where('payee_id', $payee->id)->with('period:id,name')->orderByDesc('paid_on')->get()
                 ->map(fn (Payout $payout): array => [
@@ -81,7 +85,7 @@ class PayeeController extends Controller
                 ->map(fn (Transaction $transfer): array => [
                     'id' => $transfer->id, 'paid_timestamp' => $transfer->paid_timestamp->toDateString(), 'total' => $transfer->total,
                     'converted_total' => $transfer->converted_total, 'currency' => $transfer->currency, 'category' => $transfer->category,
-                    'memo' => $transfer->memo, 'release' => $transfer->release?->name, 'ledger' => $transfer->ledger?->name,
+                    'memo' => $transfer->memo, 'release' => $transfer->release?->name, 'release_id' => $transfer->release_id, 'ledger' => $transfer->ledger?->name,
                 ]),
         ]);
     }

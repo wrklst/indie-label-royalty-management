@@ -4,6 +4,7 @@ import { Download } from 'lucide-react';
 import { Amount } from '@/components/amount';
 import { SelectInput } from '@/components/field';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
+import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,7 @@ type Row = Figures & {
     release_name: string;
     catalog_number: string | null;
     artist_name: string | null;
+    artist_id: number | null;
 };
 
 type Filters = {
@@ -366,12 +368,18 @@ export default function Profitability({
                                         {(row.artist_name ||
                                             row.catalog_number) && (
                                             <span className="block truncate text-xs text-muted-foreground">
-                                                {[
-                                                    row.artist_name,
-                                                    row.catalog_number,
-                                                ]
-                                                    .filter(Boolean)
-                                                    .join(' · ')}
+                                                {row.artist_name && (
+                                                    <RecordLink
+                                                        to="artist"
+                                                        id={row.artist_id}
+                                                    >
+                                                        {row.artist_name}
+                                                    </RecordLink>
+                                                )}
+                                                {row.artist_name &&
+                                                    row.catalog_number &&
+                                                    ' · '}
+                                                {row.catalog_number}
                                             </span>
                                         )}
                                     </TableCell>

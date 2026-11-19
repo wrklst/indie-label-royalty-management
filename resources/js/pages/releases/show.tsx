@@ -13,6 +13,7 @@ import {
     ReleaseActions,
     TrackActions,
 } from '@/components/player/track-actions';
+import { RecordLink } from '@/components/record-link';
 import { ReleaseFiles } from '@/components/release-files';
 import type { ReleaseFile } from '@/components/release-files';
 import { SortableHead } from '@/components/sortable-head';
@@ -30,7 +31,6 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useTableSort } from '@/hooks/use-table-sort';
 import { country, date, duration, quantity } from '@/lib/format';
-import { edit as editContract } from '@/routes/contracts';
 import { show as showFile } from '@/routes/release-files';
 import { edit, index } from '@/routes/releases';
 import {
@@ -78,6 +78,7 @@ type Props = {
     release: {
         id: number;
         name: string;
+        artist_id: number | null;
         version: string | null;
         catalog_number: string | null;
         upc: string | null;
@@ -444,6 +445,7 @@ export default function ShowRelease({
         fileId,
         title: track.version ? `${track.name} (${track.version})` : track.name,
         artist: track.artist ?? release.artist,
+        artistId: track.artist ? track.artist_id : release.artist_id,
         release: { id: release.id, name: release.name },
         coverFileId: release.cover_file_id,
     });
@@ -457,8 +459,12 @@ export default function ShowRelease({
             description={
                 <span className="flex flex-wrap items-center gap-2">
                     <ReleaseStatusBadge status={release.status} />
+                    {release.artist && (
+                        <RecordLink to="artist" id={release.artist_id}>
+                            {release.artist}
+                        </RecordLink>
+                    )}
                     {[
-                        release.artist,
                         release.release_type,
                         release.catalog_number,
                         release.upc && `UPC ${release.upc}`,
@@ -466,7 +472,10 @@ export default function ShowRelease({
                             `released ${date(release.released_on)}`,
                     ]
                         .filter(Boolean)
-                        .join(' · ')}
+                        .map((part, index) =>
+                            release.artist || index > 0 ? ` · ${part}` : part,
+                        )
+                        .join('')}
                 </span>
             }
             actions={
@@ -543,12 +552,13 @@ export default function ShowRelease({
                         label="Contract"
                         value={
                             release.contract ? (
-                                <Link
-                                    href={editContract(release.contract.id)}
-                                    className="text-base underline decoration-muted-foreground/40 underline-offset-4"
+                                <RecordLink
+                                    to="contract"
+                                    id={release.contract.id}
+                                    className="text-base"
                                 >
                                     {release.contract.name}
-                                </Link>
+                                </RecordLink>
                             ) : (
                                 <span className="text-base">None</span>
                             )
@@ -642,7 +652,9 @@ export default function ShowRelease({
                                         {track.track_number ?? '–'}
                                     </TableCell>
                                     <TableCell className="font-medium">
-                                        {track.name}
+                                        <RecordLink to="track" id={track.id}>
+                                            {track.name}
+                                        </RecordLink>
                                         {track.version && (
                                             <span className="font-normal text-muted-foreground">
                                                 {' '}
@@ -650,7 +662,14 @@ export default function ShowRelease({
                                             </span>
                                         )}
                                     </TableCell>
-                                    <TableCell>{track.artist ?? '–'}</TableCell>
+                                    <TableCell>
+                                        <RecordLink
+                                            to="artist"
+                                            id={track.artist_id}
+                                        >
+                                            {track.artist ?? '–'}
+                                        </RecordLink>
+                                    </TableCell>
                                     <TableCell className="font-mono text-xs">
                                         {track.isrc ?? '–'}
                                     </TableCell>
@@ -673,14 +692,12 @@ export default function ShowRelease({
                                     </TableCell>
                                     <TableCell>
                                         {track.contract ? (
-                                            <Link
-                                                href={editContract(
-                                                    track.contract.id,
-                                                )}
-                                                className="underline decoration-muted-foreground/40 underline-offset-4"
+                                            <RecordLink
+                                                to="contract"
+                                                id={track.contract.id}
                                             >
                                                 {track.contract.name}
-                                            </Link>
+                                            </RecordLink>
                                         ) : release.contract ? (
                                             <span className="text-muted-foreground">
                                                 Release contract
@@ -888,7 +905,14 @@ export default function ShowRelease({
                                         {item.format_group ?? '–'}
                                     </TableCell>
                                     <TableCell className="text-right text-muted-foreground">
-                                        {item.contract?.name ?? ''}
+                                        {item.contract && (
+                                            <RecordLink
+                                                to="contract"
+                                                id={item.contract.id}
+                                            >
+                                                {item.contract.name}
+                                            </RecordLink>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}

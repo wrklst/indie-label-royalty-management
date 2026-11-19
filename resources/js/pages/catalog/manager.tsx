@@ -2,6 +2,7 @@ import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import CatalogController from '@/actions/App/Http/Controllers/CatalogController';
 import { SelectInput } from '@/components/field';
+import { RecordLink } from '@/components/record-link';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { index } from '@/routes/catalog';
 import { create as createContract } from '@/routes/contracts';
 import { create as createImport } from '@/routes/data-imports';
-import { show as showRelease } from '@/routes/releases';
 import type { Option } from '@/types';
 
 type Track = {
@@ -18,6 +18,7 @@ type Track = {
     isrc: string | null;
     contract_id: number | null;
     artist: string | null;
+    artist_id: number | null;
 };
 type Release = {
     id: number;
@@ -25,6 +26,7 @@ type Release = {
     catalog_number: string | null;
     contract_id: number | null;
     artist: string | null;
+    artist_id: number | null;
     tracks: Track[];
 };
 
@@ -141,14 +143,19 @@ export default function CatalogManager({
                                                 {release.catalog_number}
                                             </span>
                                         )}
-                                        <Link
-                                            href={showRelease(release.id)}
-                                            className="underline decoration-muted-foreground/40 underline-offset-4"
+                                        <RecordLink
+                                            to="release"
+                                            id={release.id}
                                         >
                                             {release.name}
-                                        </Link>
+                                        </RecordLink>
                                         <span className="font-normal text-muted-foreground">
-                                            {release.artist}
+                                            <RecordLink
+                                                to="artist"
+                                                id={release.artist_id}
+                                            >
+                                                {release.artist}
+                                            </RecordLink>
                                         </span>
                                     </span>
                                 }
@@ -182,14 +189,29 @@ export default function CatalogManager({
                                             >
                                                 <span className="min-w-0 flex-1">
                                                     <span className="font-medium">
-                                                        {track.name}
+                                                        <RecordLink
+                                                            to="track"
+                                                            id={track.id}
+                                                        >
+                                                            {track.name}
+                                                        </RecordLink>
                                                     </span>
                                                     {track.artist &&
                                                         track.artist !==
                                                             release.artist && (
                                                             <span className="text-muted-foreground">
                                                                 {' '}
-                                                                · {track.artist}
+                                                                ·{' '}
+                                                                <RecordLink
+                                                                    to="artist"
+                                                                    id={
+                                                                        track.artist_id
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        track.artist
+                                                                    }
+                                                                </RecordLink>
                                                             </span>
                                                         )}
                                                     {track.isrc && (

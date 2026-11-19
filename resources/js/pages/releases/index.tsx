@@ -4,6 +4,7 @@ import { Amount } from '@/components/amount';
 import { CheckField, SelectInput } from '@/components/field';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,10 +21,9 @@ import { useFilters } from '@/hooks/use-filters';
 import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
-import { edit as editContract } from '@/routes/contracts';
 import { create as createImport } from '@/routes/data-imports';
 import { show as showFile } from '@/routes/release-files';
-import { create, index, metadata, show } from '@/routes/releases';
+import { create, index, metadata } from '@/routes/releases';
 import type { Option, Paginated } from '@/types';
 import { ReleaseStatusBadge } from './show';
 
@@ -35,6 +35,7 @@ type Release = {
     tracks_count: number;
     released_on: string | null;
     artist: string | null;
+    artist_id: number | null;
     contract: Option | null;
     income: string;
     status: 'todo' | 'in_progress' | 'done';
@@ -231,12 +232,13 @@ export default function Releases({
                                         {release.catalog_number ?? '–'}
                                     </TableCell>
                                     <TableCell>
-                                        <Link
-                                            href={show(release.id)}
-                                            className="font-medium underline decoration-muted-foreground/40 underline-offset-4"
+                                        <RecordLink
+                                            to="release"
+                                            id={release.id}
+                                            className="font-medium"
                                         >
                                             {release.name}
-                                        </Link>
+                                        </RecordLink>
                                         <span className="ml-2 inline-flex gap-1 align-middle">
                                             {release.status !== 'done' && (
                                                 <ReleaseStatusBadge
@@ -251,7 +253,12 @@ export default function Releases({
                                         </span>
                                     </TableCell>
                                     <TableCell>
-                                        {release.artist ?? '–'}
+                                        <RecordLink
+                                            to="artist"
+                                            id={release.artist_id}
+                                        >
+                                            {release.artist ?? '–'}
+                                        </RecordLink>
                                     </TableCell>
                                     <TableCell className="font-mono text-xs text-muted-foreground">
                                         {release.upc ?? '–'}
@@ -264,14 +271,12 @@ export default function Releases({
                                     </TableCell>
                                     <TableCell>
                                         {release.contract ? (
-                                            <Link
-                                                href={editContract(
-                                                    release.contract.id,
-                                                )}
-                                                className="underline decoration-muted-foreground/40 underline-offset-4"
+                                            <RecordLink
+                                                to="contract"
+                                                id={release.contract.id}
                                             >
                                                 {release.contract.name}
-                                            </Link>
+                                            </RecordLink>
                                         ) : (
                                             <Badge variant="outline">
                                                 none

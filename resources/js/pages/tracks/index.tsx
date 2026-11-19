@@ -7,6 +7,7 @@ import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
 import { TrackActions } from '@/components/player/track-actions';
+import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -137,9 +138,18 @@ export default function Tracks({
                             {tracks.data.map((track) => (
                                 <TableRow key={track.id}>
                                     <TableCell className="font-medium">
-                                        {track.name}
+                                        <RecordLink to="track" id={track.id}>
+                                            {track.name}
+                                        </RecordLink>
                                     </TableCell>
-                                    <TableCell>{track.artist ?? '–'}</TableCell>
+                                    <TableCell>
+                                        <RecordLink
+                                            to="artist"
+                                            id={track.artist_id}
+                                        >
+                                            {track.artist ?? '–'}
+                                        </RecordLink>
+                                    </TableCell>
                                     <TableCell>
                                         {track.release && (
                                             <Link
@@ -179,6 +189,7 @@ export default function Tracks({
                                                         ? `${track.name} (${track.version})`
                                                         : track.name,
                                                     artist: track.credited_artist,
+                                                    artistId: track.artist_id,
                                                     release: track.release && {
                                                         id: track.release.id,
                                                         name: track.release

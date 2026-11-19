@@ -17,7 +17,9 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        // Real masters live on both: no test may ever reach the server's disk or the bucket.
         Storage::fake('local');
+        Storage::fake('s3');
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

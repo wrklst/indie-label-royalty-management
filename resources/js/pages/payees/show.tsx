@@ -5,6 +5,7 @@ import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
 import { FormDialog } from '@/components/form-dialog';
 import { Page, Panel, Stat } from '@/components/page';
+import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ type Props = {
         ledger: string | null;
         territory: string | null;
         used_by: string[];
+        used_by_links: { to: 'release' | 'track'; id: number; name: string }[];
     }[];
     payouts: {
         id: number;
@@ -65,6 +67,7 @@ type Props = {
         category: string | null;
         memo: string | null;
         release: string | null;
+        release_id: number | null;
         ledger: string | null;
     }[];
 };
@@ -366,8 +369,23 @@ export default function ShowPayee({
                                         {split.territory ?? 'World'}
                                     </TableCell>
                                     <TableCell className="max-w-md truncate text-muted-foreground">
-                                        {split.used_by.join(', ') ||
-                                            'Not assigned to a release or track'}
+                                        {split.used_by_links.length === 0
+                                            ? 'Not assigned to a release or track'
+                                            : split.used_by_links.map(
+                                                  (item, index) => (
+                                                      <span
+                                                          key={`${item.to}-${item.id}`}
+                                                      >
+                                                          {index > 0 && ', '}
+                                                          <RecordLink
+                                                              to={item.to}
+                                                              id={item.id}
+                                                          >
+                                                              {item.name}
+                                                          </RecordLink>
+                                                      </span>
+                                                  ),
+                                              )}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -511,7 +529,16 @@ export default function ShowPayee({
                                         {transfer.category ?? '–'}
                                     </TableCell>
                                     <TableCell>
-                                        {transfer.release ?? '–'}
+                                        {transfer.release ? (
+                                            <RecordLink
+                                                to="release"
+                                                id={transfer.release_id}
+                                            >
+                                                {transfer.release}
+                                            </RecordLink>
+                                        ) : (
+                                            '–'
+                                        )}
                                     </TableCell>
                                     <TableCell>
                                         {transfer.ledger ?? 'From contract'}

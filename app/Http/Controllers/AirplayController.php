@@ -24,22 +24,25 @@ use RuntimeException;
 
 class AirplayController extends Controller
 {
-    public function index(WebSearch $search, AirplayResearch $research): Response
+    public function index(Request $request, WebSearch $search, AirplayResearch $research): Response
     {
+        $only = Track::query()->find($request->integer('track') ?: null, ['id', 'label_id', 'name', 'isrc']);
+        $onlyIds = $only?->recordingIds() ?? [];
+
         $researched = AirplaySearch::query()->whereNotNull('airplay_id')->where('succeeded', true)
             ->selectRaw('airplay_id, MAX(created_at) as researched_at')->groupBy('airplay_id')->toBase()->pluck('researched_at', 'airplay_id');
 
         return Inertia::render('airplays/index', [
-            'findings' => AirplayFinding::query()->where('status', AirplayFinding::NEW)->with(['track:id,name', 'airplay:id,track_name,station'])
+            'findings' => AirplayFinding::query()->where('status', AirplayFinding::NEW)->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with(['track:id,name', 'airplay:id,track_name,station'])
                 ->orderByRaw("verification = 'confirmed' desc")->orderByDesc('is_radio')->latest()->limit(200)->get()
                 ->map(fn (AirplayFinding $finding): array => [
-                    ...$finding->only(['id', 'is_radio', 'station', 'url', 'title', 'description', 'domain', 'query', 'airplay_id', 'verification', 'page_title', 'show', 'excerpt']),
+                    ...$finding->only(['id', 'track_id', 'is_radio', 'station', 'url', 'title', 'description', 'domain', 'query', 'airplay_id', 'verification', 'page_title', 'show', 'excerpt']),
                     'track' => $finding->track->name ?? $finding->airplay?->track_name,
                     'airplay_station' => $finding->airplay_id === null ? null : ($finding->airplay->station ?? __('Unidentified')),
                 ]),
-            'searches' => AirplaySearch::query()->with(['track:id,name', 'airplay:id,track_name,station'])->latest('id')->limit(100)->get()
+            'searches' => AirplaySearch::query()->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with(['track:id,name', 'airplay:id,track_name,station'])->latest('id')->limit(100)->get()
                 ->map(fn (AirplaySearch $entry): array => [
-                    ...$entry->only(['id', 'query', 'region', 'succeeded', 'new_findings', 'error', 'airplay_id']),
+                    ...$entry->only(['id', 'track_id', 'query', 'region', 'succeeded', 'new_findings', 'error', 'airplay_id']),
                     'track' => $entry->track->name ?? $entry->airplay?->track_name,
                     'station' => $entry->airplay?->station,
                     'results' => $entry->results ?? [],
@@ -57,12 +60,13 @@ class AirplayController extends Controller
             'staleCount' => $research->stale(Track::query())->count(),
             'staleDays' => AirplayResearch::STALE_DAYS,
             // ponytail: the whole list in one page; paginate when a label has thousands of plays.
-            'airplays' => Airplay::query()->orderByRaw('station is null')->orderBy('station')->orderByDesc('period_end')->orderBy('track_name')->get()
+            'airplays' => Airplay::query()->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with('track:id,artist_id')->orderByRaw('station is null')->orderBy('station')->orderByDesc('period_end')->orderBy('track_name')->get()
                 ->map(fn (Airplay $airplay): array => [
                     ...$airplay->only(['id', 'origin', 'track_id', 'track_name', 'artist_name', 'isrc', 'station', 'media_type', 'region', 'society', 'amount', 'notes', 'data_import_id']),
                     'period_start' => $airplay->period_start?->toDateString(),
                     'period_end' => $airplay->period_end?->toDateString(),
                     'links' => $airplay->links ?? [],
+                    'artist_id' => $airplay->track?->artist_id,
                     'search_query' => $airplay->searchQuery(),
                     'researched_at' => $researched[$airplay->id] ?? null,
                     'research_state' => ResearchState::visible($airplay->research_state, $airplay->research_state_at),
@@ -73,6 +77,7 @@ class AirplayController extends Controller
                     'id' => $track->id,
                     'name' => collect([ArtistCredits::display($track), $track->name])->filter()->implode(' – '),
                 ]),
+            'onlyTrack' => $only?->only(['id', 'name']),
             'searchAvailable' => $search->isConfigured(),
         ]);
     }

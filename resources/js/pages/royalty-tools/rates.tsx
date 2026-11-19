@@ -3,6 +3,7 @@ import RatesController from '@/actions/App/Http/Controllers/RoyaltyTools/RatesCo
 import { CheckField, Field, SelectInput } from '@/components/field';
 import InputError from '@/components/input-error';
 import { Page, Panel } from '@/components/page';
+import { RecordLink } from '@/components/record-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -229,7 +230,12 @@ export default function Rates({
                                             {track.track_number ?? '–'}
                                         </TableCell>
                                         <TableCell className="font-medium">
-                                            {track.name}
+                                            <RecordLink
+                                                to="track"
+                                                id={track.id}
+                                            >
+                                                {track.name}
+                                            </RecordLink>
                                         </TableCell>
                                         {isMechanicals && (
                                             <>

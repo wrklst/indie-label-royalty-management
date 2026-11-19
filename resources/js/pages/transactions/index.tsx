@@ -6,6 +6,7 @@ import { DeleteButton } from '@/components/delete-button';
 import { CheckField, SelectInput } from '@/components/field';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
+import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,7 +43,9 @@ type Transaction = {
     recoupable: boolean;
     release: Option | null;
     track: string | null;
+    track_id: number | null;
     payee: string | null;
+    payee_id: number | null;
 };
 
 type Filters = {
@@ -365,29 +368,73 @@ export default function Transactions({
                                     <TableCell className="max-w-xs">
                                         {transaction.type === 'transfer' ? (
                                             <span>
-                                                {transaction.payee}
+                                                <RecordLink
+                                                    to="payee"
+                                                    id={transaction.payee_id}
+                                                >
+                                                    {transaction.payee}
+                                                </RecordLink>
                                                 {transaction.release && (
                                                     <span className="block truncate text-xs text-muted-foreground">
-                                                        {
-                                                            transaction.release
-                                                                .name
-                                                        }
+                                                        <RecordLink
+                                                            to="release"
+                                                            id={
+                                                                transaction
+                                                                    .release.id
+                                                            }
+                                                        >
+                                                            {
+                                                                transaction
+                                                                    .release
+                                                                    .name
+                                                            }
+                                                        </RecordLink>
                                                     </span>
                                                 )}
                                             </span>
                                         ) : transaction.release ? (
                                             <span>
                                                 <span className="block truncate">
-                                                    {transaction.track ??
-                                                        transaction.release
-                                                            .name}
+                                                    {transaction.track ? (
+                                                        <RecordLink
+                                                            to="track"
+                                                            id={
+                                                                transaction.track_id
+                                                            }
+                                                        >
+                                                            {transaction.track}
+                                                        </RecordLink>
+                                                    ) : (
+                                                        <RecordLink
+                                                            to="release"
+                                                            id={
+                                                                transaction
+                                                                    .release.id
+                                                            }
+                                                        >
+                                                            {
+                                                                transaction
+                                                                    .release
+                                                                    .name
+                                                            }
+                                                        </RecordLink>
+                                                    )}
                                                 </span>
                                                 {transaction.track && (
                                                     <span className="block truncate text-xs text-muted-foreground">
-                                                        {
-                                                            transaction.release
-                                                                .name
-                                                        }
+                                                        <RecordLink
+                                                            to="release"
+                                                            id={
+                                                                transaction
+                                                                    .release.id
+                                                            }
+                                                        >
+                                                            {
+                                                                transaction
+                                                                    .release
+                                                                    .name
+                                                            }
+                                                        </RecordLink>
                                                     </span>
                                                 )}
                                             </span>

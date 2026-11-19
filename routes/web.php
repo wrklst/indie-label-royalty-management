@@ -40,9 +40,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('catalog', [CatalogController::class, 'index'])->name('catalog.index');
             Route::patch('catalog/assign', [CatalogController::class, 'assign'])->name('catalog.assign');
 
-            Route::resource('artists', ArtistController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::resource('artists', ArtistController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
             Route::resource('releases', ReleaseController::class);
-            Route::resource('tracks', TrackController::class)->only(['index', 'update', 'destroy']);
+            Route::resource('tracks', TrackController::class)->only(['index', 'show', 'update', 'destroy']);
             Route::resource('items', ItemController::class)->only(['index', 'update', 'destroy']);
             Route::resource('contracts', ContractController::class)->except(['show']);
             Route::resource('payees', PayeeController::class)->only(['index', 'show', 'store', 'update', 'destroy']);

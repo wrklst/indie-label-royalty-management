@@ -58,7 +58,7 @@ class TransactionController extends Controller
             ->paginate(100)
             ->withQueryString()
             ->through(fn (Transaction $transaction): array => [
-                ...$transaction->only(['id', 'total', 'converted_total', 'currency', 'quantity', 'category', 'format', 'region', 'retailer', 'memo', 'published', 'recoupable', 'data_import_id']),
+                ...$transaction->only(['id', 'total', 'converted_total', 'currency', 'quantity', 'category', 'format', 'region', 'retailer', 'memo', 'published', 'recoupable', 'data_import_id', 'track_id', 'payee_id']),
                 'type' => $transaction->type->value,
                 'timestamp' => $transaction->timestamp->toDateString(),
                 'paid_timestamp' => $transaction->paid_timestamp->toDateString(),
@@ -150,6 +150,7 @@ class TransactionController extends Controller
         return Transaction::query()
             ->when(TransactionType::tryFrom((string) $request->input('type')), fn ($query, TransactionType $type) => $query->where('type', $type))
             ->when($request->integer('release'), fn ($query, int $release) => $query->where('release_id', $release))
+            ->when($request->integer('track'), fn ($query, int $track) => $query->whereIn('track_id', Track::query()->find($track)?->recordingIds() ?? [$track]))
             ->when($request->integer('import'), fn ($query, int $import) => $query->where('data_import_id', $import))
             ->when($request->string('retailer')->value(), fn ($query, string $retailer) => $query->where('retailer', $retailer))
             ->when($request->date('from'), fn ($query, $from) => $query->where($dateColumn, '>=', $from->toDateString()))
