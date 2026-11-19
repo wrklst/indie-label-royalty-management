@@ -61,8 +61,11 @@ class HandleInertiaRequests extends Middleware
 
         // Account pages such as the profile are not tied to a label, so the role is looked up
         // there: without it the settings would hide everything that belongs to the label.
-        $role = $label === null ? null : ($current->role()?->value
-            ?? $request->user()?->labels()->whereKey($label->id)->first()?->pivot->role);
+        $role = $current->role()?->value;
+
+        if ($role === null && $label !== null && $request->user() !== null) {
+            $role = $request->user()->labels()->whereKey($label->id)->value('label_user.role');
+        }
 
         return $label === null ? null : [
             'id' => $label->id,
