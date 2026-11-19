@@ -37,6 +37,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $p_line
  * @property array<string, list<string>>|null $credits
  * @property string|null $lyrics
+ * @property string|null $research_state
+ * @property string|null $research_step
+ * @property CarbonImmutable|null $research_state_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -66,6 +69,7 @@ class Track extends Model
             'accounts_mechanicals' => 'boolean',
             'credits' => 'array',
             'researched_at' => 'immutable_datetime',
+            'research_state_at' => 'immutable_datetime',
         ];
     }
 

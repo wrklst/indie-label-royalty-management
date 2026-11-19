@@ -10,6 +10,7 @@ use App\Models\AirplayFinding;
 use App\Models\Release;
 use App\Models\Track;
 use App\Services\Airplay\AirplayResearch;
+use App\Services\Airplay\ResearchState;
 use App\Services\Airplay\WebSearch;
 use App\Services\Releases\ArtistCredits;
 use Illuminate\Http\RedirectResponse;
@@ -48,6 +49,7 @@ class AirplayResearchController extends Controller
             throw ValidationException::withMessages(['scope' => __('There are no tracks to research in this selection.')]);
         }
 
+        Track::query()->whereIn('id', $trackIds)->update(['research_state' => ResearchState::QUEUED, 'research_step' => null, 'research_state_at' => now()]);
         $trackIds->each(fn (int $trackId) => ResearchTrackAirplay::dispatch($trackId));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __(':count track(s) queued for research. Findings appear here as they come in.', ['count' => $trackIds->count()])]);
@@ -66,6 +68,7 @@ class AirplayResearchController extends Controller
             return back();
         }
 
+        ResearchState::set($airplay, ResearchState::QUEUED);
         ResearchAirplayEntry::dispatch($airplay->id);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Research queued. Findings for this play appear here in a few minutes.')]);

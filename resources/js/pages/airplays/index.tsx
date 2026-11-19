@@ -9,7 +9,7 @@ import {
     Search,
     X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AirplayController from '@/actions/App/Http/Controllers/AirplayController';
 import AirplayResearchController from '@/actions/App/Http/Controllers/AirplayResearchController';
 import { Amount } from '@/components/amount';
@@ -30,6 +30,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import {
     Table,
     TableBody,
@@ -93,6 +94,17 @@ type Airplay = {
     links: AirplayLink[];
     search_query: string;
     researched_at: string | null;
+    research_state: ResearchStateName | null;
+    research_step: string | null;
+};
+
+type ResearchStateName = 'queued' | 'running' | 'failed';
+
+type TrackResearch = {
+    id: number;
+    name: string;
+    state: ResearchStateName;
+    step: string | null;
 };
 
 type SearchEntry = {
@@ -296,7 +308,7 @@ function LinksDialog({
                     {airplay.links.length}
                 </Button>
             </DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+            <DialogContent className="max-h-[90vh] overflow-x-hidden overflow-y-auto sm:max-w-2xl [&>*]:min-w-0">
                 <DialogHeader>
                     <DialogTitle>
                         {airplay.track_name} on {stationName(airplay)}
@@ -308,7 +320,7 @@ function LinksDialog({
                 </DialogHeader>
 
                 {airplay.links.length > 0 && (
-                    <ul className="grid gap-2">
+                    <ul className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
                         {airplay.links.map((link) => (
                             <li
                                 key={link.url}
@@ -367,7 +379,7 @@ function LinksDialog({
                     {...AirplayController.storeLink.form(airplay.id)}
                     options={{ preserveScroll: true, preserveState: true }}
                     resetOnSuccess
-                    className="grid gap-2 sm:grid-cols-[2fr_1fr_auto]"
+                    className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]"
                 >
                     {({ errors, processing }) => (
                         <>
@@ -394,13 +406,16 @@ function LinksDialog({
                     )}
                 </Form>
 
-                <div className="grid gap-2 border-t pt-4">
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-2 border-t pt-4">
                     <h3 className="text-sm font-medium">Search the web</h3>
                     <p className="text-xs text-muted-foreground">
                         A search takes about half a minute.
                     </p>
                     {searchAvailable ? (
-                        <form onSubmit={runSearch} className="flex gap-2">
+                        <form
+                            onSubmit={runSearch}
+                            className="flex min-w-0 gap-2 [&>input]:min-w-0"
+                        >
                             <Input
                                 value={search.data.query}
                                 onChange={(event) =>
@@ -426,7 +441,7 @@ function LinksDialog({
                         </p>
                     )}
                     {results && results.length > 0 && (
-                        <ul className="grid gap-2">
+                        <ul className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
                             {results.map((result) => (
                                 <li
                                     key={result.url}
@@ -680,6 +695,87 @@ function Findings({ findings }: { findings: Finding[] }) {
 }
 
 /**
+ * What the queue is doing right now: the research that runs and what waits behind it.
+ */
+function ResearchProgress({
+    tracks,
+    airplays,
+}: {
+    tracks: TrackResearch[];
+    airplays: Airplay[];
+}) {
+    const entries = [
+        ...tracks.map((track) => ({
+            key: `track-${track.id}`,
+            label: track.name,
+            state: track.state,
+            step: track.step,
+        })),
+        ...airplays
+            .filter((airplay) => airplay.research_state !== null)
+            .map((airplay) => ({
+                key: `airplay-${airplay.id}`,
+                label: `${airplay.track_name} on ${stationName(airplay)}`,
+                state: airplay.research_state as ResearchStateName,
+                step: airplay.research_step,
+            })),
+    ];
+    const running = entries.filter((entry) => entry.state === 'running');
+    const queued = entries.filter((entry) => entry.state === 'queued');
+    const failed = entries.filter((entry) => entry.state === 'failed');
+
+    if (entries.length === 0) {
+        return null;
+    }
+
+    return (
+        <Panel
+            title={
+                running.length + queued.length > 0
+                    ? `Research in progress: ${running.length} running, ${queued.length} waiting`
+                    : 'Research finished with problems'
+            }
+            description="This updates by itself every few seconds. A search takes about half a minute; findings appear below as they come in."
+        >
+            <ul className="grid gap-2 text-sm" aria-live="polite">
+                {running.map((entry) => (
+                    <li key={entry.key} className="flex items-start gap-2">
+                        <Spinner className="mt-0.5 shrink-0" />
+                        <span>
+                            <span className="font-medium">{entry.label}</span>
+                            <span className="block text-xs text-muted-foreground">
+                                {entry.step ?? 'Starting'}
+                            </span>
+                        </span>
+                    </li>
+                ))}
+                {queued.length > 0 && (
+                    <li className="text-muted-foreground">
+                        Waiting:{' '}
+                        {queued
+                            .slice(0, 8)
+                            .map((entry) => entry.label)
+                            .join(', ')}
+                        {queued.length > 8 && ` and ${queued.length - 8} more`}
+                        {running.length === 0 &&
+                            '. Nothing is running: check that the queue worker (Horizon) is started.'}
+                    </li>
+                )}
+                {failed.map((entry) => (
+                    <li
+                        key={entry.key}
+                        className="text-red-600 dark:text-red-400"
+                    >
+                        <span className="font-medium">{entry.label}</span>:{' '}
+                        {entry.step ?? 'failed'}
+                    </li>
+                ))}
+            </ul>
+        </Panel>
+    );
+}
+
+/**
  * Every search that was run, newest first, so nothing is researched twice without need.
  */
 function ResearchLog({ searches }: { searches: SearchEntry[] }) {
@@ -774,6 +870,7 @@ export default function Airplays({
     airplays,
     findings,
     searches,
+    trackResearch,
     tracks,
     releases,
     staleCount,
@@ -783,12 +880,44 @@ export default function Airplays({
     airplays: Airplay[];
     findings: Finding[];
     searches: SearchEntry[];
+    trackResearch: TrackResearch[];
     tracks: Option[];
     releases: Option[];
     staleCount: number;
     staleDays: number;
     searchAvailable: boolean;
 }) {
+    const active =
+        trackResearch.some((track) => track.state !== 'failed') ||
+        airplays.some(
+            (airplay) =>
+                airplay.research_state === 'queued' ||
+                airplay.research_state === 'running',
+        );
+
+    // While a research is queued or running, fetch its progress and what it found.
+    useEffect(() => {
+        if (!active) {
+            return;
+        }
+
+        const timer = window.setInterval(
+            () =>
+                router.reload({
+                    only: [
+                        'airplays',
+                        'findings',
+                        'searches',
+                        'trackResearch',
+                        'staleCount',
+                    ],
+                }),
+            5000,
+        );
+
+        return () => window.clearInterval(timer);
+    }, [active]);
+
     const { rows, sorter } = useTableSort(airplays, SORT_COLUMNS);
 
     return (
@@ -823,6 +952,7 @@ export default function Airplays({
                 </>
             }
         >
+            <ResearchProgress tracks={trackResearch} airplays={airplays} />
             {findings.length > 0 && <Findings findings={findings} />}
             {airplays.length === 0 ? (
                 <EmptyState
@@ -906,10 +1036,22 @@ export default function Airplays({
                                         >
                                             {ORIGINS[airplay.origin]}
                                         </Badge>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            {airplay.researched_at
-                                                ? `Researched ${date(airplay.researched_at.slice(0, 10))}`
-                                                : 'Not researched yet'}
+                                        <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                                            {airplay.research_state ===
+                                                'running' && <Spinner />}
+                                            {airplay.research_state ===
+                                            'running'
+                                                ? (airplay.research_step ??
+                                                  'Researching')
+                                                : airplay.research_state ===
+                                                    'queued'
+                                                  ? 'Waiting for research'
+                                                  : airplay.research_state ===
+                                                      'failed'
+                                                    ? `Research failed: ${airplay.research_step ?? ''}`
+                                                    : airplay.researched_at
+                                                      ? `Researched ${date(airplay.researched_at.slice(0, 10))}`
+                                                      : 'Not researched yet'}
                                         </p>
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">
@@ -936,6 +1078,12 @@ export default function Airplays({
                                                     size="icon"
                                                     title="Research this play: the show, the playlist, what was written about it"
                                                     aria-label={`Research ${airplay.track_name} on ${stationName(airplay)}`}
+                                                    disabled={
+                                                        airplay.research_state ===
+                                                            'queued' ||
+                                                        airplay.research_state ===
+                                                            'running'
+                                                    }
                                                     onClick={() =>
                                                         router.post(
                                                             AirplayResearchController.airplay.url(

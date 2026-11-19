@@ -31,6 +31,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|null $period_end
  * @property string|null $amount
  * @property array<int, array{url: string, title: string|null, description: string|null, source?: string}>|null $links
+ * @property string|null $research_state
+ * @property string|null $research_step
+ * @property CarbonImmutable|null $research_state_at
  * @property string|null $notes
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
@@ -52,6 +55,7 @@ class Airplay extends Model
             'period_end' => 'date:Y-m-d',
             'amount' => 'decimal:15',
             'links' => 'array',
+            'research_state_at' => 'immutable_datetime',
         ];
     }
 

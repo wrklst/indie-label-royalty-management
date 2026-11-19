@@ -7,6 +7,7 @@ use App\Models\AirplayFinding;
 use App\Models\AirplaySearch;
 use App\Models\Track;
 use App\Services\Releases\ArtistCredits;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -87,11 +88,12 @@ class AirplayResearch
      * station a statement named, and in the country of each play whose
      * station is unknown.
      *
+     * @param  (Closure(int, int, string, string): void)|null  $progress
      * @return int The number of new findings.
      *
      * @throws RuntimeException when no search could be run; the track then stays due
      */
-    public function research(Track $track): int
+    public function research(Track $track, ?Closure $progress = null): int
     {
         $track->loadMissing(['artist:id,name', 'artists:id,name', 'release.artist:id,name', 'release.artists:id,name']);
 
@@ -112,7 +114,7 @@ class AirplayResearch
             ->concat($own->whereNull('station')->whereNotNull('region')->whereNotIn('region', $markets)->unique('region')->take(self::MAX_AIRPLAY_SEARCHES)
                 ->map(fn (Airplay $airplay): array => ['query' => "{$subject} radio playlist", 'region' => $airplay->region ?? $markets[0], 'depth' => self::GENERAL_DEPTH, 'airplay' => $airplay]));
 
-        $found = $this->run($searches, $track->label_id, $track->id, $stations, [$artist, $track->name]);
+        $found = $this->run($searches, $track->label_id, $track->id, $stations, [$artist, $track->name], $progress);
 
         // ponytail: researched once any search worked; a country that failed is tried again with the next research.
         $track->forceFill(['researched_at' => now()])->save();
@@ -124,11 +126,12 @@ class AirplayResearch
      * Look closer at one play: which show it was in, and whether the
      * station or anyone else wrote about it. Findings are tied to the play.
      *
+     * @param  (Closure(int, int, string, string): void)|null  $progress
      * @return int The number of new findings.
      *
      * @throws RuntimeException when no search could be run
      */
-    public function researchAirplay(Airplay $airplay): int
+    public function researchAirplay(Airplay $airplay, ?Closure $progress = null): int
     {
         $region = $airplay->region ?? $this->search->markets()[0];
         $artist = $airplay->artist_name === null ? null : "\"{$airplay->artist_name}\"";
@@ -142,7 +145,7 @@ class AirplayResearch
         $searches = collect($queries)->unique()->values()
             ->map(fn (string $query, int $index): array => ['query' => $query, 'region' => $region, 'depth' => $index === 0 ? self::GENERAL_DEPTH : 10, 'airplay' => $airplay]);
 
-        return $this->run($searches, $airplay->label_id, $airplay->track_id, collect($station === null ? [] : [$station]), [$airplay->artist_name, $airplay->track_name]);
+        return $this->run($searches, $airplay->label_id, $airplay->track_id, collect($station === null ? [] : [$station]), [$airplay->artist_name, $airplay->track_name], $progress);
     }
 
     /**
@@ -151,19 +154,25 @@ class AirplayResearch
      * @param  iterable<int, array{query: string, region: string, depth: int, airplay: Airplay|null}>  $searches
      * @param  Collection<int, string>  $stations  Stations the label already knows.
      * @param  list<string|null>  $names  Artist and title; a page has to mention one of them.
+     * @param  (Closure(int, int, string, string): void)|null  $progress  Told before each search: its number, how many there are, the words and the country.
      *
      * @throws RuntimeException when no search could be run
      */
-    private function run(iterable $searches, int $labelId, ?int $trackId, Collection $stations, array $names): int
+    private function run(iterable $searches, int $labelId, ?int $trackId, Collection $stations, array $names, ?Closure $progress = null): int
     {
+        $searches = [...$searches];
         $found = 0;
         $succeeded = 0;
         $failure = null;
         $deadline = microtime(true) + self::TIME_BUDGET;
 
-        foreach ($searches as $search) {
+        foreach ($searches as $index => $search) {
             if (microtime(true) > $deadline) {
                 break;
+            }
+
+            if ($progress !== null) {
+                $progress($index + 1, count($searches), $search['query'], $search['region']);
             }
 
             $log = ['label_id' => $labelId, 'track_id' => $trackId, 'airplay_id' => $search['airplay']?->id, 'query' => $search['query'], 'region' => $search['region']];

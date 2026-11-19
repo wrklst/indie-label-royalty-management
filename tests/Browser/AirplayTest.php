@@ -57,13 +57,14 @@ test('a link is added to an airplay in its links dialog', function () {
 
     visit('/airplays')
         ->click('[aria-label="Links for Example Track on Example Radio"]')
-        ->fill('url', 'https://example.com/playlist')
+        ->fill('url', 'https://example.com/'.str_repeat('a-very-long-playlist-address/', 12))
         ->fill('title', 'Playlist')
         ->press('Add link')
         ->assertSeeIn('[role="dialog"]', 'Added by hand')
+        ->assertScript('document.querySelector(\'[role="dialog"]\').scrollWidth <= document.querySelector(\'[role="dialog"]\').clientWidth', true)
         ->assertNoJavaScriptErrors();
 
-    expect($airplay->refresh()->links[0]['url'])->toBe('https://example.com/playlist');
+    expect($airplay->refresh()->links[0]['url'])->toStartWith('https://example.com/a-very-long');
 });
 
 test('an import held for a possible duplicate is merged from its review screen', function () {

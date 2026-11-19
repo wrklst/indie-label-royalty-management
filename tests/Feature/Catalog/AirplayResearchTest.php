@@ -160,6 +160,47 @@ test('a closer look at one play is queued from its row', function () {
     Queue::assertPushed(ResearchAirplayEntry::class, fn (ResearchAirplayEntry $job): bool => $job->airplayId === $airplay->id);
 });
 
+test('a queued research shows as waiting, reports each search while it runs and clears when done', function () {
+    Queue::fake();
+    $label = Label::factory()->create();
+    $airplay = Airplay::factory()->create(['label_id' => $label->id, 'track_name' => 'Example Track', 'artist_name' => 'Example Artist', 'station' => 'Example Radio', 'region' => 'GB']);
+    $this->actingAs(labelAdmin($label))->post(route('airplays.research.airplay', $airplay->id));
+
+    expect($airplay->refresh()->research_state)->toBe('queued');
+
+    $steps = [];
+    Http::preventStrayRequests();
+    Http::fake([RESEARCH_SERP_URL => function () use (&$steps, $airplay) {
+        $steps[] = $airplay->refresh()->only(['research_state', 'research_step']);
+
+        return Http::response(['status_code' => 20000, 'tasks' => [['status_code' => 20000, 'result' => [['items' => []]]]]]);
+    }]);
+
+    (new ResearchAirplayEntry($airplay->id))->handle(app(AirplayResearch::class));
+
+    expect($steps[0])->toBe(['research_state' => 'running', 'research_step' => 'Search 1 of 3 (GB): "Example Artist" "Example Track" Example Radio'])
+        ->and($steps[2]['research_step'])->toStartWith('Search 3 of 3')
+        ->and($airplay->refresh()->only(['research_state', 'research_step']))->toBe(['research_state' => null, 'research_step' => null]);
+});
+
+test('a research that fails says so on the track, and one that died without a word is not shown as running', function () {
+    $label = Label::factory()->create();
+    $failed = researchTrack($label);
+    $died = Track::factory()->create(['label_id' => $label->id, 'research_state' => 'running', 'research_state_at' => now()->subMinutes(20)]);
+    $waiting = Track::factory()->create(['label_id' => $label->id, 'name' => 'Sample Track', 'research_state' => 'queued', 'research_state_at' => now()->subHours(3)]);
+
+    (new ResearchTrackAirplay($failed->id))->failed(new RuntimeException('The search failed: Internal SE Server Error.'));
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('airplays.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('trackResearch', 2)
+            ->where('trackResearch.0', ['id' => $waiting->id, 'name' => 'Sample Track', 'state' => 'queued', 'step' => null])
+            ->where('trackResearch.1', ['id' => $failed->id, 'name' => 'Example Track', 'state' => 'failed', 'step' => 'The search failed: Internal SE Server Error.']));
+
+    expect($died->refresh()->research_state)->toBe('running');
+});
+
 test('a page that was found before is not listed again, even after it was dismissed', function () {
     $label = Label::factory()->create();
     $track = researchTrack($label);
@@ -198,6 +239,7 @@ test('a research is queued for the chosen group of tracks', function (string $sc
         ->assertSessionHasNoErrors();
 
     Queue::assertPushed(ResearchTrackAirplay::class, count($expected));
+    expect(Track::query()->withoutGlobalScope('label')->where('research_state', 'queued')->count())->toBe(count($expected));
 
     foreach ($expected as $key) {
         Queue::assertPushed(ResearchTrackAirplay::class, fn (ResearchTrackAirplay $job): bool => $job->trackId === $tracks[$key]->id);

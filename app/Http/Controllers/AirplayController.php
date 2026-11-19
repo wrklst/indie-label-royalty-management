@@ -10,6 +10,7 @@ use App\Models\AirplaySearch;
 use App\Models\Release;
 use App\Models\Track;
 use App\Services\Airplay\AirplayResearch;
+use App\Services\Airplay\ResearchState;
 use App\Services\Airplay\WebSearch;
 use App\Services\Releases\ArtistCredits;
 use Illuminate\Http\JsonResponse;
@@ -44,6 +45,14 @@ class AirplayController extends Controller
                     'results' => $entry->results ?? [],
                     'created_at' => $entry->created_at?->toDateTimeString(),
                 ]),
+            'trackResearch' => Track::query()->whereNotNull('research_state')->orderByRaw("research_state = 'running' desc")->orderBy('research_state_at')
+                ->get(['id', 'name', 'research_state', 'research_step', 'research_state_at'])
+                ->map(fn (Track $track): array => [
+                    'id' => $track->id,
+                    'name' => $track->name,
+                    'state' => ResearchState::visible($track->research_state, $track->research_state_at),
+                    'step' => $track->research_step,
+                ])->whereNotNull('state')->values(),
             'releases' => Release::query()->orderBy('name')->get(['id', 'name']),
             'staleCount' => $research->stale(Track::query())->count(),
             'staleDays' => AirplayResearch::STALE_DAYS,
@@ -56,6 +65,8 @@ class AirplayController extends Controller
                     'links' => $airplay->links ?? [],
                     'search_query' => $airplay->searchQuery(),
                     'researched_at' => $researched[$airplay->id] ?? null,
+                    'research_state' => ResearchState::visible($airplay->research_state, $airplay->research_state_at),
+                    'research_step' => $airplay->research_step,
                 ]),
             'tracks' => Track::query()->with(['artist:id,name', 'artists:id,name'])->orderBy('name')->get()
                 ->map(fn (Track $track): array => [

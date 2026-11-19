@@ -4,9 +4,11 @@ namespace App\Jobs;
 
 use App\Models\Airplay;
 use App\Services\Airplay\AirplayResearch;
+use App\Services\Airplay\ResearchState;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Throwable;
 
 /**
  * Looks closer at one airplay on the web: the show, the playlist, anything written about it.
@@ -30,10 +32,32 @@ class ResearchAirplayEntry implements ShouldBeUnique, ShouldQueue
 
     public function handle(AirplayResearch $research): void
     {
-        $airplay = Airplay::query()->withoutGlobalScope('label')->find($this->airplayId);
+        $airplay = $this->subject();
+
+        if ($airplay === null) {
+            return;
+        }
+
+        ResearchState::set($airplay, ResearchState::RUNNING, 'Starting');
+
+        $research->researchAirplay($airplay, fn (int $step, int $total, string $query, string $region) => ResearchState::set(
+            $airplay, ResearchState::RUNNING, "Search {$step} of {$total} ({$region}): {$query}",
+        ));
+
+        ResearchState::set($airplay, null);
+    }
+
+    public function failed(?Throwable $exception): void
+    {
+        $airplay = $this->subject();
 
         if ($airplay !== null) {
-            $research->researchAirplay($airplay);
+            ResearchState::set($airplay, ResearchState::FAILED, $exception?->getMessage() ?? 'The research stopped unexpectedly.');
         }
+    }
+
+    private function subject(): ?Airplay
+    {
+        return Airplay::query()->withoutGlobalScope('label')->find($this->airplayId);
     }
 }

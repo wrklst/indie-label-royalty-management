@@ -4,9 +4,11 @@ namespace App\Jobs;
 
 use App\Models\Track;
 use App\Services\Airplay\AirplayResearch;
+use App\Services\Airplay\ResearchState;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Throwable;
 
 /**
  * Researches one track on the web. A failed search leaves the track due,
@@ -32,10 +34,32 @@ class ResearchTrackAirplay implements ShouldBeUnique, ShouldQueue
 
     public function handle(AirplayResearch $research): void
     {
-        $track = Track::query()->withoutGlobalScope('label')->find($this->trackId);
+        $track = $this->subject();
+
+        if ($track === null) {
+            return;
+        }
+
+        ResearchState::set($track, ResearchState::RUNNING, 'Starting');
+
+        $research->research($track, fn (int $step, int $total, string $query, string $region) => ResearchState::set(
+            $track, ResearchState::RUNNING, "Search {$step} of {$total} ({$region}): {$query}",
+        ));
+
+        ResearchState::set($track, null);
+    }
+
+    public function failed(?Throwable $exception): void
+    {
+        $track = $this->subject();
 
         if ($track !== null) {
-            $research->research($track);
+            ResearchState::set($track, ResearchState::FAILED, $exception?->getMessage() ?? 'The research stopped unexpectedly.');
         }
+    }
+
+    private function subject(): ?Track
+    {
+        return Track::query()->withoutGlobalScope('label')->find($this->trackId);
     }
 }
