@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Release;
+use App\Services\Releases\BandcampPackage;
 use App\Services\Releases\ReleaseMetadataExport;
 use App\Services\Releases\ReleasePackage;
 use App\Services\Releases\SubvertPackage;
@@ -63,11 +64,25 @@ class ReleaseExportController extends Controller
      */
     public function subvertPackage(Release $release, SubvertPackage $package): BinaryFileResponse|RedirectResponse
     {
+        return $this->storePackage($release, $package, 'subvert_package');
+    }
+
+    /**
+     * The cover, one lossless audio file per track and a sheet to copy
+     * from, to unpack and add on Bandcamp's album page.
+     */
+    public function bandcampPackage(Release $release, BandcampPackage $package): BinaryFileResponse|RedirectResponse
+    {
+        return $this->storePackage($release, $package, 'bandcamp_package');
+    }
+
+    private function storePackage(Release $release, SubvertPackage $package, string $errors): BinaryFileResponse|RedirectResponse
+    {
         $release->load(['files', 'tracks']);
         $problems = $package->problems($release);
 
         if ($problems !== []) {
-            return to_route('releases.show', $release)->withErrors(['subvert_package' => implode("\n", $problems)]);
+            return to_route('releases.show', $release)->withErrors([$errors => implode("\n", $problems)]);
         }
 
         $this->allowLongRequest();

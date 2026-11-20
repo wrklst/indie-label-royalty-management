@@ -19,6 +19,10 @@ test('the release page lists what keeps the Subvert ZIP from being made', functi
         ->assertSee('Track 1 “Example Track” has no audio file.')
         ->press('Close')
         ->assertDontSee('The Subvert ZIP cannot be made yet')
+        ->click('Delivery')
+        ->click('Bandcamp ZIP')
+        ->assertSee('The Bandcamp ZIP cannot be made yet')
+        ->assertSee('Track 1 “Example Track” has no audio file.')
         ->assertNoJavaScriptErrors();
 });
 

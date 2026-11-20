@@ -213,8 +213,8 @@ test('a cover just under 10 MB is accepted', function () {
     $this->get(route('releases.subvert-package', $this->release))->assertOk();
 });
 
-test('the Subvert ZIP of a release is out of reach for other labels, payees and guests', function () {
-    $url = route('releases.subvert-package', $this->release);
+test('the ZIP for a store is out of reach for other labels, payees and guests', function (string $route) {
+    $url = route($route, $this->release);
 
     $this->actingAs(labelAdmin(Label::factory()->create()))->get($url)->assertNotFound();
 
@@ -224,6 +224,37 @@ test('the Subvert ZIP of a release is out of reach for other labels, payees and 
 
     auth()->logout();
     $this->get($url)->assertRedirect(route('login'));
+})->with(['releases.subvert-package', 'releases.bandcamp-package']);
+
+test('the Bandcamp ZIP holds the cover, one lossless file per track and the sheet to copy from', function () {
+    $this->release->update(['catalog_number' => 'EX001']);
+    $first = subvertTrack($this->release, ['name' => 'Opening', 'track_number' => 1, 'isrc' => 'ZZTST2600001']);
+    $second = subvertTrack($this->release, ['name' => 'Closing', 'track_number' => 2]);
+    subvertFile($this->release, 'front.jpg', ['kind' => 'cover', 'mime_type' => 'image/jpeg']);
+    subvertFile($this->release, 'one.wav', ['track_id' => $first->id, 'created_at' => '2026-01-01 10:00:00']);
+    subvertFile($this->release, 'one.mp3', ['track_id' => $first->id, 'mime_type' => 'audio/mpeg', 'created_at' => '2026-04-01 10:00:00']);
+    subvertFile($this->release, 'two.flac', ['track_id' => $second->id]);
+
+    $response = $this->get(route('releases.bandcamp-package', $this->release))->assertOk();
+    $contents = zipContents($response);
+
+    expect(array_keys($contents))->toBe(['cover.jpg', '01 Opening.wav', '02 Closing.flac', 'release.txt'])
+        ->and($contents['release.txt'])->toContain('Title: Example Release', 'Catalog number: EX001', 'Opening', 'ISRC ZZTST2600001')
+        ->and($response->headers->get('Content-Disposition'))->toContain('filename="Example Release - Bandcamp.zip"');
+});
+
+test('the Bandcamp ZIP is refused for a track that only has an MP3, and not for its size', function () {
+    $track = subvertTrack($this->release, ['name' => 'Opening', 'track_number' => 1]);
+    subvertFile($this->release, 'front.png', ['kind' => 'cover', 'mime_type' => 'image/png'], 12_000_000);
+    $audio = subvertFile($this->release, 'one.mp3', ['track_id' => $track->id, 'mime_type' => 'audio/mpeg']);
+
+    $this->get(route('releases.bandcamp-package', $this->release))
+        ->assertRedirect(route('releases.show', $this->release))
+        ->assertSessionHasErrors(['bandcamp_package' => 'Track 1 “Opening” only has audio Bandcamp does not accept (“one.mp3”); it takes WAV, AIFF or FLAC.']);
+
+    $audio->update(['original_name' => 'one.wav']);
+
+    $this->get(route('releases.bandcamp-package', $this->release))->assertOk();
 });
 
 test('a package is removed from the server once it was sent', function (string $route) {
@@ -238,4 +269,4 @@ test('a package is removed from the server once it was sent', function (string $
     ob_end_clean();
 
     expect(file_exists($path))->toBeFalse();
-})->with(['releases.subvert-package', 'releases.package']);
+})->with(['releases.subvert-package', 'releases.bandcamp-package', 'releases.package']);

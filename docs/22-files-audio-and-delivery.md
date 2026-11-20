@@ -1,6 +1,6 @@
 # Files, audio and delivery
 
-This page covers the files kept with a release, covers and their thumbnails, audio masters and their MP3 playback copies, the audio player, and the three downloads for delivering a release: the metadata CSV, the full package and the Subvert ZIP.
+This page covers the files kept with a release, covers and their thumbnails, audio masters and their MP3 playback copies, the audio player, and the four downloads for delivering a release: the metadata CSV, the full package, the Subvert ZIP and the Bandcamp ZIP.
 
 ## Who can see files
 
@@ -250,3 +250,20 @@ If the release is not ready, no file is downloaded. A dialog **The Subvert ZIP c
 - Packages are built while you wait. For a release with several gigabytes of masters this can take minutes; keep the tab open. The server needs free temporary space of about the size of the release.
 - A file whose stored copy is missing is left out of the full package without a message. The Subvert ZIP reports it instead.
 - If a master is replaced while its track is in the queue, press **Play now** on the track again to load the new file.
+
+## The Bandcamp ZIP
+
+Bandcamp has no upload for a whole release. **Delivery → Bandcamp ZIP** downloads everything you need for its album page in one ZIP: the cover, one lossless audio file per track and a text sheet to copy from. Unpack it, add the files on Bandcamp and copy the texts from the sheet.
+
+```text
+Example Release - Bandcamp.zip
+  cover.jpg
+  01 Opening.wav
+  02 Second Track.wav
+  release.txt
+```
+
+- Files are chosen, named and numbered as in the Subvert ZIP, with one difference: Bandcamp takes WAV, AIFF or FLAC only. A track that only has an MP3 keeps the ZIP from being made, and the release page says which track it is.
+- `release.txt` is the same sheet as in the full package: title, artist, catalog number, UPC / EAN, release date, genre, the track list with ISRCs, the press release and the key facts.
+- Sizes are not checked. Bandcamp's limit per track depends on your account there.
+- Prices, tags and lyrics are entered on Bandcamp.

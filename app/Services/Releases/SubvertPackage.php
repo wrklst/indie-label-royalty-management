@@ -26,15 +26,20 @@ use ZipArchive;
 class SubvertPackage
 {
     /** "ZIPs up to 2 GB are supported"; counted in decimal units to stay on the safe side. */
-    public const int MAX_BYTES = 2_000_000_000;
+    public const ?int MAX_BYTES = 2_000_000_000;
 
     /** "Cover art files must be under 10 MB." */
-    public const int MAX_COVER_BYTES = 10_000_000;
+    public const ?int MAX_COVER_BYTES = 10_000_000;
 
-    /** Formats Subvert accepts, by file extension, with the lossless ones first. */
+    /** The store the package is for, and the formats it takes, as named to the user. */
+    protected const string STORE = 'Subvert';
+
+    protected const string ACCEPTS = 'MP3, FLAC, WAV or AIFF';
+
+    /** Formats the store accepts, by file extension, with the lossless ones first. */
     private const array LOSSLESS = ['wav', 'aif', 'aiff', 'flac'];
 
-    private const array LOSSY = ['mp3'];
+    protected const array LOSSY = ['mp3'];
 
     /** What a zip entry costs on top of its content: headers and its name, generously. */
     private const int ENTRY_OVERHEAD = 1024;
@@ -63,7 +68,7 @@ class SubvertPackage
             $problems[] = 'The release has no cover.';
         } elseif (($size = $this->size($cover)) === null) {
             $problems[] = "The cover “{$cover->original_name}” is missing from storage.";
-        } elseif ($size >= self::MAX_COVER_BYTES) {
+        } elseif (static::MAX_COVER_BYTES !== null && $size >= static::MAX_COVER_BYTES) {
             $problems[] = sprintf('The cover is %s MB; Subvert accepts covers under 10 MB.', number_format($size / 1_000_000, 1));
         } else {
             $bytes += $size + self::ENTRY_OVERHEAD;
@@ -83,7 +88,7 @@ class SubvertPackage
             if ($files->isEmpty()) {
                 $problems[] = "{$label} has no audio file.";
             } elseif ($audio === null) {
-                $problems[] = "{$label} only has audio Subvert does not accept (“{$files->first()->original_name}”); it takes MP3, FLAC, WAV or AIFF.";
+                $problems[] = sprintf('%s only has audio %s does not accept (“%s”); it takes %s.', $label, static::STORE, $files->first()->original_name, static::ACCEPTS);
             } elseif (($size = $this->size($audio)) === null) {
                 $problems[] = "The audio file “{$audio->original_name}” of {$label} is missing from storage.";
             } else {
@@ -91,7 +96,7 @@ class SubvertPackage
             }
         }
 
-        if ($bytes > self::MAX_BYTES) {
+        if (static::MAX_BYTES !== null && $bytes > static::MAX_BYTES) {
             $problems[] = sprintf('The files add up to %s GB; Subvert accepts ZIP files up to 2 GB.', number_format($bytes / 1_000_000_000, 2));
         }
 
@@ -161,6 +166,10 @@ class SubvertPackage
             $zip->setCompressionName($name, ZipArchive::CM_STORE);
         }
 
+        foreach ($this->sheets($release) as $name => $text) {
+            $zip->addFromString($name, $text);
+        }
+
         if (! $zip->close()) {
             @unlink($path);
 
@@ -168,6 +177,16 @@ class SubvertPackage
         }
 
         return $path;
+    }
+
+    /**
+     * Text files that go into the ZIP next to the cover and the audio: name => content.
+     *
+     * @return array<string, string>
+     */
+    protected function sheets(Release $release): array
+    {
+        return [];
     }
 
     private function cover(Release $release): ?ReleaseFile
@@ -231,7 +250,7 @@ class SubvertPackage
     private function pick(Collection $files): ?ReleaseFile
     {
         return $files->first(fn (ReleaseFile $file): bool => in_array($this->extension($file), self::LOSSLESS, true))
-            ?? $files->first(fn (ReleaseFile $file): bool => in_array($this->extension($file), self::LOSSY, true));
+            ?? $files->first(fn (ReleaseFile $file): bool => in_array($this->extension($file), static::LOSSY, true));
     }
 
     private function extension(ReleaseFile $file): string

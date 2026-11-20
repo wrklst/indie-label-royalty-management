@@ -75,8 +75,9 @@ Self-hosted, open source (MIT), built with Laravel, Inertia and React.
   copy is made for listening.
 - The pages of every release and track on streaming services, shops and
   platforms, found by UPC, ISRC, Bandcamp sales and web search, or added by hand.
-- Export of all metadata as a CSV sheet, a delivery package per release, and
-  a ZIP for [Subvert](https://subvert.fm)'s uploader.
+- Export of all metadata as a CSV sheet, a delivery package per release, a
+  ZIP for [Subvert](https://subvert.fm)'s uploader and one with everything
+  to put a release on Bandcamp.
 
 **Airplay**
 

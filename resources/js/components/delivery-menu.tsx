@@ -17,7 +17,12 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { metadata, packageMethod, subvertPackage } from '@/routes/releases';
+import {
+    bandcampPackage,
+    metadata,
+    packageMethod,
+    subvertPackage,
+} from '@/routes/releases';
 
 /**
  * One button for everything a release can be delivered as. Each option is
@@ -26,7 +31,8 @@ import { metadata, packageMethod, subvertPackage } from '@/routes/releases';
  */
 export function DeliveryMenu({ releaseId }: { releaseId: number }) {
     const { errors } = usePage().props;
-    const problems = (errors?.subvert_package ?? '')
+    const store = errors?.bandcamp_package ? 'Bandcamp' : 'Subvert';
+    const problems = (errors?.bandcamp_package ?? errors?.subvert_package ?? '')
         .split('\n')
         .filter((problem) => problem !== '');
     const [open, setOpen] = useState(problems.length > 0);
@@ -42,6 +48,12 @@ export function DeliveryMenu({ releaseId }: { releaseId: number }) {
             description:
                 "Cover and one audio file per track, ready for Subvert's upload form.",
             href: subvertPackage.url(releaseId),
+        },
+        {
+            label: 'Bandcamp ZIP',
+            description:
+                'Cover, one lossless file per track and a sheet to copy from, to unpack and add on Bandcamp.',
+            href: bandcampPackage.url(releaseId),
         },
         {
             label: 'Metadata CSV',
@@ -83,12 +95,12 @@ export function DeliveryMenu({ releaseId }: { releaseId: number }) {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>
-                            The Subvert ZIP cannot be made yet
+                            The {store} ZIP cannot be made yet
                         </DialogTitle>
                         <DialogDescription>
-                            Subvert takes one ZIP per release with the cover and
-                            one audio file per track. Fix the following under
-                            Files, then try again.
+                            {store} needs the cover and one audio file per
+                            track. Fix the following under Files, then try
+                            again.
                         </DialogDescription>
                     </DialogHeader>
                     <ul

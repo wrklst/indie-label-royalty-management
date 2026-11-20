@@ -163,6 +163,6 @@ Audio masters are the one thing that cannot be recreated from anywhere else. If 
 
 ## Good to know
 
-- Building a delivery package or a Subvert ZIP writes to the system's temporary directory first. It needs as much free space as the release is large, and the web server has to allow the request to run for several minutes.
+- Building a delivery package, a Subvert ZIP or a Bandcamp ZIP writes to the system's temporary directory first. It needs as much free space as the release is large, and the web server has to allow the request to run for several minutes.
 - Server-side rendering is switched off. The application sits behind a login, so it gains nothing from it, and no Node process has to run in production.
 - Plan a switch-over for a time when you are at your desk. Nothing in it needs a night shift: importing a database dump of a small label takes seconds.
