@@ -2,7 +2,7 @@ import { Form, Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import BandcampController from '@/actions/App/Http/Controllers/Settings/BandcampController';
 import AlertError from '@/components/alert-error';
-import { DeleteButton } from '@/components/delete-button';
+import { ConnectionCard } from '@/components/connection-card';
 import { CheckField, Field, SelectInput } from '@/components/field';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ type Account = { band_id: number; name: string; subdomain: string | null };
 type Band = Account & { member_bands: Account[] };
 
 type Connection = {
+    client_id_hint: string;
     bands: Band[];
     band_id: number | null;
     member_band_id: number | null;
@@ -43,7 +44,7 @@ function BandcampError({ message }: { message?: string }) {
     return message ? <AlertError title="Bandcamp" errors={[message]} /> : null;
 }
 
-function Credentials({ connected }: { connected: boolean }) {
+function Credentials() {
     return (
         <Form
             {...BandcampController.connect.form()}
@@ -64,9 +65,6 @@ function Credentials({ connected }: { connected: boolean }) {
                             id="client_id"
                             name="client_id"
                             autoComplete="off"
-                            placeholder={
-                                connected ? 'Stored – enter to replace' : ''
-                            }
                             required
                         />
                     </Field>
@@ -82,22 +80,14 @@ function Credentials({ connected }: { connected: boolean }) {
                             name="client_secret"
                             type="password"
                             autoComplete="off"
-                            placeholder={
-                                connected ? 'Stored – enter to replace' : ''
-                            }
                             required
                         />
                     </Field>
                     <div>
-                        <Button
-                            variant={connected ? 'outline' : 'default'}
-                            disabled={processing}
-                        >
+                        <Button disabled={processing}>
                             {processing
                                 ? 'Asking Bandcamp…'
-                                : connected
-                                  ? 'Replace credentials'
-                                  : 'Connect and load my bands'}
+                                : 'Connect and load my bands'}
                         </Button>
                     </div>
                 </>
@@ -172,7 +162,7 @@ function SyncSettings({ connection }: { connection: Connection }) {
                         htmlFor="sync_from"
                         error={errors.sync_from}
                         required
-                        hint="The first sync fetches everything since this day. Sales already imported from an uploaded Bandcamp report are not imported twice."
+                        hint="The first sync fetches everything since this day. Sales that are in already, from an uploaded Bandcamp report or carried over from another royalty system, are not imported twice."
                     >
                         <Input
                             id="sync_from"
@@ -289,22 +279,39 @@ export default function Bandcamp({
                     description="Import your Bandcamp sales automatically instead of uploading sales reports"
                 />
 
-                <p className="text-sm text-muted-foreground">
-                    Bandcamp grants API access on request: write to them through{' '}
-                    <a
-                        href="https://bandcamp.com/contact?subj=API%20Access"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline underline-offset-4"
-                    >
-                        their contact form
-                    </a>{' '}
-                    and describe briefly that you want to read your sales
-                    report. Once they have set it up, your client ID and client
-                    secret appear on Bandcamp under Settings → API Access.
-                </p>
+                {connection ? (
+                    <ConnectionCard
+                        title="Bandcamp"
+                        facts={[
+                            ['Client ID', connection.client_id_hint],
+                            ['Client secret', 'stored, not shown'],
+                        ]}
+                        disconnect={BandcampController.destroy.url()}
+                        disconnectLabel="Disconnect Bandcamp"
+                        confirm="Disconnect Bandcamp? The stored client ID, secret and tokens are deleted and the weekly sync stops. Imported sales stay. To connect again you need your client ID and secret, and you may have to regenerate the client on Bandcamp."
+                    />
+                ) : (
+                    <>
+                        <p className="text-sm text-muted-foreground">
+                            Bandcamp grants API access on request: write to them
+                            through{' '}
+                            <a
+                                href="https://bandcamp.com/contact?subj=API%20Access"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline underline-offset-4"
+                            >
+                                their contact form
+                            </a>{' '}
+                            and describe briefly that you want to read your
+                            sales report. Once they have set it up, your client
+                            ID and client secret appear on Bandcamp under
+                            Settings → API Access.
+                        </p>
 
-                <Credentials connected={connection !== null} />
+                        <Credentials />
+                    </>
+                )}
             </div>
 
             {connection && (
@@ -354,21 +361,6 @@ export default function Bandcamp({
                             }
                         />
                         <SyncStatus connection={connection} />
-                    </div>
-
-                    <div className="mt-10 space-y-6">
-                        <Heading
-                            variant="small"
-                            title="Disconnect"
-                            description="Deletes the stored client ID, secret and tokens. Imported sales stay."
-                        />
-                        <DeleteButton
-                            url={BandcampController.destroy.url()}
-                            title="Disconnect from Bandcamp?"
-                            description="The stored credentials are deleted and the weekly sync stops. Transactions that were imported stay. To connect again you need your client ID and secret, and you may have to regenerate the client on Bandcamp."
-                            label="Disconnect"
-                            confirmLabel="Disconnect"
-                        />
                     </div>
                 </>
             )}

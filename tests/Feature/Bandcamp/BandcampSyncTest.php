@@ -235,6 +235,66 @@ test('a bandcamp report uploaded after a sync does not book the synced sales aga
         ->and(Transaction::query()->count())->toBe(2);
 });
 
+/**
+ * A Bandcamp sale the way it arrives from another royalty system: with
+ * the order id and the format, but without the line Bandcamp sent.
+ */
+function migratedBandcampSale(int $labelId, string $orderId, string $format, string $source = 'bandcamp_api'): Transaction
+{
+    return Transaction::factory()->create([
+        'label_id' => $labelId, 'importer_source' => $source, 'external_id' => $orderId, 'format' => $format,
+        'timestamp' => '2023-08-05', 'paid_timestamp' => '2023-08-05', 'raw_data' => ['infinite_catalog_id' => fake()->randomNumber(6)],
+    ]);
+}
+
+test('sales carried over from another royalty system are not imported again by a sync that starts before them', function () {
+    $this->travelTo('2023-08-20 12:00:00');
+    $connection = connectedLabel('2023-08-01');
+    migratedBandcampSale($connection->label_id, '577718015', 'Download Track');
+    migratedBandcampSale($connection->label_id, '577718099', 'Download Album', 'bandcamp');
+    migratedBandcampSale($connection->label_id, '577718099', 'Download Track');
+
+    fakeBandcampSales(['2023-08-01 00:00:00' => [
+        bandcampSale(['bandcamp_transaction_id' => 577718015, 'bandcamp_transaction_item_id' => 700000010, 'item_type' => 'track', 'item_name' => 'Example Track (Remix)', 'net_amount' => 1.14]),
+        bandcampSale(['bandcamp_transaction_id' => 577718099, 'bandcamp_transaction_item_id' => 700000011, 'net_amount' => 5.6]),
+        bandcampSale(['bandcamp_transaction_id' => 577718099, 'bandcamp_transaction_item_id' => 700000012, 'item_type' => 'track', 'item_name' => 'Example Bonus Track', 'net_amount' => 1.0]),
+        // A second track of the same order that the other system never had, and a sale it never had at all.
+        bandcampSale(['bandcamp_transaction_id' => 577718099, 'bandcamp_transaction_item_id' => 700000013, 'item_type' => 'track', 'item_name' => 'Example Hidden Track', 'net_amount' => 1.0]),
+        bandcampSale(['bandcamp_transaction_id' => 577718500, 'bandcamp_transaction_item_id' => 700000014, 'item_type' => 'track', 'item_name' => 'Example Track', 'net_amount' => 1.0]),
+    ]]);
+
+    $result = app(BandcampSync::class)->run($connection);
+
+    expect($result->alreadyImported)->toBe(3)
+        ->and($result->transactions)->toBe(2)
+        ->and(Transaction::query()->count())->toBe(5)
+        ->and(Transaction::query()->where('external_id', '577718015')->count())->toBe(1)
+        ->and(Transaction::query()->where('external_id', '577718099')->count())->toBe(3)
+        ->and(Transaction::query()->where('external_id', '577718500')->count())->toBe(1);
+
+    // Syncing the same month again changes nothing.
+    $connection->update(['last_synced_until' => null]);
+
+    expect(app(BandcampSync::class)->run($connection)->transactions)->toBe(0)
+        ->and(Transaction::query()->count())->toBe(5);
+});
+
+test('a bandcamp report uploaded after moving from another royalty system does not book its sales again', function () {
+    $connection = connectedLabel('2023-08-01');
+    $label = Label::query()->findOrFail($connection->label_id);
+    migratedBandcampSale($label->id, '577718015', 'Download Track');
+
+    Storage::disk('local')->put('imports/manual.csv', file_get_contents(base_path('tests/Fixtures/bandcamp_raw_sample.csv')));
+    $upload = app(ImportRunner::class)->run(DataImport::factory()->create([
+        'label_id' => $label->id, 'importer' => 'bandcamp', 'status' => 'pending', 'file_path' => 'imports/manual.csv',
+    ]), $label);
+
+    expect($upload->status)->toBe(ImportStatus::Imported)
+        ->and($upload->transactions_count)->toBe(1)
+        ->and(Transaction::query()->count())->toBe(2)
+        ->and(Transaction::query()->where('data_import_id', $upload->id)->sole()->external_id)->toBe('577718099');
+});
+
 test('a failing month stops the sync and leaves the cursor at the last good month', function () {
     Sleep::fake();
     $this->travelTo('2026-04-10 12:00:00');

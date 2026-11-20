@@ -20,12 +20,21 @@ class BandcampImporter extends BaseImporter
         'city', 'region/state', 'region or state',
     ];
 
+    /**
+     * What Bandcamp sales in the ledger were booked as: by this importer
+     * and the sync, or carried over from another royalty system that
+     * fetched them from Bandcamp ("bandcamp_api").
+     *
+     * @var list<string>
+     */
+    public const array SOURCES = ['bandcamp', 'bandcamp_api'];
+
     private bool $disableFee = false;
 
     private bool $excludePhysical = false;
 
-    /** @var array<string, int>|null Synced sales no line of this file has accounted for yet, by sale key. */
-    private ?array $synced = null;
+    /** @var array{items: array<string, true>, synced: array<string, int>, reported: array<string, int>, migrated: array<string, int>}|null Sales in the ledger no line of this file has accounted for yet. */
+    private ?array $known = null;
 
     public function key(): string
     {
@@ -51,7 +60,76 @@ class BandcampImporter extends BaseImporter
     {
         $this->disableFee = (bool) ($this->options['disable_fee'] ?? $this->label->importerSetting('bandcamp.disable_fee', false));
         $this->excludePhysical = (bool) ($this->options['exclude_physical'] ?? $this->label->importerSetting('bandcamp.exclude_physical', false));
-        $this->synced = null;
+        $this->known = null;
+    }
+
+    /**
+     * The format a sale is booked under.
+     */
+    public static function format(string $itemType): string
+    {
+        return match (mb_strtolower(trim($itemType))) {
+            'album' => 'Download Album',
+            'track' => 'Download Track',
+            default => 'Physical/Other',
+        };
+    }
+
+    /**
+     * The Bandcamp sales of a label that are in the ledger, sorted by
+     * how they can be recognised again:
+     *
+     * - "items": fetched by the sync, by order id and item id.
+     * - "synced": the same sales, counted by order, item type and item name, for report lines that carry no item id.
+     * - "reported": from an uploaded report, counted by order, item type and item name.
+     * - "migrated": carried over from another system without the line Bandcamp sent, counted by order id and format.
+     *
+     * @param  list<string>|null  $orderIds  Only these orders; null reads every sale.
+     * @return array{items: array<string, true>, synced: array<string, int>, reported: array<string, int>, migrated: array<string, int>}
+     */
+    public static function known(int $labelId, ?array $orderIds = null): array
+    {
+        $known = ['items' => [], 'synced' => [], 'reported' => [], 'migrated' => []];
+
+        DB::table('transactions')
+            ->where('label_id', $labelId)
+            ->whereIn('importer_source', self::SOURCES)
+            ->whereNotNull('external_id')
+            ->when($orderIds !== null, fn ($query) => $query->whereIn('external_id', $orderIds))
+            ->orderBy('id')
+            ->select(['id', 'external_id', 'format', 'raw_data'])
+            ->lazy()
+            ->each(function (object $transaction) use (&$known): void {
+                $raw = [];
+
+                foreach ((array) json_decode((string) $transaction->raw_data, true) as $column => $value) {
+                    $raw[Row::normalize((string) $column)] = is_scalar($value) ? (string) $value : '';
+                }
+
+                $orderId = (string) $transaction->external_id;
+                $itemId = $raw['bandcamp transaction item id'] ?? '';
+                $sale = self::saleKey($orderId, $raw['item type'] ?? '', $raw['item name'] ?? '');
+
+                if ($itemId !== '') {
+                    $known['items']["{$orderId}:{$itemId}"] = true;
+                    $known['synced'][$sale] = ($known['synced'][$sale] ?? 0) + 1;
+                } elseif (isset($raw['item type']) || isset($raw['item name'])) {
+                    $known['reported'][$sale] = ($known['reported'][$sale] ?? 0) + 1;
+                } else {
+                    $key = self::migratedKey($orderId, (string) $transaction->format);
+                    $known['migrated'][$key] = ($known['migrated'][$key] ?? 0) + 1;
+                }
+            });
+
+        return $known;
+    }
+
+    /**
+     * What identifies a migrated sale: all that is left of it is the order and what kind of item it was.
+     */
+    public static function migratedKey(string $orderId, string $format): string
+    {
+        return $orderId.'|'.$format;
     }
 
     /**
@@ -63,47 +141,25 @@ class BandcampImporter extends BaseImporter
     }
 
     /**
-     * Whether the sync has imported this line of a downloaded report
-     * already. A report line carries no item id, so it is matched by
-     * order, item type and item name; one synced sale accounts for one line.
+     * Whether this line of a downloaded report is in the ledger already:
+     * fetched by the sync, or carried over from another system. A report
+     * line carries no item id, so it is matched by order, item type and
+     * item name, or by order and format; one booked sale accounts for one line.
      */
-    private function wasSynced(string $orderId, string $itemType, string $itemName): bool
+    private function isKnown(string $orderId, string $itemType, string $itemName): bool
     {
-        if ($this->synced === null) {
-            $this->synced = [];
+        // ponytail: reads every Bandcamp sale of the label once per file; narrow it to the file's order ids if uploads get slow.
+        $this->known ??= self::known($this->label->id);
 
-            // ponytail: reads every synced sale of the label once per file; narrow it to the file's order ids if uploads get slow.
-            DB::table('transactions')
-                ->where('label_id', $this->label->id)
-                ->where('importer_source', $this->key())
-                ->whereNotNull('external_id')
-                ->where('raw_data', 'like', '%transaction_item_id%')
-                ->orderBy('id')
-                ->select(['id', 'external_id', 'raw_data'])
-                ->lazy()
-                ->each(function (object $transaction): void {
-                    $raw = [];
+        foreach (['synced' => self::saleKey($orderId, $itemType, $itemName), 'migrated' => self::migratedKey($orderId, self::format($itemType))] as $kind => $key) {
+            if (($this->known[$kind][$key] ?? 0) > 0) {
+                $this->known[$kind][$key]--;
 
-                    foreach ((array) json_decode((string) $transaction->raw_data, true) as $column => $value) {
-                        $raw[Row::normalize((string) $column)] = is_scalar($value) ? (string) $value : '';
-                    }
-
-                    if (($raw['bandcamp transaction item id'] ?? '') !== '') {
-                        $key = self::saleKey((string) $transaction->external_id, $raw['item type'] ?? '', $raw['item name'] ?? '');
-                        $this->synced[$key] = ($this->synced[$key] ?? 0) + 1;
-                    }
-                });
+                return true;
+            }
         }
 
-        $key = self::saleKey($orderId, $itemType, $itemName);
-
-        if (($this->synced[$key] ?? 0) === 0) {
-            return false;
-        }
-
-        $this->synced[$key]--;
-
-        return true;
+        return false;
     }
 
     protected function map(Row $row): ImportRow
@@ -120,9 +176,9 @@ class BandcampImporter extends BaseImporter
             $orderId !== null
             && $row->string('bandcamp transaction item id') === null
             && ($this->options['skip_duplicates'] ?? true)
-            && $this->wasSynced($orderId, $itemType, (string) $row->string('item name'))
+            && $this->isKnown($orderId, $itemType, (string) $row->string('item name'))
         ) {
-            $this->skip('Sale already imported by the Bandcamp sync.');
+            $this->skip('Sale already booked: fetched by the Bandcamp sync or carried over from another system.');
         }
 
         $net = $row->decimal('net amount') ?? $this->skip('Line without a net amount skipped.');
@@ -152,11 +208,7 @@ class BandcampImporter extends BaseImporter
             quantity: $row->decimal('quantity'),
             price: $row->decimal('item price'),
             category: 'Direct to Fan/Webstore',
-            format: match ($itemType) {
-                'album' => 'Download Album',
-                'track' => 'Download Track',
-                default => 'Physical/Other',
-            },
+            format: self::format($itemType),
             usageType: $row->string('package'),
             region: $row->region('country code'),
             provider: 'Bandcamp',

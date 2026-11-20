@@ -12,6 +12,7 @@ use App\Services\Bandcamp\BandcampSync;
 use App\Support\CurrentLabel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -31,6 +32,8 @@ class BandcampController extends Controller
 
         return Inertia::render('settings/bandcamp', [
             'connection' => $connection === null ? null : [
+                // Enough of the client ID to tell which client is stored; the secret is never sent back.
+                'client_id_hint' => Str::mask($connection->client_id, '•', 0, max(0, mb_strlen($connection->client_id) - 2)),
                 'bands' => $connection->bands ?? [],
                 'band_id' => $connection->band_id,
                 'member_band_id' => $connection->member_band_id,

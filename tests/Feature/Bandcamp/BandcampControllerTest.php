@@ -44,6 +44,7 @@ test('the page shows the state of the connection without any secret', function (
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('settings/bandcamp')
         ->where('connection', [
+            'client_id_hint' => '••11',
             'bands' => BANDCAMP_BANDS,
             'band_id' => 1000001,
             'member_band_id' => 1000002,

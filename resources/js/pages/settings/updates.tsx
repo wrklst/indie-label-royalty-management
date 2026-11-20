@@ -5,6 +5,7 @@ import { CheckField, Field, SelectInput } from '@/components/field';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { edit } from '@/routes/updates';
 
 type Last = {
     tag: string;
@@ -226,3 +227,7 @@ export default function Updates({
         </>
     );
 }
+
+Updates.layout = {
+    breadcrumbs: [{ title: 'Updates', href: edit() }],
+};

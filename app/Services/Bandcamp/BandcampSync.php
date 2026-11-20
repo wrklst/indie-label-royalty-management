@@ -8,12 +8,10 @@ use App\Models\DataImport;
 use App\Models\Label;
 use App\Services\Imports\Importers\BandcampImporter;
 use App\Services\Imports\ImportRunner;
-use App\Services\Imports\Row;
 use App\Support\CurrentLabel;
 use App\Support\WorkingCopy;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
@@ -173,58 +171,41 @@ class BandcampSync
 
     /**
      * Leave out the lines whose sale is in the ledger already, whether it
-     * came from an earlier sync or from a sales report someone uploaded.
+     * came from an earlier sync, from a sales report someone uploaded or
+     * from another royalty system the label moved over from.
      *
      * A synced sale is recognised by Bandcamp's order id together with its
-     * id of the item within the order. Downloaded reports do not carry that id, so their lines are
-     * matched by order id, item type and item name, one stored line
-     * accounting for one fetched line.
+     * id of the item within the order. Downloaded reports do not carry
+     * that id, so their lines are matched by order id, item type and item
+     * name. Of a migrated sale only the order id and the format are left.
+     * In both cases one stored line accounts for one fetched line.
      *
      * @param  list<array<string, string>>  $lines
      * @return list<array<string, string>>
      */
     private function withoutImported(Label $label, array $lines): array
     {
-        $itemIds = [];
-        $unidentified = [];
+        $known = ['items' => [], 'reported' => [], 'migrated' => []];
         $orderIds = array_values(array_unique(array_filter(array_column($lines, 'bandcamp_transaction_id'), fn (string $id): bool => $id !== '')));
 
         foreach (array_chunk($orderIds, 500) as $chunk) {
-            $stored = DB::table('transactions')
-                ->where('label_id', $label->id)
-                ->where('importer_source', self::IMPORTER)
-                ->whereIn('external_id', $chunk)
-                ->get(['external_id', 'raw_data']);
-
-            foreach ($stored as $transaction) {
-                $raw = [];
-
-                foreach ((array) json_decode((string) $transaction->raw_data, true) as $column => $value) {
-                    $raw[Row::normalize((string) $column)] = is_scalar($value) ? (string) $value : '';
-                }
-
-                $itemId = $raw['bandcamp transaction item id'] ?? '';
-
-                if ($itemId !== '') {
-                    $itemIds["{$transaction->external_id}:{$itemId}"] = true;
-                } else {
-                    $key = BandcampImporter::saleKey((string) $transaction->external_id, $raw['item type'] ?? '', $raw['item name'] ?? '');
-                    $unidentified[$key] = ($unidentified[$key] ?? 0) + 1;
-                }
-            }
+            $stored = BandcampImporter::known($label->id, $chunk);
+            $known = ['items' => $known['items'] + $stored['items'], 'reported' => $known['reported'] + $stored['reported'], 'migrated' => $known['migrated'] + $stored['migrated']];
         }
 
-        return array_values(array_filter($lines, function (array $line) use ($itemIds, &$unidentified): bool {
-            if ($line['bandcamp_transaction_item_id'] !== '' && isset($itemIds["{$line['bandcamp_transaction_id']}:{$line['bandcamp_transaction_item_id']}"])) {
+        return array_values(array_filter($lines, function (array $line) use (&$known): bool {
+            $orderId = $line['bandcamp_transaction_id'];
+
+            if ($line['bandcamp_transaction_item_id'] !== '' && isset($known['items']["{$orderId}:{$line['bandcamp_transaction_item_id']}"])) {
                 return false;
             }
 
-            $key = BandcampImporter::saleKey($line['bandcamp_transaction_id'], $line['item_type'], $line['item_name']);
+            foreach (['reported' => BandcampImporter::saleKey($orderId, $line['item_type'], $line['item_name']), 'migrated' => BandcampImporter::migratedKey($orderId, BandcampImporter::format($line['item_type']))] as $kind => $key) {
+                if (($known[$kind][$key] ?? 0) > 0) {
+                    $known[$kind][$key]--;
 
-            if (($unidentified[$key] ?? 0) > 0) {
-                $unidentified[$key]--;
-
-                return false;
+                    return false;
+                }
             }
 
             return true;
