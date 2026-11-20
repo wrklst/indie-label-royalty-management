@@ -85,6 +85,7 @@ test('the database is copied before the update', function () {
 
 test('without a backup of the database nothing is updated', function () {
     fakeRepository();
+    config(['database.connections.sqlite.database' => ':memory:']);
 
     $this->artisan('royalties:update')->expectsOutputToContain('The database file could not be copied.')->assertFailed();
 
