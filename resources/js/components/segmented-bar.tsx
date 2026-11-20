@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -8,22 +9,22 @@ export type Segment = {
     remainder?: boolean;
 };
 
-/** Chart colours in their fixed order; a part keeps its colour by its position. */
-const COLOURS = [
-    'bg-chart-1',
-    'bg-chart-2',
-    'bg-chart-3',
-    'bg-chart-4',
-    'bg-chart-5',
-    'bg-chart-6',
-    'bg-chart-7',
-    'bg-chart-8',
-];
+/** How many chart colours the theme defines, in their fixed order. */
+const THEMED = 8;
 
-/** More parts than colours: the smallest are shown as one. */
-const MOST = 7;
+/** Grey belongs to the remainder alone, so no party is ever mistaken for it. */
+const GREY = 'color-mix(in oklab, var(--muted-foreground) 45%, transparent)';
 
-const GREY = 'bg-muted-foreground/40';
+/**
+ * The colour of the party at a position. The first eight are the theme's
+ * chart colours; further ones step around the colour wheel by the golden
+ * angle, so no two parties of one bar ever share a colour.
+ */
+function colourAt(position: number): string {
+    return position < THEMED
+        ? `var(--chart-${position + 1})`
+        : `oklch(${position % 2 === 0 ? 0.6 : 0.72} 0.14 ${Math.round((20 + (position - THEMED) * 137.508) % 360)})`;
+}
 
 /**
  * The colour each part gets in the bar, in the order the parts are
@@ -31,22 +32,15 @@ const GREY = 'bg-muted-foreground/40';
  * a part that is not drawn.
  */
 export function partColours(segments: Segment[]): (string | null)[] {
-    const parties = segments.filter(
-        (segment) => segment.value > 0 && !segment.remainder,
+    let party = 0;
+
+    return segments.map((segment) =>
+        segment.value <= 0
+            ? null
+            : segment.remainder
+              ? GREY
+              : colourAt(party++),
     );
-
-    return segments.map((segment) => {
-        if (segment.value <= 0) {
-            return null;
-        }
-
-        const position = parties.indexOf(segment);
-
-        return segment.remainder ||
-            (parties.length > MOST && position >= MOST - 1)
-            ? GREY
-            : COLOURS[position];
-    });
 }
 
 /**
@@ -59,35 +53,30 @@ export function SegmentedBar({
     format,
     compact = false,
     className,
+    active,
+    onActive,
 }: {
+    /** The part pointed at, by its place in `segments`, when the page names the parts itself. */
+    active?: number | null;
+    onActive?: (position: number | null) => void;
     segments: Segment[];
     format: (value: number) => ReactNode;
     /** A thin bar without figures on it, for table rows. */
     compact?: boolean;
     className?: string;
 }) {
-    const positive = segments.filter((segment) => segment.value > 0);
-    const parties = positive.filter((segment) => !segment.remainder);
-    const shown =
-        parties.length > MOST
-            ? [
-                  ...parties.slice(0, MOST - 1),
-                  {
-                      label: `${parties.length - MOST + 1} others`,
-                      value: parties
-                          .slice(MOST - 1)
-                          .reduce((sum, segment) => sum + segment.value, 0),
-                      remainder: true,
-                  },
-              ]
-            : parties;
-    const parts = [
-        ...shown,
-        ...positive.filter((segment) => segment.remainder),
-    ].map((segment, position) => ({
-        ...segment,
-        colour: segment.remainder ? GREY : COLOURS[position % COLOURS.length],
-    }));
+    const colours = partColours(segments);
+    const parts = segments.flatMap((segment, position) =>
+        colours[position] === null
+            ? []
+            : [{ ...segment, position, colour: colours[position] as string }],
+    );
+    // Pointing at a part, in the bar or by its name, sets the others back.
+    const [own, setOwn] = useState<number | null>(null);
+    const pointed = active === undefined ? own : active;
+    const point = onActive ?? setOwn;
+    const dimmed = (position: number) =>
+        pointed !== null && pointed !== position && 'opacity-25';
     const total = parts.reduce((sum, segment) => sum + segment.value, 0);
 
     if (total <= 0) {
@@ -111,13 +100,19 @@ export function SegmentedBar({
             >
                 {parts.map((part) => (
                     <div
-                        key={part.label}
+                        key={part.position}
+                        data-part={part.position}
                         title={`${part.label}: ${share(part.value)}`}
+                        onMouseEnter={() => point(part.position)}
+                        onMouseLeave={() => point(null)}
                         className={cn(
-                            'flex min-w-0.5 items-center justify-center overflow-hidden text-xs font-medium text-white',
-                            part.colour,
+                            'flex min-w-0.5 items-center justify-center overflow-hidden text-xs font-medium text-white transition-opacity',
+                            dimmed(part.position),
                         )}
-                        style={{ width: `${(part.value / total) * 100}%` }}
+                        style={{
+                            width: `${(part.value / total) * 100}%`,
+                            backgroundColor: part.colour,
+                        }}
                     >
                         {!compact &&
                             part.value / total >= 0.09 &&
@@ -129,15 +124,18 @@ export function SegmentedBar({
                 <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
                     {parts.map((part) => (
                         <li
-                            key={part.label}
-                            className="flex items-baseline gap-1.5"
+                            key={part.position}
+                            onMouseEnter={() => point(part.position)}
+                            onMouseLeave={() => point(null)}
+                            className={cn(
+                                'flex items-baseline gap-1.5 transition-opacity',
+                                dimmed(part.position),
+                            )}
                         >
                             <span
                                 aria-hidden
-                                className={cn(
-                                    'size-2.5 shrink-0 self-center rounded-sm',
-                                    part.colour,
-                                )}
+                                className="size-2.5 shrink-0 self-center rounded-sm"
+                                style={{ backgroundColor: part.colour }}
                             />
                             <span>{part.label}</span>
                             <span className="text-muted-foreground tabular-nums">

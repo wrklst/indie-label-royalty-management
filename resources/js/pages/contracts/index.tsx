@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { SegmentedBar, partColours } from '@/components/segmented-bar';
 import { Link } from '@inertiajs/react';
@@ -54,6 +55,10 @@ export default function Contracts({
         direction: SortDirection | null;
     };
 }) {
+    const [hovered, setHovered] = useState<{
+        contract: number;
+        part: number;
+    } | null>(null);
     const { apply } = useFilters(index.url(), filters);
     const sorter = serverSorter(filters, apply);
 
@@ -149,6 +154,21 @@ export default function Contracts({
                                     },
                                 ];
                                 const colours = partColours(segments);
+                                // The part of this contract the pointer is on, in the bar or on a name.
+                                const pointed =
+                                    hovered?.contract === contract.id
+                                        ? hovered.part
+                                        : null;
+                                const point = (part: number | null) =>
+                                    setHovered(
+                                        part === null
+                                            ? null
+                                            : { contract: contract.id, part },
+                                    );
+                                const dimmed = (part: number) =>
+                                    pointed !== null &&
+                                    pointed !== part &&
+                                    'opacity-25';
                                 const used =
                                     contract.releases_count +
                                     contract.tracks_count +
@@ -185,58 +205,87 @@ export default function Contracts({
                                                     no splits
                                                 </Badge>
                                             ) : (
-                                                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                                <div className="flex items-center gap-4">
                                                     <SegmentedBar
                                                         compact
-                                                        className="w-full max-w-xs"
+                                                        active={pointed}
+                                                        onActive={point}
+                                                        className="w-56 shrink-0"
                                                         format={(value) =>
                                                             percent(value)
                                                         }
                                                         segments={segments}
                                                     />
-                                                    {contract.splits.map(
-                                                        (split, position) => (
-                                                            <span
-                                                                key={position}
-                                                                className="inline-flex items-baseline gap-1.5"
-                                                            >
+                                                    <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                                        {contract.splits.map(
+                                                            (
+                                                                split,
+                                                                position,
+                                                            ) => (
                                                                 <span
-                                                                    aria-hidden
-                                                                    data-split-dot
+                                                                    key={
+                                                                        position
+                                                                    }
+                                                                    data-split-name={
+                                                                        position
+                                                                    }
+                                                                    onMouseEnter={() =>
+                                                                        point(
+                                                                            position,
+                                                                        )
+                                                                    }
+                                                                    onMouseLeave={() =>
+                                                                        point(
+                                                                            null,
+                                                                        )
+                                                                    }
                                                                     className={cn(
-                                                                        'size-2.5 shrink-0 self-center rounded-full',
-                                                                        colours[
-                                                                            position
-                                                                        ],
+                                                                        'inline-flex items-baseline gap-1.5 transition-opacity',
+                                                                        dimmed(
+                                                                            position,
+                                                                        ),
                                                                     )}
-                                                                />
-                                                                <RecordLink
-                                                                    to="payee"
-                                                                    id={
-                                                                        split.payee_id
-                                                                    }
                                                                 >
-                                                                    {
-                                                                        split.payee
-                                                                    }
-                                                                </RecordLink>{' '}
-                                                                <span className="text-muted-foreground tabular-nums">
-                                                                    {percent(
-                                                                        split.split_amount,
+                                                                    <span
+                                                                        aria-hidden
+                                                                        data-split-dot
+                                                                        className="size-2.5 shrink-0 self-center rounded-full"
+                                                                        style={{
+                                                                            backgroundColor:
+                                                                                colours[
+                                                                                    position
+                                                                                ] ??
+                                                                                undefined,
+                                                                        }}
+                                                                    />
+                                                                    <RecordLink
+                                                                        to="payee"
+                                                                        id={
+                                                                            split.payee_id
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            split.payee
+                                                                        }
+                                                                    </RecordLink>{' '}
+                                                                    <span className="text-muted-foreground tabular-nums">
+                                                                        {percent(
+                                                                            split.split_amount,
+                                                                        )}
+                                                                    </span>
+                                                                    {split.ledger && (
+                                                                        <span className="text-muted-foreground">
+                                                                            {' '}
+                                                                            →{' '}
+                                                                            {
+                                                                                split.ledger
+                                                                            }
+                                                                        </span>
                                                                     )}
                                                                 </span>
-                                                                {split.ledger && (
-                                                                    <span className="text-muted-foreground">
-                                                                        {' '}
-                                                                        →{' '}
-                                                                        {
-                                                                            split.ledger
-                                                                        }
-                                                                    </span>
-                                                                )}
-                                                            </span>
-                                                        ),
-                                                    )}
+                                                            ),
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
                                         </TableCell>
@@ -248,7 +297,38 @@ export default function Contracts({
                                                     over 100%
                                                 </Badge>
                                             ) : (
-                                                percent(1 - paid)
+                                                <span
+                                                    onMouseEnter={() =>
+                                                        point(
+                                                            segments.length - 1,
+                                                        )
+                                                    }
+                                                    onMouseLeave={() =>
+                                                        point(null)
+                                                    }
+                                                    className={cn(
+                                                        'inline-flex items-baseline gap-1.5 transition-opacity',
+                                                        dimmed(
+                                                            segments.length - 1,
+                                                        ),
+                                                    )}
+                                                >
+                                                    {colours.at(-1) && (
+                                                        <span
+                                                            aria-hidden
+                                                            data-label-dot
+                                                            className="size-2.5 shrink-0 self-center rounded-full"
+                                                            style={{
+                                                                backgroundColor:
+                                                                    colours.at(
+                                                                        -1,
+                                                                    ) ??
+                                                                    undefined,
+                                                            }}
+                                                        />
+                                                    )}
+                                                    {percent(1 - paid)}
+                                                </span>
                                             )}
                                         </TableCell>
                                         <TableCell className="text-muted-foreground">

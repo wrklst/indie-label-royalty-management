@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\LabelRole;
+use App\Models\ContractSplit;
 use App\Models\Label;
 use App\Models\Payee;
 use App\Models\Statement;
@@ -143,5 +144,25 @@ test('a signet dropped into the label settings is uploaded and shown in the side
         ->attach('[data-label-image="signet"] input[type="file"]', $signet)
         ->assertPresent('[data-label-signet]')
         ->assertPresent('[data-label-image="signet"] img[alt="Current signet"]')
+        ->assertNoJavaScriptErrors();
+});
+
+test('every payee of a contract has its own colour and pointing at a name sets the other parts of the bar back', function () {
+    $scenario = royaltyScenario();
+    $scenario['contract']->splits()->first()->update(['split_amount' => '0.0625']);
+
+    foreach (range(2, 11) as $number) {
+        ContractSplit::factory()->create([
+            'contract_id' => $scenario['contract']->id, 'split_amount' => '0.0625',
+            'payee_id' => Payee::factory()->create(['label_id' => $scenario['label']->id, 'name' => "Payee {$number}"])->id,
+        ]);
+    }
+
+    $this->actingAs($scenario['admin']);
+
+    visit('/contracts')
+        ->assertScript('(() => { const colour = (element) => getComputedStyle(element).backgroundColor; const bar = [...document.querySelectorAll("[data-segmented-bar] [data-part]")].map(colour); const dots = [...document.querySelectorAll("[data-split-dot]")].map(colour); const label = colour(document.querySelector("[data-label-dot]")); return dots.length === 11 && new Set(dots).size === 11 && dots.every((dot, index) => dot === bar[index]) && label === bar.at(-1) && ! dots.includes(label); })()')
+        ->hover('[data-split-name="2"]')
+        ->assertScript('(() => { const parts = [...document.querySelectorAll("[data-segmented-bar] [data-part]")]; return parts.filter((part) => part.classList.contains("opacity-25")).length === parts.length - 1 && ! parts[2].classList.contains("opacity-25"); })()')
         ->assertNoJavaScriptErrors();
 });
