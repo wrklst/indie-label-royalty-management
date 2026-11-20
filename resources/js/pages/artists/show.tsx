@@ -16,7 +16,12 @@ import { date, percent } from '@/lib/format';
 import { index } from '@/routes/artists';
 
 type Props = {
-    artist: { id: number; name: string };
+    artist: {
+        id: number;
+        name: string;
+        alias_of: { id: number; name: string } | null;
+        aliases: { id: number; name: string }[];
+    };
     totals: {
         income: string;
         expense: string;
@@ -63,6 +68,32 @@ export default function ShowArtist({
             title={artist.name}
             description={`${releases.length} release(s), ${tracks.length} track(s)`}
         >
+            {(artist.alias_of || artist.aliases.length > 0) && (
+                <p className="text-sm text-muted-foreground">
+                    {artist.alias_of ? (
+                        <>
+                            Alias of{' '}
+                            <RecordLink to="artist" id={artist.alias_of.id}>
+                                {artist.alias_of.name}
+                            </RecordLink>
+                            . What statements book under this name belongs to
+                            that artist.
+                        </>
+                    ) : (
+                        <>
+                            Also named on statements as:{' '}
+                            {artist.aliases.map((alias, position) => (
+                                <span key={alias.id}>
+                                    {position > 0 && ' · '}
+                                    <RecordLink to="artist" id={alias.id}>
+                                        {alias.name}
+                                    </RecordLink>
+                                </span>
+                            ))}
+                        </>
+                    )}
+                </p>
+            )}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Stat
                     label="Income to date"

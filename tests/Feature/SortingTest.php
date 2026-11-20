@@ -215,7 +215,7 @@ test('a sorted and filtered list keeps its order on the next page', function () 
             ->has('artists.data', 10)
             ->where('artists.data.0.name', 'Example Artist 10')
             ->where('artists.data.9.name', 'Example Artist 01')
-            ->where('filters', $query));
+            ->where('filters', [...$query, 'aliases' => false]));
 });
 
 test('rows that tie on the sorted column keep a fixed order', function () {

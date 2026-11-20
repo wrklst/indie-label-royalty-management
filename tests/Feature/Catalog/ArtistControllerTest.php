@@ -6,27 +6,39 @@ use App\Models\Release;
 use App\Models\Track;
 use Inertia\Testing\AssertableInertia as Assert;
 
-test('the artist list shows each artist with its alias target and usage counts', function () {
+test('the artist list shows each artist with its aliases and usage counts, and an alias as a row only when asked for', function () {
     $label = Label::factory()->create();
     $main = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
-    Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Alias', 'alias_of_id' => $main->id]);
+    Artist::factory()->create(['label_id' => $label->id, 'name' => 'Sample Alias', 'alias_of_id' => $main->id]);
     $release = Release::factory()->create(['label_id' => $label->id, 'artist_id' => $main->id]);
     Track::factory()->count(2)->create(['label_id' => $label->id, 'release_id' => $release->id, 'artist_id' => $main->id]);
+    $this->actingAs(labelAdmin($label));
 
-    $this->actingAs(labelAdmin($label))
-        ->get(route('artists.index'))
+    $this->get(route('artists.index'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('artists/index')
-            ->has('artists.data', 2)
-            ->where('artists.data.0.name', 'Example Alias')
-            ->where('artists.data.0.alias_of', 'Example Artist')
-            ->where('artists.data.1.name', 'Example Artist')
-            ->where('artists.data.1.alias_of', null)
-            ->where('artists.data.1.releases_count', 1)
-            ->where('artists.data.1.tracks_count', 2)
-            ->where('artists.data.1.aliases_count', 1)
+            ->has('artists.data', 1)
+            ->where('artists.data.0.name', 'Example Artist')
+            ->where('artists.data.0.aliases', ['Sample Alias'])
+            ->where('artists.data.0.releases_count', 1)
+            ->where('artists.data.0.tracks_count', 2)
+            ->where('filters.aliases', false)
             ->has('artistOptions', 2));
+
+    $this->get(route('artists.index', ['search' => 'sample']))->assertInertia(fn (Assert $page) => $page
+        ->has('artists.data', 1)
+        ->where('artists.data.0.name', 'Example Artist'));
+
+    $this->get(route('artists.index', ['aliases' => 1]))->assertInertia(fn (Assert $page) => $page
+        ->has('artists.data', 2)
+        ->where('artists.data.1.name', 'Sample Alias')
+        ->where('artists.data.1.alias_of', 'Example Artist')
+        ->where('filters.aliases', true));
+
+    $this->get(route('artists.show', $main->id))->assertInertia(fn (Assert $page) => $page
+        ->where('artist.alias_of', null)
+        ->where('artist.aliases.0.name', 'Sample Alias'));
 });
 
 test('the artist list counts the tracks an artist is credited on in any role', function () {

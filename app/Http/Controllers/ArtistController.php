@@ -38,7 +38,9 @@ class ArtistController extends Controller
                 ->whereColumn('artist_track.track_id', 'tracks.id')->whereColumn('artist_track.artist_id', 'artists.id'));
 
         $artists = Artist::query()
-            ->with('aliasOf:id,name')
+            ->with(['aliasOf:id,name', 'aliases:id,alias_of_id,name'])
+            // An alias is listed with its artist; on its own only when asked for.
+            ->unless($request->boolean('aliases'), fn ($query) => $query->whereNull('alias_of_id'))
             ->withCount('aliases')
             // Releases and tracks the artist is on in any role, as on the artist's own page.
             ->selectSub(Release::query()->selectRaw('count(*)')->where(fn ($query) => $query
@@ -47,18 +49,20 @@ class ArtistController extends Controller
                     ->whereColumn('artist_release.release_id', 'releases.id')->whereColumn('artist_release.artist_id', 'artists.id'))
                 ->orWhereExists(fn ($query) => $query->from('tracks')->whereColumn('tracks.release_id', 'releases.id')->where($onTrack))), 'releases_count')
             ->selectSub(Track::query()->selectRaw('count(*)')->where($onTrack), 'tracks_count')
-            ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
+            ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
+                ->where('name', 'like', "%{$search}%")->orWhereHas('aliases', fn ($query) => $query->where('name', 'like', "%{$search}%"))))
             ->tap($sorting)
             ->paginate(50)
             ->withQueryString()
             ->through(fn (Artist $artist): array => [
                 ...$artist->only(['id', 'name', 'alias_of_id', 'spotify_id', 'discogs_search_name', 'notes', 'releases_count', 'tracks_count', 'aliases_count']),
                 'alias_of' => $artist->aliasOf?->name,
+                'aliases' => $artist->aliases->sortBy('name')->pluck('name')->values(),
             ]);
 
         return Inertia::render('artists/index', [
             'artists' => $artists,
-            'filters' => ['search' => $request->string('search')->value(), ...$sorting->toArray()],
+            'filters' => ['search' => $request->string('search')->value(), 'aliases' => $request->boolean('aliases'), ...$sorting->toArray()],
             'artistOptions' => Options::artists(),
         ]);
     }
@@ -95,7 +99,11 @@ class ArtistController extends Controller
         $expense = Decimal::parse($byType['expense']->total ?? 0) ?? '0';
 
         return Inertia::render('artists/show', [
-            'artist' => $artist->only(['id', 'name']),
+            'artist' => [
+                ...$artist->only(['id', 'name']),
+                'alias_of' => $artist->aliasOf?->only(['id', 'name']),
+                'aliases' => $artist->aliases()->orderBy('name')->get(['id', 'name'])->map->only(['id', 'name']),
+            ],
             'totals' => [
                 'income' => $income,
                 'expense' => $expense,

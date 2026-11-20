@@ -63,9 +63,10 @@ class CatalogMatcher
             ->get(['id', 'release_id', 'name', 'isrc'])
             ->each(fn (Track $track) => $this->rememberTrack($track));
 
-        Artist::query()->where('label_id', $label->id)->orderBy('id')->get(['id', 'name'])
+        // An alias is another spelling a statement uses: what it names belongs to the main artist.
+        Artist::query()->where('label_id', $label->id)->orderBy('id')->get(['id', 'name', 'alias_of_id'])
             ->each(function (Artist $artist): void {
-                $this->artists[Identifiers::nameKey($artist->name)] ??= $artist->id;
+                $this->artists[Identifiers::nameKey($artist->name)] ??= $artist->alias_of_id ?? $artist->id;
             });
 
         Item::query()->where('label_id', $label->id)->orderBy('id')

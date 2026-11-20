@@ -126,15 +126,17 @@ The pencil in a row opens the same fields for editing. The bin deletes the artis
 
 ### Aliases
 
-Set **Alias of** when an artist is another name of an artist already in your catalog. The list then shows `alias of Example Artist` on the alias and the number of aliases on the main name.
+Set **Alias of** when an artist is another name of an artist already in your catalog, for example the spelling a shop or a statement uses, such as `Example Artist feat. Guest Artist`.
+
+- The artist list shows an alias under its artist, not as a row of its own. Tick **Show aliases as rows of their own** to edit or delete an alias. The search also finds an artist by the name of an alias.
+- The artist page names its aliases under the title; the page of an alias links to its artist.
+- A release or a track that an import creates under the name of an alias belongs to the main artist. Releases and tracks that were given to the alias before stay with it until you change their artist.
 
 Rules:
 
 - An alias must point at an artist that is not an alias itself.
 - An artist that has aliases cannot become an alias.
 - An artist cannot be an alias of itself.
-
-An alias is a note for you. It does not merge the two artists: each keeps its own page, releases, tracks and counts.
 
 ### The artist page
 

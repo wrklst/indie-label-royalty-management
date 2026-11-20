@@ -38,6 +38,7 @@ type Artist = {
     releases_count: number;
     tracks_count: number;
     aliases_count: number;
+    aliases: string[];
 };
 
 function ArtistFields({
@@ -118,6 +119,7 @@ export default function Artists({
     artists: Paginated<Artist>;
     filters: {
         search: string;
+        aliases: boolean;
         sort: string | null;
         direction: SortDirection | null;
     };
@@ -129,7 +131,7 @@ export default function Artists({
     return (
         <Page
             title="Artists"
-            description="The performers on your releases and tracks. Artists are created automatically when an import mentions a new name."
+            description="The performers on your releases and tracks. Artists are created automatically when an import mentions a new name. Other spellings of an artist are its aliases and are listed with it."
             actions={
                 <FormDialog
                     title="New artist"
@@ -157,6 +159,17 @@ export default function Artists({
                 }
                 className="max-w-sm"
             />
+            <label className="flex items-center gap-2 text-sm">
+                <input
+                    type="checkbox"
+                    className="size-4 accent-primary"
+                    checked={filters.aliases}
+                    onChange={(event) =>
+                        apply({ aliases: event.target.checked })
+                    }
+                />
+                Show aliases as rows of their own
+            </label>
 
             {artists.total === 0 ? (
                 <EmptyState
@@ -221,16 +234,11 @@ export default function Artists({
                                                 alias of {artist.alias_of}
                                             </Badge>
                                         )}
-                                        {artist.aliases_count > 0 && (
-                                            <Badge
-                                                variant="outline"
-                                                className="ml-2"
-                                            >
-                                                {artist.aliases_count}{' '}
-                                                {artist.aliases_count === 1
-                                                    ? 'alias'
-                                                    : 'aliases'}
-                                            </Badge>
+                                        {artist.aliases.length > 0 && (
+                                            <span className="block text-xs text-muted-foreground">
+                                                also{' '}
+                                                {artist.aliases.join(' · ')}
+                                            </span>
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">

@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ImportStatus;
+use App\Models\Artist;
 use App\Models\DataImport;
 use App\Models\Label;
 use App\Models\Release;
@@ -67,4 +68,16 @@ test('a release that has another upc is not taken for the one a statement names'
     $import = importTemplate($label, "date,total,catalog number,upc\n2026-03-31,10,EX001,4000000000017\n");
 
     expect($import->created_releases_count)->toBe(1);
+});
+
+test('a release and a track a statement names under an alias belong to the main artist', function () {
+    $label = currentLabel();
+    $main = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
+    Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist feat. Guest', 'alias_of_id' => $main->id]);
+
+    importTemplate($label, "date,total,artist,release name,track name,isrc\n2026-03-31,10,example artist FEAT. guest,Example Release,Example Track,ZZTST2600001\n");
+
+    expect(Track::query()->sole()->artist_id)->toBe($main->id)
+        ->and(Release::query()->sole()->artist_id)->toBe($main->id)
+        ->and(Artist::query()->count())->toBe(2);
 });
