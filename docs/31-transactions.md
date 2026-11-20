@@ -1,6 +1,6 @@
 # Transactions
 
-Every amount in Label Royalties is a transaction: a line of income, an expense or a transfer. This page explains the types, the fields that decide how a transaction is counted, and how to enter and find transactions under **Royalties → Transactions**.
+Every amount in Label Office is a transaction: a line of income, an expense or a transfer. This page explains the types, the fields that decide how a transaction is counted, and how to enter and find transactions under **Royalties → Transactions**.
 
 ## Types
 
@@ -149,7 +149,7 @@ The track filter includes every track that shares the same ISRC, so a recording 
 
 ## Full precision amounts
 
-Streaming lines are often worth fractions of a cent. Label Royalties never rounds them when storing or calculating:
+Streaming lines are often worth fractions of a cent. Label Office never rounds them when storing or calculating:
 
 - Totals are stored with up to 15 decimals, and all sums, splits and balances are calculated at that precision.
 - The **Amount** column of the list shows up to six decimals, for example `€0.003271`.

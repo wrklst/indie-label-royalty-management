@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Label Royalties'),
+    'name' => env('APP_NAME', 'Label Office'),
 
     /*
     |--------------------------------------------------------------------------

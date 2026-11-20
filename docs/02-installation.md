@@ -1,6 +1,6 @@
 # Installation
 
-How to get Label Royalties running: what the server needs, the installation itself, and creating the first account. For a production server continue with [Configuration](03-configuration.md) and [Deployment](04-deployment.md) afterwards.
+How to get Label Office running: what the server needs, the installation itself, and creating the first account. For a production server continue with [Configuration](03-configuration.md) and [Deployment](04-deployment.md) afterwards.
 
 ## Server requirements
 
@@ -24,8 +24,8 @@ How to get Label Royalties running: what the server needs, the installation itse
 ## Local installation
 
 ```sh
-git clone https://github.com/your-account/label-royalties.git
-cd label-royalties
+git clone https://github.com/wrklst/label-office.git
+cd label-office
 touch database/database.sqlite   # only when using SQLite, the default
 composer setup                   # installs, creates .env, migrates, builds
 composer dev                     # serves the app, runs the queue and watches assets
@@ -43,8 +43,8 @@ Create an empty database, then set these values in `.env` before running `compos
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=label_royalties
-DB_USERNAME=label_royalties
+DB_DATABASE=label_office
+DB_USERNAME=label_office
 DB_PASSWORD=your-password
 ```
 

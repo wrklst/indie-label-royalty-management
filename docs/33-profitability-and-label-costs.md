@@ -4,7 +4,7 @@ The profitability report shows what the label itself is left with per release, a
 
 ## Two kinds of cost
 
-Label Royalties separates costs by who bears them:
+Label Office separates costs by who bears them:
 
 | Cost                    | Who bears it                          | Where it is entered                                | Effect                                                                  |
 | ----------------------- | ------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------- |

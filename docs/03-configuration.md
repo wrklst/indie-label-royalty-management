@@ -7,7 +7,7 @@ After changing `.env` on a production server run `php artisan optimize` and rest
 ## Application
 
 ```ini
-APP_NAME="Label Royalties"
+APP_NAME="Label Office"
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://royalties.example.com
@@ -23,8 +23,8 @@ APP_URL=https://royalties.example.com
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=label_royalties
-DB_USERNAME=label_royalties
+DB_DATABASE=label_office
+DB_USERNAME=label_office
 DB_PASSWORD=your-password
 ```
 
@@ -75,7 +75,7 @@ Set `QUEUE_CONNECTION=database` and keep `php artisan queue:work` running instea
 One cron entry runs everything that happens on its own:
 
 ```
-* * * * * cd /path/to/label-royalties && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /path/to/label-office && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 | When            | What                                                                  |

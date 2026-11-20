@@ -1,11 +1,14 @@
-# Label Royalties
+# Label Office
 
-Royalty accounting and release management for independent record labels.
+**The open-source back office for independent labels.**
+Self-hosted and MIT-licensed. Royalties, releases and payouts for every label
+you run, in one install. Website: [labeloffice.org](https://labeloffice.org).
+
 Import the statements your distributor sends, split the income by contract,
 give your artists statements they can read, and keep every release together
 with its metadata, cover and audio.
 
-Label Royalties comes from the management of
+Label Office comes from the management of
 [Never Not Now](https://nevernotnow.net), an independent label in Berlin,
 Germany, and is the software the label runs on: its royalty accounting, its
 catalogue and its release files are kept in it, in production. It was built
@@ -31,7 +34,7 @@ Self-hosted, open source (MIT), built with Laravel, Inertia and React.
 
 ## Who is this for?
 
-Label Royalties is for labels that can run their own software, or have
+Label Office is for labels that can run their own software, or have
 someone who does. You need basic knowledge of how to run a web application
 and keep it updated. The application needs continuous security updates, and
 so does the server you run it on. An installation that is not kept up to date
@@ -41,7 +44,7 @@ If you don't feel up to that, you can hire professionals to do it for you, or
 use one of the proven managed platforms that work well, such as
 [Infinite Catalog](https://infinitecatalog.com), which has fair pricing for
 small indie labels. If your situation changes later, you can still move to
-Label Royalties: an importer for an Infinite Catalog account export is
+Label Office: an importer for an Infinite Catalog account export is
 included; see [Command line](docs/50-command-line.md#migrating-from-infinite-catalog).
 
 ## What it does
@@ -130,8 +133,8 @@ included; see [Command line](docs/50-command-line.md#migrating-from-infinite-cat
 ## Installation
 
 ```sh
-git clone https://github.com/wrklst/indie-label-royalty-management.git label-royalties
-cd label-royalties
+git clone https://github.com/wrklst/label-office.git
+cd label-office
 touch database/database.sqlite   # only when using SQLite, the default
 composer setup                   # installs, creates .env, migrates, builds
 composer dev                     # serves the app, runs the queue and watches assets
@@ -154,7 +157,7 @@ Step by step, including MySQL: [docs/02-installation.md](docs/02-installation.md
 
 ## Trying it locally with Laravel Herd
 
-The easiest way to try Label Royalties on your own computer is
+The easiest way to try Label Office on your own computer is
 [Laravel Herd](https://herd.laravel.com). The free version brings PHP, a web
 server, Composer and Node.js, and serves every folder inside its `Herd`
 folder at `http://<folder name>.test`. You also need
@@ -171,22 +174,22 @@ worker, so that no Redis is needed.
 
 ```sh
 cd ~/Herd
-git clone https://github.com/wrklst/indie-label-royalty-management.git label-royalties
-cd label-royalties
+git clone https://github.com/wrklst/label-office.git
+cd label-office
 touch database/database.sqlite
 composer setup
 ```
 
-3. Open the file `.env` in the folder `label-royalties` and set these three
+3. Open the file `.env` in the folder `label-office` and set these three
    lines, adding any that is not there yet:
 
 ```ini
-APP_URL=http://label-royalties.test
+APP_URL=http://label-office.test
 QUEUE_CONNECTION=sync
 AUDIO_PREVIEW_QUEUE=false
 ```
 
-4. Create your account and open `http://label-royalties.test`:
+4. Create your account and open `http://label-office.test`:
 
 ```sh
 php artisan royalties:create-user you@example.com --name="Your Name"
@@ -202,8 +205,8 @@ The sign-in code is not sent by email locally. Read it from the end of
 
 ```powershell
 cd $HOME\Herd
-git clone https://github.com/wrklst/indie-label-royalty-management.git label-royalties
-cd label-royalties
+git clone https://github.com/wrklst/label-office.git
+cd label-office
 New-Item database\database.sqlite
 composer install --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix
 Copy-Item .env.example .env
@@ -214,7 +217,7 @@ npm run build
 ```
 
 3. Set the three lines in `.env` as for macOS, then create your account and
-   open `http://label-royalties.test` the same way.
+   open `http://label-office.test` the same way.
 
 Windows is for trying it out only. The queue worker (Horizon) and the updater
 need Linux or macOS, which is why two requirements are skipped during the

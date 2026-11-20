@@ -1,6 +1,6 @@
 # Introduction
 
-Label Royalties is royalty accounting and release management for independent record labels, seen from the label's side: what came in, what each artist is owed, what the label keeps. This page explains the ideas the rest of the handbook builds on and walks through a first session.
+Label Office is royalty accounting and release management for independent record labels, seen from the label's side: what came in, what each artist is owed, what the label keeps. This page explains the ideas the rest of the handbook builds on and walks through a first session.
 
 ## What the software does
 

@@ -1,6 +1,6 @@
 # Deployment
 
-How to run Label Royalties on a production server. The steps are shown for a plain Ubuntu server and for Laravel Forge; any host that runs a Laravel application works the same way.
+How to run Label Office on a production server. The steps are shown for a plain Ubuntu server and for Laravel Forge; any host that runs a Laravel application works the same way.
 
 ## What a production server needs
 
@@ -18,8 +18,8 @@ The settings behind each of these are explained in [Configuration](03-configurat
 ## First deployment
 
 ```sh
-git clone https://github.com/your-account/label-royalties.git /var/www/label-royalties
-cd /var/www/label-royalties
+git clone https://github.com/wrklst/label-office.git /var/www/label-office
+cd /var/www/label-office
 composer install --no-dev --optimize-autoloader
 cp .env.example .env
 php artisan key:generate
@@ -39,7 +39,7 @@ The web server user needs write access to `storage` and `bootstrap/cache`.
 server {
     listen 443 ssl http2;
     server_name royalties.example.com;
-    root /var/www/label-royalties/public;
+    root /var/www/label-office/public;
     index index.php;
 
     client_max_body_size 1024m;   # audio masters
@@ -59,17 +59,17 @@ server {
 
 ### Horizon under Supervisor
 
-`/etc/supervisor/conf.d/label-royalties-horizon.conf`:
+`/etc/supervisor/conf.d/label-office-horizon.conf`:
 
 ```ini
-[program:label-royalties-horizon]
+[program:label-office-horizon]
 process_name=%(program_name)s
-command=php /var/www/label-royalties/artisan horizon
+command=php /var/www/label-office/artisan horizon
 autostart=true
 autorestart=true
 user=www-data
 redirect_stderr=true
-stdout_logfile=/var/www/label-royalties/storage/logs/horizon.log
+stdout_logfile=/var/www/label-office/storage/logs/horizon.log
 stopwaitsecs=3600
 ```
 
@@ -80,7 +80,7 @@ sudo supervisorctl reread && sudo supervisorctl update
 ### Cron
 
 ```
-* * * * * cd /var/www/label-royalties && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /var/www/label-office && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 ## Laravel Forge

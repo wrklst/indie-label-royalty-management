@@ -1,6 +1,14 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
+    "name": "label-office",
     "private": true,
+    "description": "The open-source back office for independent labels. Self-hosted and MIT-licensed. Royalties, releases and payouts for every label you run, in one install.",
+    "homepage": "https://labeloffice.org",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/wrklst/label-office.git"
+    },
     "type": "module",
     "scripts": {
         "build": "vp build",

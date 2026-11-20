@@ -1,8 +1,13 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "wrklst/indie-label-royalty-management",
+    "name": "wrklst/label-office",
     "type": "project",
-    "description": "Royalty accounting and release management for independent record labels.",
+    "description": "The open-source back office for independent labels. Self-hosted and MIT-licensed. Royalties, releases and payouts for every label you run, in one install.",
+    "homepage": "https://labeloffice.org",
+    "support": {
+        "issues": "https://github.com/wrklst/label-office/issues",
+        "source": "https://github.com/wrklst/label-office"
+    },
     "keywords": [
         "royalties",
         "record-label",
