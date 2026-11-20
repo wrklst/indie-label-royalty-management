@@ -31,7 +31,12 @@ class ArtistController extends Controller
 
         $artists = Artist::query()
             ->with('aliasOf:id,name')
-            ->withCount(['releases', 'tracks', 'aliases'])
+            ->withCount(['releases', 'aliases'])
+            // Tracks the artist is on in any role, as on the artist's own page.
+            ->selectSub(Track::query()->selectRaw('count(*)')->where(fn ($query) => $query
+                ->whereColumn('tracks.artist_id', 'artists.id')
+                ->orWhereExists(fn ($query) => $query->from('artist_track')
+                    ->whereColumn('artist_track.track_id', 'tracks.id')->whereColumn('artist_track.artist_id', 'artists.id'))), 'tracks_count')
             ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
             ->tap($sorting)
             ->paginate(50)

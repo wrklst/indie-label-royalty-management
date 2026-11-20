@@ -148,6 +148,14 @@ Has the web server forget the PHP code it has compiled (OPcache), so that it run
 php artisan royalties:reset-code-cache
 ```
 
+### royalties:credit-remixers
+
+Credits as **Remixer** every artist of your catalog that a track title names, such as `Second Track - Example Artist Remix` or `Second Track (Example Artist Remix)`. A statement or an account export names one artist per track, so a remixer that came in that way is in the artist list with no tracks. The name in the title has to be the name of an artist exactly, apart from upper and lower case; other titles are left alone. Running it again adds nothing twice. The Infinite Catalog migration runs it by itself.
+
+```sh
+php artisan royalties:credit-remixers
+```
+
 ## Useful framework commands
 
 | Command                         | What it tells you                                                 |

@@ -19,6 +19,7 @@ use App\Models\Territory;
 use App\Models\Track;
 use App\Models\Transaction;
 use App\Services\Imports\Identifiers;
+use App\Services\Releases\ArtistCredits;
 use App\Support\CurrentLabel;
 use App\Support\Decimal;
 use App\Support\Formats;
@@ -178,6 +179,9 @@ class ImportInfiniteCatalog extends Command
                 'mechanicals_rate' => $track['mechanicals_rate'],
             ])->id;
         }
+
+        // The export names one artist per track; remixers are found in the titles.
+        ArtistCredits::creditRemixers();
 
         foreach ($this->read('data-imports') as $import) {
             $this->ids['data-imports'][$import['id']] = DataImport::query()->create([

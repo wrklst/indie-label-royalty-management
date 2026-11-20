@@ -29,6 +29,21 @@ test('the artist list shows each artist with its alias target and usage counts',
             ->has('artistOptions', 2));
 });
 
+test('the artist list counts the tracks an artist is credited on in any role', function () {
+    $label = Label::factory()->create();
+    $main = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
+    $remixer = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Sample Ensemble']);
+    Track::factory()->create(['label_id' => $label->id, 'artist_id' => $main->id])->artists()->attach($remixer->id, ['role' => 'remixer', 'position' => 0]);
+    Track::factory()->create(['label_id' => $label->id, 'artist_id' => $main->id])->artists()->attach($main->id, ['role' => 'producer', 'position' => 0]);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('artists.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('artists.data.0.tracks_count', 2)
+            ->where('artists.data.1.name', 'Sample Ensemble')
+            ->where('artists.data.1.tracks_count', 1));
+});
+
 test('searching the artist list matches part of the name', function () {
     $label = Label::factory()->create();
     Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
