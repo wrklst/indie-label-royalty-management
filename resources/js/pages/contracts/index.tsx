@@ -1,4 +1,5 @@
-import { SegmentedBar } from '@/components/segmented-bar';
+import { cn } from '@/lib/utils';
+import { SegmentedBar, partColours } from '@/components/segmented-bar';
 import { Link } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { CheckField } from '@/components/field';
@@ -136,6 +137,18 @@ export default function Contracts({
                                         sum + Number(split.split_amount),
                                     0,
                                 );
+                                const segments = [
+                                    ...contract.splits.map((split) => ({
+                                        label: split.payee ?? 'Payee',
+                                        value: Number(split.split_amount),
+                                    })),
+                                    {
+                                        label: 'Label',
+                                        value: Math.max(0, 1 - paid),
+                                        remainder: true,
+                                    },
+                                ];
+                                const colours = partColours(segments);
                                 const used =
                                     contract.releases_count +
                                     contract.tracks_count +
@@ -179,32 +192,24 @@ export default function Contracts({
                                                         format={(value) =>
                                                             percent(value)
                                                         }
-                                                        segments={[
-                                                            ...contract.splits.map(
-                                                                (split) => ({
-                                                                    label:
-                                                                        split.payee ??
-                                                                        'Payee',
-                                                                    value: Number(
-                                                                        split.split_amount,
-                                                                    ),
-                                                                }),
-                                                            ),
-                                                            {
-                                                                label: 'Label',
-                                                                value: Math.max(
-                                                                    0,
-                                                                    1 - paid,
-                                                                ),
-                                                                remainder: true,
-                                                            },
-                                                        ]}
+                                                        segments={segments}
                                                     />
                                                     {contract.splits.map(
                                                         (split, position) => (
                                                             <span
                                                                 key={position}
+                                                                className="inline-flex items-baseline gap-1.5"
                                                             >
+                                                                <span
+                                                                    aria-hidden
+                                                                    data-split-dot
+                                                                    className={cn(
+                                                                        'size-2.5 shrink-0 self-center rounded-full',
+                                                                        colours[
+                                                                            position
+                                                                        ],
+                                                                    )}
+                                                                />
                                                                 <RecordLink
                                                                     to="payee"
                                                                     id={

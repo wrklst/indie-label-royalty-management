@@ -23,6 +23,32 @@ const COLOURS = [
 /** More parts than colours: the smallest are shown as one. */
 const MOST = 7;
 
+const GREY = 'bg-muted-foreground/40';
+
+/**
+ * The colour each part gets in the bar, in the order the parts are
+ * given, for naming the parts elsewhere with the same colour. Null for
+ * a part that is not drawn.
+ */
+export function partColours(segments: Segment[]): (string | null)[] {
+    const parties = segments.filter(
+        (segment) => segment.value > 0 && !segment.remainder,
+    );
+
+    return segments.map((segment) => {
+        if (segment.value <= 0) {
+            return null;
+        }
+
+        const position = parties.indexOf(segment);
+
+        return segment.remainder ||
+            (parties.length > MOST && position >= MOST - 1)
+            ? GREY
+            : COLOURS[position];
+    });
+}
+
 /**
  * One whole split into its parts: a bar with a block per part and a
  * legend that names each part with its figure. Parts keep the order they
@@ -60,9 +86,7 @@ export function SegmentedBar({
         ...positive.filter((segment) => segment.remainder),
     ].map((segment, position) => ({
         ...segment,
-        colour: segment.remainder
-            ? 'bg-muted-foreground/40'
-            : COLOURS[position % COLOURS.length],
+        colour: segment.remainder ? GREY : COLOURS[position % COLOURS.length],
     }));
     const total = parts.reduce((sum, segment) => sum + segment.value, 0);
 
