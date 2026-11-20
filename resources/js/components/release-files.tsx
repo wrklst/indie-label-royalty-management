@@ -1,9 +1,10 @@
 import { router } from '@inertiajs/react';
-import { Download, Upload } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Download } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import ReleaseFileController from '@/actions/App/Http/Controllers/ReleaseFileController';
 import { DeleteButton } from '@/components/delete-button';
 import { SelectInput } from '@/components/field';
+import { FileDrop } from '@/components/file-drop';
 import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
 import {
@@ -178,11 +179,7 @@ export function ReleaseFiles({
     maxMegabytes: number;
 }) {
     const { rows: fileRows, sorter } = useTableSort(files, FILE_COLUMNS);
-    const input = useRef<HTMLInputElement | null>(null);
     const [kind, setKind] = useState('');
-    const [queue, setQueue] = useState<{ name: string; progress: number }[]>(
-        [],
-    );
     const [errors, setErrors] = useState<string[]>([]);
     const { copies, refresh } = usePlaybackCopies(
         releaseId,
@@ -203,72 +200,6 @@ export function ReleaseFiles({
             },
         );
 
-    // One file per request keeps every upload under the server's size limit.
-    const upload = async (selected: FileList | null) => {
-        const chosen = Array.from(selected ?? []);
-        const problems: string[] = [];
-
-        setErrors([]);
-        setQueue(chosen.map((file) => ({ name: file.name, progress: 0 })));
-
-        let cancelled = false;
-
-        for (const [position, file] of chosen.entries()) {
-            if (file.size > maxMegabytes * 1024 * 1024) {
-                problems.push(
-                    `${file.name} is larger than ${maxMegabytes} MB.`,
-                );
-                continue;
-            }
-
-            await new Promise<void>((resolve) => {
-                router.post(
-                    ReleaseFileController.store.url(releaseId),
-                    { file, kind: kind || null },
-                    {
-                        forceFormData: true,
-                        preserveScroll: true,
-                        preserveState: true,
-                        onProgress: (event) =>
-                            setQueue((current) =>
-                                current.map((entry, index) =>
-                                    index === position
-                                        ? {
-                                              ...entry,
-                                              progress: event?.percentage ?? 0,
-                                          }
-                                        : entry,
-                                ),
-                            ),
-                        onError: (response) =>
-                            problems.push(
-                                `${file.name}: ${Object.values(response).join(' ')}`,
-                            ),
-                        onCancel: () => {
-                            cancelled = true;
-                        },
-                        onFinish: () => resolve(),
-                    },
-                );
-            });
-
-            // Leaving the page cancels the upload; the next one would pull the user back.
-            if (cancelled) {
-                problems.push(
-                    `${file.name} and the files after it were not uploaded.`,
-                );
-                break;
-            }
-        }
-
-        setQueue([]);
-        setErrors(problems);
-
-        if (input.current) {
-            input.current.value = '';
-        }
-    };
-
     const change = (file: ReleaseFile, changes: Partial<ReleaseFile>) =>
         router.patch(
             ReleaseFileController.update.url(file.id),
@@ -288,64 +219,35 @@ export function ReleaseFiles({
 
     return (
         <div>
-            <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
-                <input
-                    ref={input}
-                    id="release-file-input"
-                    type="file"
-                    multiple
-                    className="sr-only"
-                    onChange={(event) => upload(event.target.files)}
-                />
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={queue.length > 0}
-                    onClick={() => input.current?.click()}
-                >
-                    <Upload />
-                    {queue.length > 0 ? 'Uploading…' : 'Upload files'}
-                </Button>
-                <SelectInput
-                    aria-label="Upload as"
-                    value={kind}
-                    onChange={(event) => setKind(event.target.value)}
-                    className="w-44"
-                >
-                    <option value="">Detect type</option>
-                    {kinds.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            As {option.label.toLowerCase()}
-                        </option>
-                    ))}
-                </SelectInput>
-                <span className="text-xs text-muted-foreground">
-                    Up to {maxMegabytes} MB per file. Files are private: only
-                    signed-in admins of this label can open them.
-                </span>
+            <div className="grid gap-3 border-b px-4 py-3">
+                <div data-release-upload>
+                    <FileDrop
+                        url={ReleaseFileController.store.url(releaseId)}
+                        data={{ kind: kind || null }}
+                        maxMegabytes={maxMegabytes}
+                        label="Drop the cover, masters and other files here"
+                    />
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                    <SelectInput
+                        aria-label="Upload as"
+                        value={kind}
+                        onChange={(event) => setKind(event.target.value)}
+                        className="w-44"
+                    >
+                        <option value="">Detect type</option>
+                        {kinds.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                As {option.label.toLowerCase()}
+                            </option>
+                        ))}
+                    </SelectInput>
+                    <span className="text-xs text-muted-foreground">
+                        Up to {maxMegabytes} MB per file. Files are private:
+                        only signed-in admins of this label can open them.
+                    </span>
+                </div>
             </div>
-
-            {queue.length > 0 && (
-                <ul className="grid gap-1 border-b px-4 py-3 text-sm">
-                    {queue.map((entry) => (
-                        <li
-                            key={entry.name}
-                            className="flex items-center gap-3"
-                        >
-                            <span className="min-w-0 flex-1 truncate">
-                                {entry.name}
-                            </span>
-                            <span className="h-1 w-32 overflow-hidden rounded-full bg-muted">
-                                <span
-                                    className="block h-full bg-foreground/70"
-                                    style={{ width: `${entry.progress}%` }}
-                                />
-                            </span>
-                        </li>
-                    ))}
-                </ul>
-            )}
 
             {errors.length > 0 && (
                 <ul

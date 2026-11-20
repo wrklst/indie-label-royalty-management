@@ -24,6 +24,7 @@ use App\Http\Controllers\Settings\TeamController;
 use App\Http\Controllers\StatementController;
 use App\Http\Controllers\TrackController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\UploadController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -43,6 +44,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware('label.admin')->group(function () {
             Route::post('label-branding/{kind}', [LabelBrandingController::class, 'store'])->whereIn('kind', LabelBrandingController::KINDS)->name('label-branding.store');
             Route::delete('label-branding/{kind}', [LabelBrandingController::class, 'destroy'])->whereIn('kind', LabelBrandingController::KINDS)->name('label-branding.destroy');
+
+            Route::post('uploads/sign', [UploadController::class, 'sign'])->name('uploads.sign');
 
             Route::get('dashboard', DashboardController::class)->name('dashboard');
 
@@ -101,6 +104,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('settings/connections/ai', [ConnectionsController::class, 'ai'])->name('connections.ai');
             Route::put('settings/connections/ai/model', [ConnectionsController::class, 'aiModel'])->name('connections.ai.model');
             Route::put('settings/connections/storage', [ConnectionsController::class, 'storage'])->name('connections.storage');
+            Route::post('settings/connections/storage/direct-uploads', [ConnectionsController::class, 'directUploads'])->name('connections.storage.direct-uploads');
             Route::delete('settings/connections/search', [ConnectionsController::class, 'destroySearch'])->name('connections.search.destroy');
             Route::delete('settings/connections/ai', [ConnectionsController::class, 'destroyAi'])->name('connections.ai.destroy');
             Route::delete('settings/connections/storage', [ConnectionsController::class, 'destroyStorage'])->name('connections.storage.destroy');

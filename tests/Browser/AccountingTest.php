@@ -11,7 +11,8 @@ test('a statement file is uploaded, recognised and summarised', function () {
 
     visit('/data-imports/create')
         ->assertChecked('importer', 'auto')
-        ->attach('file', base_path('tests/Fixtures/zebralution_2026q3_sample.csv'))
+        ->attach('#file input[type="file"]', base_path('tests/Fixtures/zebralution_2026q3_sample.csv'))
+        ->assertSee('zebralution_2026q3_sample.csv')
         ->fill('default_paid_timestamp', '2026-10-15')
         ->press('Import')
         ->assertSee('67 transactions imported.')
@@ -26,7 +27,8 @@ test('the upload form explains a missing paid date instead of importing', functi
     $this->actingAs(labelAdmin(Label::factory()->create()));
 
     visit('/data-imports/create')
-        ->attach('file', base_path('tests/Fixtures/zebralution_2026q3_sample.csv'))
+        ->attach('#file input[type="file"]', base_path('tests/Fixtures/zebralution_2026q3_sample.csv'))
+        ->assertSee('zebralution_2026q3_sample.csv')
         ->press('Import')
         ->assertSee('Zebralution statements have no payment date')
         ->assertPathIs('/data-imports/create');

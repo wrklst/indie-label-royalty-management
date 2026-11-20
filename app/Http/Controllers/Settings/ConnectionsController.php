@@ -10,6 +10,7 @@ use App\Services\Receipts\AiConnection;
 use App\Services\Receipts\ModelCatalogue;
 use App\Services\Receipts\SampleReceipt;
 use App\Support\CurrentLabel;
+use App\Support\DirectUploads;
 use App\Support\InstallationSettings;
 use App\Support\WorkingCopy;
 use Illuminate\Http\RedirectResponse;
@@ -20,6 +21,7 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
+use Throwable;
 
 /**
  * The outside services a label works with, and for the installation's
@@ -66,6 +68,9 @@ class ConnectionsController extends Controller
                 'region' => config('filesystems.disks.s3.region'),
                 'endpoint' => config('filesystems.disks.s3.endpoint'),
                 'key_hint' => filled(config('filesystems.disks.s3.key')) ? '••••'.mb_substr((string) config('filesystems.disks.s3.key'), -4) : null,
+                // Whether browsers at this address may send files to the bucket themselves.
+                'direct_uploads' => WorkingCopy::isLocal(WorkingCopy::disk()) ? null : DirectUploads::allowed($request->getSchemeAndHttpHost()),
+                'origin' => $request->getSchemeAndHttpHost(),
             ] : null,
         ]);
     }
@@ -239,6 +244,22 @@ class ConnectionsController extends Controller
         InstallationSettings::putStorage($bucket);
 
         return $this->saved(__('New files are stored in the bucket. Files stored before stay where they are until you move them.'));
+    }
+
+    /**
+     * Have the bucket take uploads straight from browsers at this address.
+     */
+    public function directUploads(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->installation_admin, 403);
+
+        try {
+            DirectUploads::allow($request->getSchemeAndHttpHost());
+        } catch (Throwable $exception) {
+            throw ValidationException::withMessages(['direct_uploads' => __('The bucket did not take the setting: :answer', ['answer' => mb_substr($exception->getMessage(), 0, 300)])]);
+        }
+
+        return $this->saved(__('Uploads now go straight to the bucket.'));
     }
 
     /**

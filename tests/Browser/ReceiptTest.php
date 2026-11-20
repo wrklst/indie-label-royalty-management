@@ -13,8 +13,7 @@ test('a receipt is uploaded on the label costs page and booked as a cost', funct
     $this->actingAs(labelAdmin($label));
 
     visit('/label-costs')
-        ->attach('#receipt_files', $file)
-        ->press('Upload')
+        ->attach('[data-receipt-upload] input[type="file"]', $file)
         ->assertSee('Receipt uploaded.')
         ->assertSee('not read')
         ->press('Book as cost')

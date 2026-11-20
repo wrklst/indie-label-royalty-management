@@ -137,7 +137,7 @@ Every entry under **Booked costs** is an ordinary expense. The edit button opens
 
 Under **Royalties → Label costs**, the panel **Receipts** collects the receipts and invoices behind your costs.
 
-1. Choose one or more files (PDF, JPEG, PNG or WebP, up to 20 MB each) and choose **Upload**.
+1. Drop one or more files (PDF, JPEG, PNG or WebP, up to 20 MB each) on the drop area, or click **browse**. Each file is uploaded as soon as it is added.
 2. Each receipt waits in the list until it belongs to a cost. For each one you either
     - choose **Book as cost**: a new cost is booked and the receipt is attached to it, or
     - pick a cost under **Attach to a cost…** and choose **Attach**, for a cost that is booked already, such as a payment of a recurring cost.

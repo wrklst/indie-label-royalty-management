@@ -1,11 +1,15 @@
 import { Link, useForm } from '@inertiajs/react';
+import { useState } from 'react';
+import { FilePond } from 'react-filepond';
 import DataImportController from '@/actions/App/Http/Controllers/DataImportController';
 import { CheckField, Field } from '@/components/field';
 import { Page, Panel } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { sendToBucket } from '@/lib/direct-upload';
 import { cn } from '@/lib/utils';
 import { index, template } from '@/routes/data-imports';
+import 'filepond/dist/filepond.min.css';
 
 type Source = {
     key: string;
@@ -72,9 +76,34 @@ export default function CreateDataImport({
         form.data.importer === 'template' ||
         form.data.importer === 'audio-rights';
 
-    const submit = (event: React.FormEvent) => {
+    // How much of the file has reached the bucket, while it is being sent there.
+    const [sent, setSent] = useState<number | null>(null);
+
+    const submit = async (event: React.FormEvent) => {
         event.preventDefault();
-        form.post(DataImportController.store.url(), { forceFormData: true });
+
+        const file = form.data.file;
+
+        if (!file) {
+            form.setError('file', 'Choose the statement file.');
+
+            return;
+        }
+
+        setSent(0);
+
+        // Straight to the bucket where there is one; otherwise the file travels with the form.
+        const key = await sendToBucket(file, (loaded, total) =>
+            setSent(Math.round((loaded / total) * 100)),
+        );
+
+        setSent(null);
+        form.transform((data) =>
+            key
+                ? { ...data, file: null, upload: key, upload_name: file.name }
+                : data,
+        );
+        form.post(DataImportController.store.url(), { forceFormData: !key });
     };
 
     return (
@@ -150,15 +179,16 @@ export default function CreateDataImport({
                             required
                             hint="CSV or Excel (.xlsx), up to 50 MB. Encoding, separator and title lines above the header are handled."
                         >
-                            <Input
+                            <FilePond
                                 id="file"
-                                type="file"
-                                accept=".csv,.txt,.tsv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                required
-                                onChange={(event) =>
+                                name="file"
+                                credits={false}
+                                allowMultiple={false}
+                                labelIdle='Drop the statement here or <span class="filepond--label-action">browse</span>'
+                                onupdatefiles={(items) =>
                                     form.setData(
                                         'file',
-                                        event.target.files?.[0] ?? null,
+                                        (items[0]?.file as File) ?? null,
                                     )
                                 }
                             />
@@ -312,15 +342,17 @@ export default function CreateDataImport({
                 </Panel>
 
                 <div className="flex items-center gap-3">
-                    <Button disabled={form.processing}>
-                        {form.processing ? 'Importing…' : 'Import'}
+                    <Button disabled={form.processing || sent !== null}>
+                        {form.processing || sent !== null
+                            ? 'Importing…'
+                            : 'Import'}
                     </Button>
                     <Button variant="ghost" asChild>
                         <Link href={index()}>Cancel</Link>
                     </Button>
-                    {form.progress && (
+                    {(sent !== null || form.progress) && (
                         <span className="text-sm text-muted-foreground">
-                            Uploading {form.progress.percentage}%
+                            Uploading {sent ?? form.progress?.percentage}%
                         </span>
                     )}
                 </div>

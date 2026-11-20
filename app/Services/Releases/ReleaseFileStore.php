@@ -7,8 +7,8 @@ use App\Models\Release;
 use App\Models\ReleaseFile;
 use App\Models\Track;
 use App\Models\User;
+use App\Support\IncomingFile;
 use App\Support\WorkingCopy;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -32,15 +32,11 @@ class ReleaseFileStore
      *
      * @throws ValidationException when a cover is not a JPEG, PNG or WebP image
      */
-    public function store(Release $release, UploadedFile $upload, ?ReleaseFileKind $kind = null, ?int $trackId = null, ?User $user = null): ReleaseFile
+    public function store(Release $release, IncomingFile $upload, ?ReleaseFileKind $kind = null, ?int $trackId = null, ?User $user = null): ReleaseFile
     {
-        $mimeType = $upload->getMimeType();
-        $extension = strtolower($upload->getClientOriginalExtension() ?: (string) $upload->guessExtension());
-
+        $mimeType = $upload->mimeType;
         // The extension becomes part of the stored path, which has to fit its column.
-        if (preg_match('/^[a-z0-9]{1,10}$/', $extension) !== 1) {
-            $extension = (string) $upload->guessExtension();
-        }
+        $extension = $upload->extension();
         $kind ??= ReleaseFileKind::guess($mimeType, $extension);
 
         if ($kind === ReleaseFileKind::Cover && ! in_array($mimeType, self::COVER_TYPES, true)) {
@@ -48,7 +44,7 @@ class ReleaseFileStore
         }
 
         if ($kind === ReleaseFileKind::Audio) {
-            $trackId ??= $this->guessTrack($release, $upload->getClientOriginalName())?->id;
+            $trackId ??= $this->guessTrack($release, $upload->name)?->id;
         } else {
             $trackId = null;
         }
@@ -78,10 +74,10 @@ class ReleaseFileStore
                     'kind' => $kind,
                     'disk' => $disk,
                     'path' => $path,
-                    'original_name' => Str::limit(basename($upload->getClientOriginalName()), 250, ''),
+                    'original_name' => Str::limit(basename($upload->name), 250, ''),
                     'mime_type' => $mimeType,
-                    'size' => $upload->getSize(),
-                    'checksum' => hash_file('sha256', $upload->getRealPath()) ?: null,
+                    'size' => $upload->size,
+                    'checksum' => $upload->checksum(),
                 ]);
             });
         } catch (Throwable $exception) {

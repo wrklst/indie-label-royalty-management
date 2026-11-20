@@ -214,3 +214,26 @@
 .handbook-prose th {
     @apply font-medium;
 }
+
+/* The upload field in the colours of the interface, light and dark. The field's own sheet loads later, hence the doubled selectors. */
+.filepond--root {
+    margin-bottom: 0;
+    font-family: inherit;
+}
+
+.filepond--root .filepond--panel-root {
+    border: 1px dashed var(--border);
+    background-color: var(--muted);
+}
+
+.filepond--root .filepond--drop-label {
+    color: var(--muted-foreground);
+}
+
+.filepond--root .filepond--drop-label label {
+    font-size: 0.875rem;
+}
+
+.filepond--root .filepond--label-action {
+    color: var(--foreground);
+}

@@ -12,6 +12,7 @@ use App\Services\Releases\ReleaseFileStore;
 use App\Services\Releases\ReleaseImageSize;
 use App\Services\Releases\ReleaseImageVariants;
 use App\Support\CurrentLabel;
+use App\Support\IncomingFile;
 use App\Support\WorkingCopy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -41,7 +42,8 @@ class ReleaseFileController extends Controller
     public function store(Request $request, Release $release, ReleaseFileStore $files, CurrentLabel $currentLabel): RedirectResponse
     {
         $validated = $request->validate([
-            'file' => ['required', 'file', 'max:'.config('royalties.uploads.max_kilobytes')],
+            'file' => ['required_without:upload', 'file', 'max:'.config('royalties.uploads.max_kilobytes')],
+            ...IncomingFile::RULES,
             'kind' => ['nullable', Rule::enum(ReleaseFileKind::class)],
             'track_id' => ['nullable', 'integer', Rule::exists('tracks', 'id')->where('release_id', $release->id)],
         ], [
@@ -49,9 +51,11 @@ class ReleaseFileController extends Controller
             'file.uploaded' => 'The upload did not arrive completely. The file may be larger than the server accepts.',
         ]);
 
-        $upload = $request->file('file');
+        $upload = IncomingFile::from($request, $release->label_id, (int) config('royalties.uploads.max_kilobytes'));
 
-        if (in_array(strtolower($upload->getClientOriginalExtension()), self::REFUSED_EXTENSIONS, true)) {
+        if (in_array(strtolower(pathinfo($upload->name, PATHINFO_EXTENSION)), self::REFUSED_EXTENSIONS, true)) {
+            $upload->discard();
+
             return back()->withErrors(['file' => 'Files of this type cannot be stored here.']);
         }
 

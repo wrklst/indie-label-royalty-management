@@ -5,16 +5,11 @@ import FilePondPluginImagePreview from 'filepond-plugin-image-preview';
 import { FilePond } from 'react-filepond';
 import LabelBrandingController from '@/actions/App/Http/Controllers/Settings/LabelBrandingController';
 import { DeleteButton } from '@/components/delete-button';
+import { xsrfToken } from '@/lib/direct-upload';
 import 'filepond/dist/filepond.min.css';
 import 'filepond-plugin-image-preview/dist/filepond-plugin-image-preview.min.css';
 
 registerPlugin(FilePondPluginFileValidateType, FilePondPluginImagePreview);
-
-/** Laravel hands the token for write requests to the browser in a cookie. */
-const token = () =>
-    decodeURIComponent(
-        /(?:^|; )XSRF-TOKEN=([^;]*)/.exec(document.cookie)?.[1] ?? '',
-    );
 
 /**
  * One image of the label: what is stored now, and a drop area that
@@ -64,7 +59,7 @@ export function LabelImageUpload({
                     process: {
                         url: LabelBrandingController.store.url(kind),
                         headers: {
-                            'X-XSRF-TOKEN': token(),
+                            'X-XSRF-TOKEN': xsrfToken(),
                             Accept: 'application/json',
                         },
                         // FilePond sends a text part of the same name beside the file; the server wants the file alone.

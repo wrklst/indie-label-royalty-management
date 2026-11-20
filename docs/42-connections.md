@@ -92,6 +92,24 @@ While nothing is connected here, the server's `.env` decides, as described in [C
 
 For a bucket you enter its name, the endpoint (for every provider other than Amazon), the region, and the access key and secret key. **Test and connect** writes, reads and deletes a small test file in the bucket; a bucket that fails this is not stored. The cross on the card hands the decision back to the environment file.
 
+### Direct uploads
+
+With a bucket, the card shows whether **direct uploads** are on.
+
+- **Off**: every upload travels to this server first and from there to the bucket. That is limited by what the server accepts in one upload and takes twice the time for a large master.
+- **On**: release files, receipts and statement files go from the browser straight to the bucket. The server only hears where the file went, checks it and files it.
+
+A bucket takes files from a web page only when it has been told the page's address. **Allow direct uploads** tells it: the address you are using right now is added to the bucket's rules for cross-origin requests (CORS), next to any rules it already has, for uploading only. An installation reached under several addresses needs this once for each.
+
+Things to know:
+
+- A file lands in the folder `uploads/` of the bucket first and is moved to its place once the browser reports it. What is never reported, such as the file of a form that was not sent, is removed after a day.
+- A file sent this way is checked like any other: its type is read off the file itself, and one that is too large or of the wrong type is deleted.
+- If the bucket refuses the browser after all, the upload goes through the server as before. Nothing is lost.
+- Some storage providers offer no way to set these rules through their API. The button then shows what the provider answered; set the rule in the provider's own console: origin = the address of this installation, method `PUT`, all headers.
+
+### Before changing the storage
+
 Two things to know before changing it:
 
 - The choice applies to **new files**. Files stored before stay where they are. Copy them over on the server with `php artisan royalties:move-files --to=s3` (or `--to=local`); see [Command line](50-command-line.md).

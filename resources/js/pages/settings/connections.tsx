@@ -65,6 +65,8 @@ type Props = {
         region: string | null;
         endpoint: string | null;
         key_hint: string | null;
+        direct_uploads: boolean | null;
+        origin: string;
     } | null;
 };
 
@@ -629,6 +631,45 @@ function Storage({ storage }: { storage: NonNullable<Props['storage']> }) {
                     disconnectLabel="Disconnect this file storage"
                     confirm="Disconnect this file storage? The server's environment file decides again where new files go. Files already stored are not touched, but files in this bucket are unreachable while another storage is in use."
                 />
+            )}
+            {storage.direct_uploads !== null && (
+                <div className="flex flex-wrap items-center gap-3 text-sm">
+                    <Badge
+                        variant={storage.direct_uploads ? 'success' : 'warning'}
+                    >
+                        {storage.direct_uploads
+                            ? 'Direct uploads on'
+                            : 'Direct uploads off'}
+                    </Badge>
+                    <span className="text-muted-foreground">
+                        {storage.direct_uploads
+                            ? `Files go from the browser straight to the bucket when uploaded at ${storage.origin}.`
+                            : `The bucket does not take files from pages at ${storage.origin} yet, so every upload passes through this server first.`}
+                    </span>
+                    {!storage.direct_uploads && (
+                        <Form
+                            {...ConnectionsController.directUploads.form()}
+                            options={{ preserveScroll: true }}
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={processing}
+                                    >
+                                        Allow direct uploads
+                                    </Button>
+                                    {errors.direct_uploads && (
+                                        <p className="mt-2 text-sm text-red-600">
+                                            {errors.direct_uploads}
+                                        </p>
+                                    )}
+                                </>
+                            )}
+                        </Form>
+                    )}
+                </div>
             )}
             {storage.from_environment && open && (
                 <Form

@@ -18,12 +18,12 @@ test('files are uploaded on the release page, the cover shows and audio gets a p
         ->assertSee('No cover yet')
         ->assertSee('No audio')
         ->select('select[aria-label="Upload as"]', 'cover')
-        ->attach('#release-file-input', $cover)
+        ->attach('[data-release-upload] input[type="file"]', $cover)
         ->assertSee('uploaded.')
         ->assertPresent('img[alt="Cover of Example Release"]');
 
     $page->select('select[aria-label="Upload as"]', '')
-        ->attach('#release-file-input', $audio)
+        ->attach('[data-release-upload] input[type="file"]', $audio)
         ->assertSee('01 Example Track.mp3')
         ->assertPresent('[aria-label="Play Example Track"]')
         ->assertNoJavaScriptErrors();

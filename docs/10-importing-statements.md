@@ -21,7 +21,7 @@ Bandcamp sales can also be fetched automatically, without uploading anything: se
 
 1. Open **Royalties → Data imports** and choose **Import a statement**.
 2. **Where is the file from?** Leave it on automatic detection, or pick the source. The layout is recognised by the columns of the file, so the two Zebralution layouts are one entry.
-3. **File.** Choose the file. The name of the import defaults to the file name.
+3. **File.** Drop the file on the field or click **browse**. It is sent when you choose **Import**. The name of the import defaults to the file name.
 4. **Dates.** Enter the **Paid date**: the day the money reached your bank account. It decides which accounting period the lines count in. For sources that carry no payment date it is required. Tick **Use this paid date for every line** to override dates the file does contain.
 5. **Options.**
     - **Conversion rate**: only for lines in a currency other than the label's. Without a rate those lines are imported but not counted until you set one.

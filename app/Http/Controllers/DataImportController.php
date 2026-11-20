@@ -21,6 +21,7 @@ use App\Support\WorkingCopy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -74,11 +75,11 @@ class DataImportController extends Controller
     public function store(DataImportRequest $request, ImportRunner $runner, ImporterRegistry $importers, ReaderFactory $readers, CurrentLabel $currentLabel): RedirectResponse
     {
         $label = $currentLabel->get();
-        $file = $request->file('file');
-        $hash = hash_file('sha256', $file->getRealPath());
+        $file = $request->statement($label->id);
+        $hash = hash_file('sha256', $file->path());
 
         try {
-            $importer = $importers->resolve($request->validated('importer'), $readers->open($file->getRealPath()));
+            $importer = $importers->resolve($request->validated('importer'), $readers->open($file->path()));
         } catch (ImportException $exception) {
             throw ValidationException::withMessages(['file' => $exception->getMessage()]);
         }
@@ -92,10 +93,10 @@ class DataImportController extends Controller
         $import = DataImport::query()->create([
             'user_id' => $request->user()->id,
             'importer' => $importer->key(),
-            'name' => $request->validated('name') ?? pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
+            'name' => $request->validated('name') ?? pathinfo($file->name, PATHINFO_FILENAME),
             'status' => ImportStatus::Pending,
-            'original_filename' => $file->getClientOriginalName(),
-            'file_path' => $file->store("imports/{$label->id}", WorkingCopy::disk()),
+            'original_filename' => $file->name,
+            'file_path' => $file->storeAs("imports/{$label->id}", Str::random(40).'.'.$file->extension(), WorkingCopy::disk()),
             'file_hash' => $hash,
             'default_timestamp' => $request->validated('default_timestamp'),
             'replace_timestamp' => $request->boolean('replace_timestamp'),

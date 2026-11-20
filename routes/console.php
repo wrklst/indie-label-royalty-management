@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\DirectUploads;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -19,3 +20,5 @@ Schedule::command('royalties:book-recurring-expenses')->dailyAt('04:00')->withou
 Schedule::command('royalties:research-airplay')->dailyAt('06:30')->withoutOverlapping(60)->onOneServer();
 
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
+
+Schedule::call(fn () => DirectUploads::prune())->name('prune-unreported-uploads')->dailyAt('03:30')->onOneServer();

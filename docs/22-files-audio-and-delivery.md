@@ -11,9 +11,11 @@ Files are stored on the server or in a storage bucket, depending on your setup; 
 ## Upload files to a release
 
 1. Open the release and scroll to the panel **Files**.
-2. Optionally choose a type in the field next to the button. **Detect type** is the default.
-3. Click **Upload files** and select one or more files.
-4. Wait until the progress bars are gone. Each file is sent on its own, one after the other.
+2. Optionally choose a type in the field below the drop area. **Detect type** is the default.
+3. Drop one or more files on the drop area, or click **browse** and select them.
+4. Each file is uploaded as soon as it is added, one after the other. A finished file leaves the drop area and appears in the list; one that was refused stays, in red, with the reason.
+
+With a storage bucket, files can go from your browser straight to the bucket instead of through the server; see [Connections](42-connections.md#direct-uploads).
 
 Example: for `Example Release` you choose **As cover** and upload `cover.jpg`. Then you switch back to **Detect type** and upload `01 Opening.wav` and `02 Second Track.wav`. Both are recognised as audio and attached to track 1 and track 2.
 

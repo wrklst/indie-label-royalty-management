@@ -8,6 +8,7 @@ use App\Models\Receipt;
 use App\Models\Transaction;
 use App\Services\Receipts\AiConnection;
 use App\Support\CurrentLabel;
+use App\Support\IncomingFile;
 use App\Support\WorkingCopy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,6 +26,11 @@ class ReceiptController extends Controller
 {
     private const int LINK_MINUTES = 10;
 
+    private const int MAX_KILOBYTES = 20480;
+
+    /** @var list<string> */
+    private const array TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+
     /**
      * Store an uploaded file and, when the label has an AI service, have it read.
      * The page sends several files one after the other.
@@ -32,7 +38,8 @@ class ReceiptController extends Controller
     public function store(Request $request, CurrentLabel $currentLabel): RedirectResponse
     {
         $request->validate([
-            'file' => ['required', 'file', 'max:20480', 'mimetypes:application/pdf,image/jpeg,image/png,image/webp'],
+            'file' => ['required_without:upload', 'file', 'max:'.self::MAX_KILOBYTES, 'mimetypes:'.implode(',', self::TYPES)],
+            ...IncomingFile::RULES,
         ], [
             'file.mimetypes' => __('A receipt has to be a PDF, JPEG, PNG or WebP file.'),
             'file.max' => __('A receipt can be 20 MB at most.'),
@@ -41,15 +48,18 @@ class ReceiptController extends Controller
         $label = $currentLabel->get() ?? abort(404);
         $reads = AiConnection::isConfigured($label);
         $disk = WorkingCopy::disk();
-        $file = $request->file('file');
+        $file = IncomingFile::from($request, $label->id, self::MAX_KILOBYTES, self::TYPES, messages: [
+            'type' => __('A receipt has to be a PDF, JPEG, PNG or WebP file.'),
+            'max' => __('A receipt can be 20 MB at most.'),
+        ]);
 
         $receipt = Receipt::query()->create([
             'user_id' => $request->user()->id,
             'disk' => $disk,
             'path' => $file->storeAs("receipts/{$label->id}", Str::uuid().'.'.$file->extension(), $disk),
-            'original_name' => mb_substr($file->getClientOriginalName(), 0, 255),
-            'mime_type' => (string) $file->getMimeType(),
-            'size' => $file->getSize(),
+            'original_name' => $file->name,
+            'mime_type' => (string) $file->mimeType,
+            'size' => $file->size,
             'status' => $reads ? Receipt::READING : Receipt::NEW,
         ]);
 

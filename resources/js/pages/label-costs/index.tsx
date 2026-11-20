@@ -7,6 +7,7 @@ import TransactionController from '@/actions/App/Http/Controllers/TransactionCon
 import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
 import { Field, SelectInput } from '@/components/field';
+import { FileDrop } from '@/components/file-drop';
 import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
 import { SortableHead } from '@/components/sortable-head';
@@ -213,67 +214,25 @@ const COST_COLUMNS = {
     amount: (row: Cost) => row.converted_total,
 };
 
-/**
- * Uploads the chosen files one after the other, so a large scan does not
- * hold up the rest and each file gets its own answer.
- */
+/** Receipts are uploaded as they are dropped; each one is read on its own. */
 function ReceiptUpload() {
-    const [processing, setProcessing] = useState(false);
-    const [errors, setErrors] = useState<Record<string, string>>({});
-
-    const upload = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-
-        const form = event.currentTarget;
-        const input = form.elements.namedItem('files') as HTMLInputElement;
-        const problems: Record<string, string> = {};
-
-        setProcessing(true);
-
-        for (const file of Array.from(input.files ?? [])) {
-            await new Promise<void>((resolve) =>
-                router.post(
-                    ReceiptController.store.url(),
-                    { file },
-                    {
-                        forceFormData: true,
-                        preserveScroll: true,
-                        preserveState: true,
-                        onError: (response) => {
-                            problems.files = `${file.name}: ${Object.values(response).join(' ')}`;
-                        },
-                        onFinish: () => resolve(),
-                    },
-                ),
-            );
-        }
-
-        setProcessing(false);
-        setErrors(problems);
-        form.reset();
-    };
-
     return (
-        <form onSubmit={upload} className="flex flex-wrap items-end gap-3">
-            <Field
-                label="Receipt files"
-                htmlFor="receipt_files"
-                error={errors.files}
-                hint="PDF, JPEG, PNG or WebP, up to 20 MB each."
-            >
-                <Input
-                    id="receipt_files"
-                    name="files"
-                    type="file"
-                    accept="application/pdf,image/jpeg,image/png,image/webp"
-                    multiple
-                    required
-                />
-            </Field>
-            <Button variant="outline" disabled={processing}>
-                {processing ? 'Uploading…' : 'Upload'}
-            </Button>
-        </form>
+        <div data-receipt-upload className="grid gap-1">
+            <FileDrop
+                url={ReceiptController.store.url()}
+                accept={[
+                    'application/pdf',
+                    'image/jpeg',
+                    'image/png',
+                    'image/webp',
+                ]}
+                maxMegabytes={20}
+                label="Drop receipts here"
+            />
+            <p className="text-xs text-muted-foreground">
+                PDF, JPEG, PNG or WebP, up to 20 MB each.
+            </p>
+        </div>
     );
 }
 
