@@ -165,3 +165,25 @@ test('a payee cannot open the pages or files the player is fed from', function (
     $this->get(route('releases.show', $this->release))->assertRedirect(route('portal.index'));
     $this->get(route('release-files.show', $file))->assertRedirect(route('portal.index'));
 });
+
+test('a track without audio plays the audio of the same recording on another release, within its label', function () {
+    $single = Release::factory()->create(['label_id' => $this->label->id, 'artist_id' => $this->artist->id, 'name' => 'Example Single']);
+    $onAlbum = playerTrack($this->release, ['name' => 'Alpha', 'isrc' => 'ZZTST2600001']);
+    $onSingle = playerTrack($single, ['name' => 'Alpha Single', 'isrc' => 'ZZTST2600001']);
+    playerTrack($single, ['name' => 'Beta', 'isrc' => null]);
+    $audio = playerFile($this->release, ['track_id' => $onAlbum->id]);
+    $foreign = Release::factory()->create();
+    playerFile($foreign, ['track_id' => playerTrack($foreign, ['isrc' => 'ZZTST2600002'])->id]);
+    playerTrack($single, ['name' => 'Gamma', 'isrc' => 'ZZTST2600002']);
+
+    $this->get(route('tracks.index'))->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('tracks.data', fn ($tracks) => collect($tracks)->pluck('audio_file_id', 'name')->all() === ['Alpha' => $audio->id, 'Beta' => null, 'Gamma' => null]));
+
+    $this->get(route('tracks.index', ['release' => $single->id]))->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('tracks.data', fn ($tracks) => collect($tracks)->pluck('audio_file_id', 'name')->all() === ['Alpha Single' => $audio->id, 'Beta' => null, 'Gamma' => null]));
+
+    $this->get(route('tracks.show', $onSingle->id))->assertInertia(fn (AssertableInertia $page) => $page->where('track.audio_file_id', $audio->id));
+
+    $this->get(route('releases.index'))->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('releases.data', fn ($releases) => collect(collect($releases)->firstWhere('id', $single->id)['player_tracks'])->pluck('fileId', 'id')->all() === [$onSingle->id => $audio->id]));
+});

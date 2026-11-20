@@ -23,6 +23,9 @@ Open **Catalog → Tracks**. The list shows 50 tracks per page, ordered by title
 
 - **Search title or ISRC…** matches part of the title or of the ISRC. You can type the ISRC with or without dashes.
 - **All releases** narrows the list to one release.
+
+A recording that is on several releases is one row in this list, naming all its releases; the row is the oldest of its tracks. A track without audio of its own plays the audio of the same recording on another release. Narrow the list to a release to see and edit that release's own track. A badge `none on Example Single` marks a release on which the recording has no contract.
+
 - Click a column heading to sort, again to reverse, and a third time to return to the default order.
 
 The pencil at the end of a row opens a short edit dialog with **Title**, **Artist**, **Contract**, **ISRC**, **ISWC**, **Track number** and **Duration (seconds)**. The bin deletes the track.
@@ -138,7 +141,8 @@ An alias is a note for you. It does not merge the two artists: each keeps its ow
 Click an artist name anywhere to open the page. It shows:
 
 - **Releases**: every release the artist is on, as main artist or in any credit role, newest first, with **Catalog number**, **Released** and the buttons to play or queue the whole release.
-- **Tracks**: every track the artist is on, as main artist or in any credit role, with its release, ISRC and the number of airplay entries.
+- **Tracks**: every track the artist is on, as main artist or in any credit role, with its releases, ISRC and the number of airplay entries. A recording that is on several releases is one row naming all of them, with airplay and income added up.
+- **Contracts and payees**: the contracts of these releases and tracks, each with its payees and their share. A track uses its own contract, otherwise that of its release.
 
 The page has no edit button. Edit an artist from the artist list.
 

@@ -5,7 +5,10 @@ use App\Enums\ArtistRole;
 use App\Models\Airplay;
 use App\Models\AirplayFinding;
 use App\Models\Artist;
+use App\Models\Contract;
+use App\Models\ContractSplit;
 use App\Models\Label;
+use App\Models\Payee;
 use App\Models\Release;
 use App\Models\Track;
 use App\Models\Transaction;
@@ -71,8 +74,66 @@ test('an artist page lists the releases and tracks credited to the artist', func
             ->where('releases.0.id', $release->id)
             ->has('tracks', 1)
             ->where('tracks.0.id', $track->id)
-            ->where('tracks.0.release', ['id' => $release->id, 'name' => 'Example Release'])
+            ->where('tracks.0.releases', [['id' => $release->id, 'name' => 'Example Release']])
             ->where('tracks.0.airplays_count', 1));
+});
+
+test('a recording on several releases is listed once, with all its releases and what it earned on them', function () {
+    $label = Label::factory()->create();
+    $artist = Artist::factory()->create(['label_id' => $label->id]);
+    $album = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'contract_id' => Contract::factory()->create(['label_id' => $label->id])->id]);
+    $single = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Single', 'contract_id' => null]);
+    $entry = fn (Release $release, array $attributes = []): Track => Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'artist_id' => $artist->id, 'contract_id' => null, ...$attributes]);
+    $onAlbum = $entry($album, ['name' => 'Opening', 'isrc' => 'ZZTST2600001']);
+    $onSingle = $entry($single, ['name' => 'Opening', 'isrc' => 'ZZTST2600001']);
+    $entry($album, ['name' => 'Second Track', 'isrc' => null]);
+    $entry($single, ['name' => 'Second Track', 'isrc' => null]);
+    Track::factory()->create(['isrc' => 'ZZTST2600001']);
+    Transaction::factory()->create(['label_id' => $label->id, 'type' => 'income', 'track_id' => $onAlbum->id, 'converted_total' => '10']);
+    Transaction::factory()->create(['label_id' => $label->id, 'type' => 'income', 'track_id' => $onSingle->id, 'converted_total' => '2.5']);
+    $this->actingAs(labelAdmin($label));
+
+    $this->get(route('artists.show', $artist->id))->assertInertia(fn (Assert $page) => $page
+        ->has('tracks', 3)
+        ->where('tracks.0.id', $onAlbum->id)
+        ->where('tracks.0.releases', [['id' => $album->id, 'name' => 'Example Release'], ['id' => $single->id, 'name' => 'Example Single']])
+        ->where('tracks.0.income', fn ($income) => (float) $income === 12.5));
+
+    $this->get(route('tracks.index'))->assertInertia(fn (Assert $page) => $page
+        ->has('tracks.data', 3)
+        ->where('tracks.data.0.id', $onAlbum->id)
+        ->where('tracks.data.0.releases', [['id' => $album->id, 'name' => 'Example Release'], ['id' => $single->id, 'name' => 'Example Single']])
+        ->where('tracks.data.0.without_contract_on', ['Example Single'])
+        ->where('tracks.data.1.without_contract_on', []));
+
+    $this->get(route('tracks.index', ['release' => $single->id]))->assertInertia(fn (Assert $page) => $page
+        ->has('tracks.data', 2)
+        ->where('tracks.data.0.id', $onSingle->id)
+        ->where('tracks.data.0.releases', [['id' => $single->id, 'name' => 'Example Single']]));
+});
+
+test('an artist page lists the contracts of the artist\'s releases and tracks with their payees', function () {
+    $label = Label::factory()->create();
+    $artist = Artist::factory()->create(['label_id' => $label->id]);
+    $payee = Payee::factory()->create(['label_id' => $label->id, 'name' => 'Example Payee']);
+    $own = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Remixer deal']);
+    $inherited = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist 50/50']);
+    Contract::factory()->create(['label_id' => $label->id, 'name' => 'Unrelated']);
+    ContractSplit::factory()->create(['contract_id' => $own->id, 'payee_id' => $payee->id, 'split_amount' => '0.5']);
+    $release = Release::factory()->create(['label_id' => $label->id, 'contract_id' => $inherited->id]);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $own->id])
+        ->artists()->attach($artist->id, ['role' => 'remixer', 'position' => 0]);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'artist_id' => $artist->id, 'contract_id' => null]);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('artists.show', $artist->id))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('contracts', 2)
+            ->where('contracts.0.name', 'Example Artist 50/50')
+            ->where('contracts.0.splits', [])
+            ->where('contracts.1.name', 'Remixer deal')
+            ->where('contracts.1.splits.0.payee', ['id' => $payee->id, 'name' => 'Example Payee'])
+            ->where('contracts.1.splits.0.split_amount', fn ($share) => (float) $share === 0.5));
 });
 
 test('an artist page totals what the artist\'s releases and tracks earned and cost, counting each transaction once', function () {

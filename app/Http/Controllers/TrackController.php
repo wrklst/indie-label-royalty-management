@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ReleaseFileKind;
 use App\Enums\TransactionType;
 use App\Http\Requests\TrackRequest;
 use App\Models\Airplay;
@@ -42,25 +41,37 @@ class TrackController extends Controller
             ->with([
                 'artist:id,name', 'artists:id,name', 'contract:id,name', 'release:id,name,catalog_number,contract_id,artist_id', 'release.contract:id,name',
                 'release.artist:id,name', 'release.artists:id,name', 'release.cover:id,release_id',
-                'files' => fn ($query) => $query->where('kind', ReleaseFileKind::Audio)->orderBy('id')->select(['id', 'track_id', 'mime_type']),
             ])
             ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('isrc', 'like', '%'.str_replace('-', '', $search).'%')))
-            ->when($request->integer('release'), fn ($query, int $release) => $query->where('release_id', $release))
+            // A recording on several releases is listed once, by its first entry;
+            // within one release every entry of that release is listed.
+            ->when($request->integer('release'), fn ($query, int $release) => $query->where('release_id', $release), fn ($query) => $query
+                ->where(fn ($query) => $query->whereNull('isrc')->orWhereRaw('tracks.id = (select min(entries.id) from tracks as entries where entries.label_id = tracks.label_id and entries.isrc = tracks.isrc)')))
             ->tap($sorting)
             ->paginate(50)
-            ->withQueryString()
-            ->through(fn (Track $track): array => [
-                ...$track->only(['id', 'name', 'artist_id', 'contract_id', 'isrc', 'iswc', 'track_number', 'duration', 'mechanicals_rate', 'ppd_rate', 'release_id', 'version']),
-                'artist' => $track->artist?->name,
-                'release' => $track->release?->only(['id', 'name', 'catalog_number']),
-                'audio_file_id' => PlayableAudio::pick($track->files)?->id,
-                'credited_artist' => ArtistCredits::display($track) ?? ($track->release ? ArtistCredits::display($track->release) : null),
-                'cover_file_id' => $track->release?->cover?->id,
-                'contract' => $track->contract?->only(['id', 'name']),
-                'inherited_contract' => $track->contract ? null : $track->release?->contract?->only(['id', 'name']),
-            ]);
+            ->withQueryString();
+        $audio = PlayableAudio::forTracks($tracks->getCollection());
+        $recordings = $request->integer('release') ? collect() : Track::query()
+            ->whereIn('isrc', $tracks->getCollection()->pluck('isrc')->filter())
+            ->with(['release:id,name,contract_id'])->orderBy('id')->get()->groupBy('isrc');
+
+        $tracks = $tracks->through(fn (Track $track): array => [
+            ...$track->only(['id', 'name', 'artist_id', 'contract_id', 'isrc', 'iswc', 'track_number', 'duration', 'mechanicals_rate', 'ppd_rate', 'release_id', 'version']),
+            'artist' => $track->artist?->name,
+            'release' => $track->release?->only(['id', 'name', 'catalog_number']),
+            'releases' => ($recordings->get($track->isrc) ?? collect([$track]))->map(fn (Track $entry): ?array => $entry->release?->only(['id', 'name']))->filter()->unique('id')->values(),
+            // Each entry has its own contract; one without is named here, as its row is not listed.
+            'without_contract_on' => ($recordings->get($track->isrc) ?? collect())
+                ->filter(fn (Track $entry): bool => $entry->id !== $track->id && $entry->contract_id === null && $entry->release?->contract_id === null)
+                ->map(fn (Track $entry): string => $entry->release->name ?? $entry->name)->values(),
+            'audio_file_id' => $audio->get($track->id)?->id,
+            'credited_artist' => ArtistCredits::display($track) ?? ($track->release ? ArtistCredits::display($track->release) : null),
+            'cover_file_id' => $track->release?->cover?->id,
+            'contract' => $track->contract?->only(['id', 'name']),
+            'inherited_contract' => $track->contract ? null : $track->release?->contract?->only(['id', 'name']),
+        ]);
 
         return Inertia::render('tracks/index', [
             'tracks' => $tracks,
@@ -79,7 +90,6 @@ class TrackController extends Controller
         $track->load([
             'artist:id,name', 'artists:id,name', 'contract:id,name', 'release:id,name,catalog_number,contract_id', 'release.contract:id,name',
             'release.cover:id,release_id',
-            'files' => fn ($query) => $query->where('kind', ReleaseFileKind::Audio)->orderBy('id')->select(['id', 'track_id', 'mime_type']),
         ]);
 
         $ids = $track->recordingIds();
@@ -94,7 +104,7 @@ class TrackController extends Controller
                     ->map(fn (Artist $artist): array => $artist->only(['id', 'name']))->values(),
                 'release' => $track->release?->only(['id', 'name', 'catalog_number']),
                 'cover_file_id' => $track->release?->cover?->id,
-                'audio_file_id' => PlayableAudio::pick($track->files)?->id,
+                'audio_file_id' => PlayableAudio::forTracks(collect([$track]))->get($track->id)?->id,
                 'contract' => $track->contract?->only(['id', 'name']),
                 'inherited_contract' => $track->contract ? null : $track->release?->contract?->only(['id', 'name']),
                 'researched_at' => $track->researched_at?->toDateTimeString(),

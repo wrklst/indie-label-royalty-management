@@ -12,7 +12,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { date } from '@/lib/format';
+import { date, percent } from '@/lib/format';
 import { index } from '@/routes/artists';
 
 type Props = {
@@ -33,11 +33,19 @@ type Props = {
         income: string;
         player_tracks: PlayerTrack[];
     }[];
+    contracts: {
+        id: number;
+        name: string;
+        splits: {
+            payee: { id: number; name: string } | null;
+            split_amount: string;
+        }[];
+    }[];
     tracks: {
         id: number;
         name: string;
         isrc: string | null;
-        release: { id: number; name: string } | null;
+        releases: { id: number; name: string }[];
         airplays_count: number;
         income: string;
     }[];
@@ -47,6 +55,7 @@ export default function ShowArtist({
     artist,
     totals,
     releases,
+    contracts,
     tracks,
 }: Props) {
     return (
@@ -156,6 +165,59 @@ export default function ShowArtist({
                 )}
             </Panel>
 
+            <Panel title="Contracts and payees" flush>
+                {contracts.length === 0 ? (
+                    <div className="p-4">
+                        <EmptyState title="No contract on this artist's releases or tracks" />
+                    </div>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Contract</TableHead>
+                                <TableHead>Payees and their share</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {contracts.map((contract) => (
+                                <TableRow key={contract.id}>
+                                    <TableCell className="font-medium">
+                                        <RecordLink
+                                            to="contract"
+                                            id={contract.id}
+                                        >
+                                            {contract.name}
+                                        </RecordLink>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                            {contract.splits.map(
+                                                (split, position) => (
+                                                    <span key={position}>
+                                                        <RecordLink
+                                                            to="payee"
+                                                            id={split.payee?.id}
+                                                        >
+                                                            {split.payee
+                                                                ?.name ?? '–'}
+                                                        </RecordLink>{' '}
+                                                        <span className="text-muted-foreground tabular-nums">
+                                                            {percent(
+                                                                split.split_amount,
+                                                            )}
+                                                        </span>
+                                                    </span>
+                                                ),
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </Panel>
+
             <Panel title="Tracks" flush>
                 {tracks.length === 0 ? (
                     <div className="p-4">
@@ -185,12 +247,20 @@ export default function ShowArtist({
                                         </RecordLink>
                                     </TableCell>
                                     <TableCell>
-                                        <RecordLink
-                                            to="release"
-                                            id={track.release?.id}
-                                        >
-                                            {track.release?.name ?? '–'}
-                                        </RecordLink>
+                                        {track.releases.length === 0 && '–'}
+                                        {track.releases.map(
+                                            (release, position) => (
+                                                <span key={release.id}>
+                                                    {position > 0 && ', '}
+                                                    <RecordLink
+                                                        to="release"
+                                                        id={release.id}
+                                                    >
+                                                        {release.name}
+                                                    </RecordLink>
+                                                </span>
+                                            ),
+                                        )}
                                     </TableCell>
                                     <TableCell className="font-mono text-xs">
                                         {track.isrc ?? '–'}

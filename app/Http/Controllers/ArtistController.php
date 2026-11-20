@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Enums\TransactionType;
 use App\Http\Requests\ArtistRequest;
 use App\Models\Artist;
+use App\Models\Contract;
+use App\Models\ContractSplit;
 use App\Models\Release;
 use App\Models\Track;
 use App\Models\Transaction;
@@ -15,6 +17,7 @@ use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -59,11 +62,14 @@ class ArtistController extends Controller
     public function show(Artist $artist): Response
     {
         $tracks = Track::query()->where(fn ($query) => $query->where('artist_id', $artist->id)->orWhereHas('artists', fn ($query) => $query->whereKey($artist->id)))
-            ->with('release:id,name')->withCount('airplays')->orderBy('name')->get();
+            ->with('release:id,name,contract_id')->withCount('airplays')->orderBy('name')->get();
 
         $releases = Release::query()->where(fn ($query) => $query->where('artist_id', $artist->id)->orWhereHas('artists', fn ($query) => $query->whereKey($artist->id)))
-            ->orderByDesc('released_on')->orderBy('name')->get(['id', 'name', 'catalog_number', 'released_on', 'artist_id']);
+            ->orderByDesc('released_on')->orderBy('name')->get(['id', 'name', 'catalog_number', 'released_on', 'artist_id', 'contract_id']);
         $albums = PlayableAudio::albums($releases);
+        // The contract of a track is its own, otherwise that of its release.
+        $contracts = Contract::query()->with('splits.payee:id,name')->orderBy('name')
+            ->findMany($tracks->toBase()->map(fn (Track $track): ?int => $track->contract_id ?? $track->release?->contract_id)->merge($releases->pluck('contract_id'))->filter()->unique());
 
         // Everything booked on the artist's releases, plus what their tracks earned on releases
         // of others, such as compilations. Each transaction counts once.
@@ -95,12 +101,21 @@ class ArtistController extends Controller
                     'released_on' => $release->released_on?->toDateString(),
                     'income' => Decimal::parse($incomeByRelease[$release->id] ?? 0) ?? '0',
                 ]),
-            'tracks' => $tracks->map(fn (Track $track): array => [
-                ...$track->only(['id', 'name', 'isrc']),
-                'release' => $track->release?->only(['id', 'name']),
-                'airplays_count' => $track->airplays_count,
-                'income' => Decimal::parse($incomeByTrack[$track->id] ?? 0) ?? '0',
-            ]),
+            'contracts' => $contracts->map(fn (Contract $contract): array => [
+                ...$contract->only(['id', 'name']),
+                'splits' => $contract->splits->map(fn (ContractSplit $split): array => [
+                    'payee' => $split->payee?->only(['id', 'name']),
+                    'split_amount' => $split->split_amount,
+                ])->values(),
+            ])->values(),
+            // A recording on several releases has one track per release; it is listed once.
+            'tracks' => $tracks->toBase()->groupBy(fn (Track $track): string => $track->isrc ?? "track {$track->id}")->values()
+                ->map(fn (Collection $entries): array => [
+                    ...$entries->first()->only(['id', 'name', 'isrc']),
+                    'releases' => $entries->map(fn (Track $track): ?array => $track->release?->only(['id', 'name']))->filter()->unique('id')->values(),
+                    'airplays_count' => (int) $entries->sum('airplays_count'),
+                    'income' => $entries->reduce(fn (string $sum, Track $track): string => Decimal::add($sum, Decimal::parse($incomeByTrack[$track->id] ?? 0) ?? '0'), '0'),
+                ]),
         ]);
     }
 

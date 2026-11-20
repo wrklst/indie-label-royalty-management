@@ -42,6 +42,8 @@ type Track = {
     audio_file_id: number | null;
     cover_file_id: number | null;
     release: { id: number; name: string; catalog_number: string | null } | null;
+    releases: { id: number; name: string }[];
+    without_contract_on: string[];
     contract: Option | null;
     inherited_contract: Option | null;
 };
@@ -73,7 +75,7 @@ export default function Tracks({
     return (
         <Page
             title="Tracks"
-            description="Every recording across all releases. The same recording on a single and an album is two tracks sharing one ISRC."
+            description="Every recording across all releases. A recording on several releases, such as a single and an album, is listed once with all of them; pick a release to see and edit its own entry."
         >
             <div className="flex flex-wrap items-center gap-3">
                 <Input
@@ -151,15 +153,20 @@ export default function Tracks({
                                         </RecordLink>
                                     </TableCell>
                                     <TableCell>
-                                        {track.release && (
-                                            <Link
-                                                href={showRelease(
-                                                    track.release.id,
-                                                )}
-                                                className="underline decoration-muted-foreground/40 underline-offset-4"
-                                            >
-                                                {track.release.name}
-                                            </Link>
+                                        {track.releases.map(
+                                            (release, position) => (
+                                                <span key={release.id}>
+                                                    {position > 0 && ', '}
+                                                    <Link
+                                                        href={showRelease(
+                                                            release.id,
+                                                        )}
+                                                        className="underline decoration-muted-foreground/40 underline-offset-4"
+                                                    >
+                                                        {release.name}
+                                                    </Link>
+                                                </span>
+                                            ),
                                         )}
                                     </TableCell>
                                     <TableCell className="font-mono text-xs">
@@ -177,6 +184,17 @@ export default function Tracks({
                                             <Badge variant="warning">
                                                 none
                                             </Badge>
+                                        )}
+                                        {track.without_contract_on.map(
+                                            (release) => (
+                                                <Badge
+                                                    key={release}
+                                                    variant="warning"
+                                                    className="ml-2"
+                                                >
+                                                    none on {release}
+                                                </Badge>
+                                            ),
                                         )}
                                     </TableCell>
                                     <TableCell>
