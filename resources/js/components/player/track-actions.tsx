@@ -15,7 +15,17 @@ import { Button } from '@/components/ui/button';
  * "Play now" and "Add to queue" for one track. When the track is the one in
  * the player, the first button pauses and resumes it instead.
  */
-export function TrackActions({ track }: { track: PlayerTrack }) {
+export function TrackActions({
+    track,
+    bare = false,
+    name,
+}: {
+    track: PlayerTrack;
+    /** What the buttons are called for screen readers, when not the track's title. */
+    name?: string;
+    /** Buttons only, where there is no room for "Playing". */
+    bare?: boolean;
+}) {
     const isCurrent = usePlayer(
         (state) => currentTrack(state)?.id === track.id,
     );
@@ -27,6 +37,7 @@ export function TrackActions({ track }: { track: PlayerTrack }) {
     );
     const playing = usePlayer((state) => state.playing);
     const isPlaying = isCurrent && playing;
+    const label = name ?? track.title;
 
     return (
         <div className="flex items-center gap-1">
@@ -37,10 +48,10 @@ export function TrackActions({ track }: { track: PlayerTrack }) {
                 title={isPlaying ? 'Pause' : isCurrent ? 'Resume' : 'Play now'}
                 aria-label={
                     isPlaying
-                        ? `Pause ${track.title}`
+                        ? `Pause ${label}`
                         : isCurrent
-                          ? `Resume ${track.title}`
-                          : `Play ${track.title}`
+                          ? `Resume ${label}`
+                          : `Play ${label}`
                 }
                 onClick={() =>
                     isCurrent && !isStale ? toggle() : playNow(track)
@@ -53,7 +64,7 @@ export function TrackActions({ track }: { track: PlayerTrack }) {
                 variant="ghost"
                 size="icon"
                 title="Add to queue"
-                aria-label={`Add ${track.title} to queue`}
+                aria-label={`Add ${label} to queue`}
                 onClick={() =>
                     enqueue([track]) === 1
                         ? toast.success(`${track.title} added to the queue.`)
@@ -62,7 +73,7 @@ export function TrackActions({ track }: { track: PlayerTrack }) {
             >
                 <ListPlus className="text-muted-foreground" />
             </Button>
-            {isCurrent && (
+            {isCurrent && !bare && (
                 <span className="text-xs text-muted-foreground">
                     {isPlaying ? 'Playing' : 'Paused'}
                 </span>

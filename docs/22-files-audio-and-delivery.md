@@ -44,6 +44,8 @@ A file such as `bounce final v3.wav` matches nothing and stays without a track. 
 
 ### The file table
 
+Above the table is one tab per type that has files, each with its number of files, and **All**. In front of each name an image shows a small preview, and an audio file has the buttons **Play now** and **Add to queue**. An audio file without a track is played under its file name.
+
 | Column   | What it shows                                                                                                               |
 | -------- | --------------------------------------------------------------------------------------------------------------------------- |
 | File     | The original file name. Images and audio are links that open in a new tab. Audio also shows the state of its playback copy. |

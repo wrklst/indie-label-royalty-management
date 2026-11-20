@@ -428,7 +428,10 @@ export function PlayerDock() {
                             className="truncate text-sm font-medium"
                             data-player="title"
                         >
-                            <RecordLink to="track" id={track.id}>
+                            <RecordLink
+                                to="track"
+                                id={track.id > 0 ? track.id : null}
+                            >
                                 {track.title}
                             </RecordLink>
                         </div>

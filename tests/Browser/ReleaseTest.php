@@ -113,3 +113,25 @@ test('a platform link is added to a release by hand and listed with its platform
         ->assertSeeIn('[data-platform-links] a', 'https://example.bandcamp.com/album/example-release')
         ->assertNoJavaScriptErrors();
 });
+
+test('the files of a release are shown by type, images with a thumbnail and audio with play and queue buttons', function () {
+    $scenario = royaltyScenario();
+    $this->actingAs($scenario['admin']);
+    $file = fn (array $attributes): ReleaseFile => ReleaseFile::factory()->create(['label_id' => $scenario['release']->label_id, 'release_id' => $scenario['release']->id, ...$attributes]);
+    $artwork = $file(['kind' => 'artwork', 'mime_type' => 'image/png', 'original_name' => 'poster.png']);
+    $file(['kind' => 'audio', 'mime_type' => 'audio/mpeg', 'original_name' => 'loose take.mp3', 'track_id' => null]);
+    $file(['kind' => 'document', 'mime_type' => 'application/pdf', 'original_name' => 'press sheet.pdf']);
+
+    visit("/releases/{$scenario['release']->id}")
+        ->assertSee('poster.png')
+        ->assertPresent("img[src*='/{$artwork->id}?size=thumb']")
+        ->assertPresent('[aria-label="Play loose take.mp3"]')
+        ->assertPresent('[aria-label="Add loose take.mp3 to queue"]')
+        ->click('[role="tab"]:has-text("Audio")')
+        ->assertSee('loose take.mp3')
+        ->assertDontSee('poster.png')
+        ->assertDontSee('press sheet.pdf')
+        ->click('[role="tab"]:has-text("All")')
+        ->assertSee('press sheet.pdf')
+        ->assertNoJavaScriptErrors();
+});

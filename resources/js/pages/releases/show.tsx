@@ -787,6 +787,12 @@ export default function ShowRelease({
                     }))}
                     kinds={fileKinds}
                     maxMegabytes={maxUploadMegabytes}
+                    player={{
+                        release: { id: release.id, name: release.name },
+                        artist: release.artist ?? null,
+                        artistId: release.artist_id ?? null,
+                        coverFileId: release.cover_file_id,
+                    }}
                 />
             </Panel>
 
