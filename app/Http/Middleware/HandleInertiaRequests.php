@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\RoyaltyTool;
+use App\Http\Controllers\Settings\LabelBrandingController;
 use App\Support\CurrentLabel;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -52,7 +53,7 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * @return array{id: int, name: string, currency: string, role: string|null, tools: array<string, bool>}|null
+     * @return array{id: int, name: string, currency: string, role: string|null, logo_url: string|null, signet_url: string|null, tools: array<string, bool>}|null
      */
     private function currentLabel(Request $request): ?array
     {
@@ -72,6 +73,8 @@ class HandleInertiaRequests extends Middleware
             'name' => $label->name,
             'currency' => $label->currency,
             'role' => $role,
+            'logo_url' => LabelBrandingController::url($label, 'logo'),
+            'signet_url' => LabelBrandingController::url($label, 'signet'),
             // Which of the mechanicals, PPD and reserves tools the label uses.
             'tools' => array_combine(
                 array_map(fn (RoyaltyTool $tool): string => $tool->value, RoyaltyTool::cases()),

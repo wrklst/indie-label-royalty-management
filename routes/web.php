@@ -18,6 +18,7 @@ use App\Http\Controllers\PlatformLinkController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ReleaseController;
 use App\Http\Controllers\Settings\ConnectionsController;
+use App\Http\Controllers\Settings\LabelBrandingController;
 use App\Http\Controllers\Settings\LabelSettingsController;
 use App\Http\Controllers\Settings\TeamController;
 use App\Http\Controllers\StatementController;
@@ -37,7 +38,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('my-statements/{statement}', [PortalController::class, 'show'])->name('portal.show')->whereNumber('statement');
         Route::get('my-statements/{statement}/download', [PortalController::class, 'download'])->name('portal.download')->whereNumber('statement');
 
+        Route::get('label-branding/{kind}', [LabelBrandingController::class, 'show'])->whereIn('kind', LabelBrandingController::KINDS)->name('label-branding.show');
+
         Route::middleware('label.admin')->group(function () {
+            Route::post('label-branding/{kind}', [LabelBrandingController::class, 'store'])->whereIn('kind', LabelBrandingController::KINDS)->name('label-branding.store');
+            Route::delete('label-branding/{kind}', [LabelBrandingController::class, 'destroy'])->whereIn('kind', LabelBrandingController::KINDS)->name('label-branding.destroy');
+
             Route::get('dashboard', DashboardController::class)->name('dashboard');
 
             Route::get('handbook/{slug}/panel', [HandbookController::class, 'panel'])->where('slug', '[\w-]+')->name('handbook.panel');

@@ -17,7 +17,8 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property string $slug
  * @property string $currency
  * @property string|null $contact_email
- * @property string|null $logo_path
+ * @property string|null $logo_path The label's logo as "disk:path".
+ * @property string|null $signet_path The label's small mark as "disk:path".
  * @property bool $accounts_mechanicals
  * @property bool $accounts_ppd
  * @property bool $accounts_reserves
@@ -35,7 +36,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property CarbonImmutable|null $updated_at
  * @property-read Pivot&object{role: string, payee_id: int|null} $pivot Membership of the user when loaded through User::labels().
  */
-#[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings', 'royalty_tool_settings', 'airplay_markets', 'dataforseo_login', 'dataforseo_password', 'ai_provider', 'ai_key', 'ai_endpoint', 'ai_model', 'ai_trial'])]
+#[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'signet_path', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings', 'royalty_tool_settings', 'airplay_markets', 'dataforseo_login', 'dataforseo_password', 'ai_provider', 'ai_key', 'ai_endpoint', 'ai_model', 'ai_trial'])]
 #[Hidden(['dataforseo_login', 'dataforseo_password', 'ai_key'])]
 class Label extends Model
 {

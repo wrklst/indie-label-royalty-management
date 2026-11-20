@@ -1,9 +1,10 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import LabelSettingsController from '@/actions/App/Http/Controllers/Settings/LabelSettingsController';
 import { DeleteButton } from '@/components/delete-button';
 import { CheckField, Field } from '@/components/field';
 import Heading from '@/components/heading';
+import { LabelImageUpload } from '@/components/label-image-upload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { edit as editBandcamp } from '@/routes/bandcamp';
@@ -62,6 +63,7 @@ export default function LabelSettings({
     royaltyTools,
     territories,
 }: Props) {
+    const { label } = usePage().props;
     const [tools, setTools] = useState({
         mechanicals: settings.accounts_mechanicals,
         ppd: settings.accounts_ppd,
@@ -78,6 +80,21 @@ export default function LabelSettings({
                     title="Label"
                     description="Name, accounting currency and how imports behave for this label"
                 />
+
+                <div className="grid gap-6 sm:grid-cols-2">
+                    <LabelImageUpload
+                        kind="logo"
+                        title="Logo"
+                        hint="Shown at the top of statements. PNG, JPEG or WebP, up to 4 MB; a transparent PNG works on light and dark."
+                        current={label?.logo_url ?? null}
+                    />
+                    <LabelImageUpload
+                        kind="signet"
+                        title="Signet"
+                        hint="The small square mark, shown in the sidebar next to the label's name."
+                        current={label?.signet_url ?? null}
+                    />
+                </div>
 
                 <Form
                     {...LabelSettingsController.update.form()}

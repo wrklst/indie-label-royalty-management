@@ -1,3 +1,4 @@
+import { usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import { Amount } from '@/components/amount';
 import { Panel, Stat } from '@/components/page';
@@ -253,6 +254,7 @@ const MOVEMENT_COLUMNS = {
  * income, expense and transfer detail behind them.
  */
 export function StatementView({ data }: { data: StatementData }) {
+    const { label } = usePage().props;
     const tabs = [
         { key: 'summary', label: 'Summary' },
         ...data.ledgers.map((ledger) => ({
@@ -315,6 +317,14 @@ export function StatementView({ data }: { data: StatementData }) {
 
     return (
         <div className="grid gap-6">
+            {label?.logo_url && (
+                <img
+                    src={label.logo_url}
+                    alt={label.name}
+                    data-label-logo
+                    className="max-h-16 max-w-56 self-start object-contain"
+                />
+            )}
             <div role="tablist" className="flex flex-wrap gap-1 border-b">
                 {tabs.map((item) => (
                     <button

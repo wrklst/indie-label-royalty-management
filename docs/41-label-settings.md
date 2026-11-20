@@ -10,6 +10,17 @@ Everything a label decides for itself is under **Settings → Label**, open to a
 | **Accounting currency** | The currency all totals are shown in. Changing it does not convert existing transactions, so it can only be changed while the label has no transactions. |
 | **Contact email**       | The label's contact address. It starts as the address of whoever created the label.                                                                      |
 
+## Logo and signet
+
+Two images of the label, each uploaded by dropping a file on its field or choosing one. PNG, JPEG or WebP, up to 4 MB.
+
+| Image      | Where it is shown                                                |
+| ---------- | ---------------------------------------------------------------- |
+| **Logo**   | At the top of statements, for you and for payees in their portal |
+| **Signet** | The small square mark in the sidebar, next to the label's name   |
+
+Dropping a new file replaces the stored image. The bin removes it. A transparent PNG works on light and dark backgrounds. SVG files are not accepted.
+
 ## Bandcamp imports
 
 Two options that apply to uploaded Bandcamp reports and to the automatic sync alike:

@@ -27,9 +27,18 @@ export function LabelSwitcher() {
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton size="lg">
-                            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-                                <Disc3 className="size-5" />
-                            </div>
+                            {label?.signet_url ? (
+                                <img
+                                    src={label.signet_url}
+                                    alt=""
+                                    data-label-signet
+                                    className="aspect-square size-8 rounded-md object-contain"
+                                />
+                            ) : (
+                                <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+                                    <Disc3 className="size-5" />
+                                </div>
+                            )}
                             <div className="grid flex-1 text-left text-sm leading-tight">
                                 <span className="truncate font-semibold">
                                     {label?.name ?? name}

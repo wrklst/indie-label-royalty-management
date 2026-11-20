@@ -7,6 +7,7 @@ use App\Models\Statement;
 use App\Models\User;
 use App\Services\Royalties\PayoutService;
 use App\Services\Royalties\StatementGenerator;
+use Illuminate\Support\Facades\Storage;
 
 test('a user can log in through the form and lands on the dashboard', function () {
     $user = labelAdmin(Label::factory()->create(['name' => 'Example Records']));
@@ -128,5 +129,19 @@ test('a period draws who the income goes to and a contract draws its splits', fu
 
     visit('/contracts')
         ->assertAttribute('[data-segmented-bar] [role="img"]', 'aria-label', 'Example Payee 50%, Label 50%')
+        ->assertNoJavaScriptErrors();
+});
+
+test('a signet dropped into the label settings is uploaded and shown in the sidebar', function () {
+    Storage::fake('local');
+    $signet = sys_get_temp_dir().'/example-signet.png';
+    imagepng(imagecreatetruecolor(64, 64), $signet);
+    $this->actingAs(labelAdmin(Label::factory()->create(['name' => 'Example Records'])));
+
+    visit('/settings/label')
+        ->assertMissing('[data-label-signet]')
+        ->attach('[data-label-image="signet"] input[type="file"]', $signet)
+        ->assertPresent('[data-label-signet]')
+        ->assertPresent('[data-label-image="signet"] img[alt="Current signet"]')
         ->assertNoJavaScriptErrors();
 });

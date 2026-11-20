@@ -18,6 +18,8 @@ export type CurrentLabel = {
     name: string;
     currency: string;
     role: 'admin' | 'payee' | null;
+    logo_url: string | null;
+    signet_url: string | null;
     tools: { mechanicals: boolean; ppd: boolean; reserves: boolean };
 };
 
