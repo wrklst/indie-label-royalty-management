@@ -33,6 +33,35 @@ test('files are uploaded on the release page, the cover shows and audio gets a p
     expect($stored->track_id)->toBe($scenario['track']->id);
 });
 
+test('several files added at once are all stored', function () {
+    Storage::fake('local');
+    $scenario = royaltyScenario();
+    $this->actingAs($scenario['admin']);
+
+    $page = visit("/releases/{$scenario['release']->id}");
+
+    $page->script(<<<'JS'
+        const input = document.querySelector('[data-release-upload] input[type="file"]');
+        const files = new DataTransfer();
+        ['one.txt', 'two.txt', 'three.txt', 'four.txt'].forEach((name) => files.items.add(new File([name], name, { type: 'text/plain' })));
+        input.files = files.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    JS);
+
+    $stored = fn (): int => ReleaseFile::query()->withoutGlobalScopes()->count();
+
+    for ($waited = 0; $waited < 40 && $stored() < 4; $waited++) {
+        $page->wait(0.25);
+    }
+
+    $page->assertSee('one.txt')
+        ->assertSee('four.txt')
+        ->assertMissing('.filepond--item')
+        ->assertNoJavaScriptErrors();
+
+    expect($stored())->toBe(4);
+});
+
 test('track details are edited in a dialog on the release page', function () {
     $scenario = royaltyScenario();
     $this->actingAs($scenario['admin']);

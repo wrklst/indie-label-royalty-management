@@ -9,9 +9,16 @@ import 'filepond/dist/filepond.min.css';
 registerPlugin(FilePondPluginFileValidateType);
 
 /**
- * A drop area that uploads each file as soon as it is added, one after
- * the other. A file goes straight to the bucket where there is one and
- * is then reported to `url`; otherwise it is posted to `url` itself.
+ * Requests to `url` wait for each other on every drop area of the page:
+ * a page visit that starts while another runs would cancel it.
+ */
+let reporting: Promise<void> = Promise.resolve();
+
+/**
+ * A drop area that uploads each file as soon as it is added. A file goes
+ * straight to the bucket where there is one, three at a time, and is then
+ * reported to `url`; otherwise it is posted to `url` itself, one after
+ * the other.
  */
 export function FileDrop({
     url,
@@ -39,7 +46,7 @@ export function FileDrop({
             name="file"
             credits={false}
             allowMultiple
-            maxParallelUploads={1}
+            maxParallelUploads={3}
             acceptedFileTypes={accept}
             labelFileTypeNotAllowed="This type of file is not accepted"
             fileValidateTypeLabelExpectedTypes=""
@@ -66,37 +73,50 @@ export function FileDrop({
                         stop.signal,
                     ).then(
                         (key) => {
-                            if (stop.signal.aborted) {
-                                return;
-                            }
+                            reporting = reporting.then(
+                                () =>
+                                    new Promise<void>((done) => {
+                                        if (stop.signal.aborted) {
+                                            return done();
+                                        }
 
-                            router.post(
-                                url,
-                                key
-                                    ? {
-                                          ...extra.current,
-                                          upload: key,
-                                          upload_name: file.name,
-                                      }
-                                    : { ...extra.current, file },
-                                {
-                                    forceFormData: !key,
-                                    preserveScroll: true,
-                                    preserveState: true,
-                                    onProgress: (event) =>
-                                        event &&
-                                        !key &&
-                                        progress(
-                                            true,
-                                            event.loaded,
-                                            event.total ?? file.size,
-                                        ),
-                                    onSuccess: () => load(key ?? file.name),
-                                    onError: (errors) =>
-                                        error(Object.values(errors).join(' ')),
-                                    // Leaving the page cancels the request.
-                                    onCancel: () => error('Not uploaded'),
-                                },
+                                        router.post(
+                                            url,
+                                            key
+                                                ? {
+                                                      ...extra.current,
+                                                      upload: key,
+                                                      upload_name: file.name,
+                                                  }
+                                                : { ...extra.current, file },
+                                            {
+                                                forceFormData: !key,
+                                                preserveScroll: true,
+                                                preserveState: true,
+                                                onProgress: (event) =>
+                                                    event &&
+                                                    !key &&
+                                                    progress(
+                                                        true,
+                                                        event.loaded,
+                                                        event.total ??
+                                                            file.size,
+                                                    ),
+                                                onSuccess: () =>
+                                                    load(key ?? file.name),
+                                                onError: (errors) =>
+                                                    error(
+                                                        Object.values(
+                                                            errors,
+                                                        ).join(' '),
+                                                    ),
+                                                // Leaving the page cancels the request.
+                                                onCancel: () =>
+                                                    error('Not uploaded'),
+                                                onFinish: () => done(),
+                                            },
+                                        );
+                                    }),
                             );
                         },
                         () => error('The upload failed.'),

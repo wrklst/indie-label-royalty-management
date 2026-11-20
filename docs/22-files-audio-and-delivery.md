@@ -13,7 +13,7 @@ Files are stored on the server or in a storage bucket, depending on your setup; 
 1. Open the release and scroll to the panel **Files**.
 2. Optionally choose a type in the field below the drop area. **Detect type** is the default.
 3. Drop one or more files on the drop area, or click **browse** and select them.
-4. Each file is uploaded as soon as it is added, one after the other. A finished file leaves the drop area and appears in the list; one that was refused stays, in red, with the reason.
+4. Each file is uploaded as soon as it is added: three at a time when files go straight to the bucket, otherwise one after the other. A finished file leaves the drop area and appears in the list; one that was refused stays, in red, with the reason.
 
 With a storage bucket, files can go from your browser straight to the bucket instead of through the server; see [Connections](42-connections.md#direct-uploads).
 
