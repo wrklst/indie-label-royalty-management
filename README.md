@@ -13,17 +13,36 @@ for the day-to-day work of an indie label and is used for exactly that.
 
 Self-hosted, open source (MIT), built with Laravel, Inertia and React.
 
+- [Who is this for?](#who-is-this-for)
 - [What it does](#what-it-does)
 - [Server requirements](#server-requirements)
 - [Installation](#installation)
+- [Trying it locally with Laravel Herd](#trying-it-locally-with-laravel-herd)
 - [Running it in production](#running-it-in-production)
 - [Configuration](#configuration)
 - [Documentation](#documentation)
 - [Command line](#command-line)
 - [Not included](#not-included)
 - [Development](#development)
+- [Support](#support)
+- [Keeping the culture alive](#keeping-the-culture-alive)
 - [Security](#security)
 - [License](#license)
+
+## Who is this for?
+
+Label Royalties is for labels that can run their own software, or have
+someone who does. You need basic knowledge of how to run a web application
+and keep it updated. The application needs continuous security updates, and
+so does the server you run it on. An installation that is not kept up to date
+can become a serious security risk, and it holds confidential royalty data.
+
+If you don't feel up to that, you can hire professionals to do it for you, or
+use one of the proven managed platforms that work well, such as
+[Infinite Catalog](https://infinitecatalog.com), which has fair pricing for
+small indie labels. If your situation changes later, you can still move to
+Label Royalties: an importer for an Infinite Catalog account export is
+included; see [Command line](docs/50-command-line.md#migrating-from-infinite-catalog).
 
 ## What it does
 
@@ -133,6 +152,75 @@ instead of being sent, so read the code from there.
 
 Step by step, including MySQL: [docs/02-installation.md](docs/02-installation.md).
 
+## Trying it locally with Laravel Herd
+
+The easiest way to try Label Royalties on your own computer is
+[Laravel Herd](https://herd.laravel.com). The free version brings PHP, a web
+server, Composer and Node.js, and serves every folder inside its `Herd`
+folder at `http://<folder name>.test`. You also need
+[Git](https://git-scm.com/downloads).
+
+The steps below set the application up for trying it out: with an SQLite
+database, and with background work done right away instead of by a queue
+worker, so that no Redis is needed.
+
+### macOS
+
+1. Install Herd and open it once.
+2. In the Terminal:
+
+```sh
+cd ~/Herd
+git clone https://github.com/wrklst/indie-label-royalty-management.git label-royalties
+cd label-royalties
+touch database/database.sqlite
+composer setup
+```
+
+3. Open the file `.env` in the folder `label-royalties` and set these three
+   lines, adding any that is not there yet:
+
+```ini
+APP_URL=http://label-royalties.test
+QUEUE_CONNECTION=sync
+AUDIO_PREVIEW_QUEUE=false
+```
+
+4. Create your account and open `http://label-royalties.test`:
+
+```sh
+php artisan royalties:create-user you@example.com --name="Your Name"
+```
+
+The sign-in code is not sent by email locally. Read it from the end of
+`storage/logs/laravel.log`.
+
+### Windows
+
+1. Install Herd and Git for Windows, and open Herd once.
+2. In PowerShell:
+
+```powershell
+cd $HOME\Herd
+git clone https://github.com/wrklst/indie-label-royalty-management.git label-royalties
+cd label-royalties
+New-Item database\database.sqlite
+composer install --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix
+Copy-Item .env.example .env
+php artisan key:generate
+php artisan migrate --force
+npm install
+npm run build
+```
+
+3. Set the three lines in `.env` as for macOS, then create your account and
+   open `http://label-royalties.test` the same way.
+
+Windows is for trying it out only. The queue worker (Horizon) and the updater
+need Linux or macOS, which is why two requirements are skipped during the
+installation. We have not tested these Windows steps ourselves yet; please
+tell us when one of them fails.
+
 ## Running it in production
 
 A production server needs, beyond the above:
@@ -230,15 +318,6 @@ php artisan royalties:update --check
 ```
 
 All commands and options: [docs/50-command-line.md](docs/50-command-line.md).
-
-### Migrating from Infinite Catalog
-
-`php artisan royalties:import-infinite-catalog <export-directory> --label=…`
-loads an account export (catalog, contracts, periods, payouts and
-transactions), and `royalties:compare-infinite-catalog` checks the
-calculated period figures against the ones Infinite Catalog reported. The
-export itself has to be produced from your own account; no export tool is
-included. This project is not affiliated with Infinite Catalog.
 
 ## Not included
 
