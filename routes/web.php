@@ -21,6 +21,7 @@ use App\Http\Controllers\Settings\ConnectionsController;
 use App\Http\Controllers\Settings\LabelBrandingController;
 use App\Http\Controllers\Settings\LabelSettingsController;
 use App\Http\Controllers\Settings\TeamController;
+use App\Http\Controllers\Settings\UpdatesController;
 use App\Http\Controllers\StatementController;
 use App\Http\Controllers\TrackController;
 use App\Http\Controllers\TransactionController;
@@ -108,6 +109,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('settings/connections/search', [ConnectionsController::class, 'destroySearch'])->name('connections.search.destroy');
             Route::delete('settings/connections/ai', [ConnectionsController::class, 'destroyAi'])->name('connections.ai.destroy');
             Route::delete('settings/connections/storage', [ConnectionsController::class, 'destroyStorage'])->name('connections.storage.destroy');
+
+            Route::get('settings/updates', [UpdatesController::class, 'edit'])->name('updates.edit');
+            Route::put('settings/updates', [UpdatesController::class, 'update'])->name('updates.update');
+            Route::post('settings/updates/check', [UpdatesController::class, 'check'])->name('updates.check');
+            Route::post('settings/updates/install', [UpdatesController::class, 'install'])->name('updates.install');
 
             Route::get('settings/team', [TeamController::class, 'index'])->name('team.index');
             Route::post('settings/team', [TeamController::class, 'store'])->middleware('throttle:30,60')->name('team.store');

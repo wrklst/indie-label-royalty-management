@@ -12,6 +12,7 @@ import { edit as editLabel } from '@/routes/label-settings';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { index as team } from '@/routes/team';
+import { edit as editUpdates } from '@/routes/updates';
 import type { NavItem } from '@/types';
 
 const accountNavItems: NavItem[] = [
@@ -57,10 +58,17 @@ const labelNavItems: NavItem[] = [
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
-    const { label } = usePage().props;
+    const { label, auth } = usePage().props;
     const sidebarNavItems =
         label?.role === 'admin'
-            ? [...accountNavItems, ...labelNavItems]
+            ? [
+                  ...accountNavItems,
+                  ...labelNavItems,
+                  // The installation's own admins look after its version.
+                  ...(auth.user.installation_admin
+                      ? [{ title: 'Updates', href: editUpdates(), icon: null }]
+                      : []),
+              ]
             : accountNavItems;
 
     return (

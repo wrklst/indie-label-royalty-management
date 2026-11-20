@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+#
+# Brings this installation to a tagged version, and back to the version
+# it ran before when a step fails.
+#
+# Do not run it by hand without need: "php artisan royalties:update"
+# checks first that an update is possible and backs up the database.
+#
+# Usage: bin/update <tag>
+# UPDATE_PHP names the PHP program to use, when it is not "php".
+#
+# Ends with 0 when the new version runs, 1 when the update failed and the
+# previous version runs again, 3 when going back failed as well and the
+# site is left in maintenance mode.
+
+set -uo pipefail
+
+# Everything happens inside one function, so that bash has read the whole
+# script before git replaces this file.
+main() {
+    cd "$(dirname "$0")/.." || exit 2
+
+    local tag="${1:?Usage: bin/update <tag>}"
+    local previous
+    previous="$(git rev-parse HEAD)" || exit 2
+
+    # Composer and the build call "php"; make that the PHP the site runs on.
+    local shim
+    shim="$(mktemp -d)"
+    trap 'rm -rf "$shim"' EXIT
+    ln -s "$(command -v "${UPDATE_PHP:-php}")" "$shim/php"
+    PATH="$shim:$PATH"
+
+    # An installation without the development packages stays without them.
+    local without_dev="--no-dev"
+    [ -d vendor/pestphp ] && without_dev=""
+
+    say() {
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+    }
+
+    install() {
+        composer install --no-interaction --prefer-dist --optimize-autoloader $without_dev \
+            && npm ci \
+            && npm run build
+    }
+
+    restart() {
+        php artisan optimize || return 1
+        # The process manager starts the queue workers again with the new code.
+        php artisan horizon:terminate || true
+        php artisan up
+    }
+
+    say "Updating from $(git describe --tags --always) to $tag"
+    php artisan down --retry=60 || say "Maintenance mode could not be switched on; going on."
+
+    if git merge --ff-only --quiet "$tag" && install && php artisan migrate --force && restart; then
+        say "Now running $tag"
+        exit 0
+    fi
+
+    say "The update failed. Going back to $previous"
+
+    # Migrations only add to the database, so the previous code runs on it as it is.
+    if git reset --hard --quiet "$previous" && install && restart; then
+        say "Running the previous version again"
+        exit 1
+    fi
+
+    say "Going back failed as well. The site stays in maintenance mode; see docs/04-deployment.md."
+    exit 3
+}
+
+main "$@"

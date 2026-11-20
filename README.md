@@ -149,6 +149,11 @@ Ready-to-use configurations for nginx, Supervisor and Laravel Forge, a deploy
 script, and how to move an installation to another server:
 [docs/04-deployment.md](docs/04-deployment.md).
 
+The application updates itself to each new tagged version, on demand under
+**Settings → Updates** or automatically. It backs up the database first and
+goes back to the previous version when a step fails:
+[docs/02-installation.md](docs/02-installation.md#updating).
+
 ## Configuration
 
 `.env` holds only the basic connections of the server: database, Redis, mail
@@ -221,6 +226,7 @@ php artisan royalties:sync-bandcamp --label=example-records
 php artisan royalties:generate-previews
 php artisan royalties:move-files --to=s3 --dry-run
 php artisan royalties:research-airplay --label=example-records
+php artisan royalties:update --check
 ```
 
 All commands and options: [docs/50-command-line.md](docs/50-command-line.md).
@@ -262,6 +268,31 @@ figures.
 
 How to add an importer for another distributor or a radio station for the
 airplay research: [docs/51-extending.md](docs/51-extending.md).
+
+## Support
+
+For support, write to [tobias@wrklst.art](mailto:tobias@wrklst.art).
+
+If you need an importer for another distributor or collecting society, send a
+sample statement to the same address and I will work on it as soon as I can.
+Please send it by email and not in a public issue: statements hold
+confidential figures.
+
+## Keeping the culture alive
+
+Small independent labels all over the world are part of the backbone of a
+diverse and humanistic music culture, one that is continually undermined by
+big label deals and the streaming giants. Many of them are run as side
+projects, paid for by day jobs and a passion for music.
+
+Let's keep that culture alive by sharing what we know about improving the
+infrastructure these labels work with. This tool is a first step: it is what
+we learned over the last years. We appreciate every pointer, whether it is an
+improvement, a feature, a trick for getting better airplay feedback or any
+other industry knowledge.
+
+Our vision is that this open-source tool grows into a far more powerful
+system that really helps independent labels.
 
 ## Security
 

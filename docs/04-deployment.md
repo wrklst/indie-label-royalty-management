@@ -112,6 +112,8 @@ $RESTART_QUEUES()
 
 If Horizon still runs old code after a deployment, add `$FORGE_PHP artisan horizon:terminate` as the last line.
 
+With this deploy script Forge puts each version in place itself, so the updater under **Settings → Updates** is switched off there: update by deploying.
+
 7. Create the first account over SSH:
 
 ```sh
@@ -153,6 +155,24 @@ Back up three things, and test restoring them:
 | `.env`   | Once, and after every change. It holds `APP_KEY`.                                           |
 
 Audio masters are the one thing that cannot be recreated from anywhere else. If the files are on the server's own disk, a disk failure without a backup loses them.
+
+## When an update leaves the site in maintenance mode
+
+The updater from [Installation](02-installation.md#updating) goes back to the previous version when a step fails. If going back fails as well, for example because the server has no disk space left, it leaves the site in maintenance mode instead of opening it half installed. **Settings → Updates** cannot be reached then. On the server:
+
+1. Read the end of `storage/logs/update.log` to see which step failed.
+2. Fix the cause.
+3. Finish by hand:
+
+```sh
+composer install --no-dev --optimize-autoloader
+npm ci && npm run build
+php artisan optimize
+php artisan horizon:terminate
+php artisan up
+```
+
+The database copy made before the update is in `storage/app/update-backups`.
 
 ## After every deployment
 

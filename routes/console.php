@@ -22,3 +22,6 @@ Schedule::command('royalties:research-airplay')->dailyAt('06:30')->withoutOverla
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
 
 Schedule::call(fn () => DirectUploads::prune())->name('prune-unreported-uploads')->dailyAt('03:30')->onOneServer();
+
+// Does nothing unless an update was asked for under Settings → Updates, or automatic updates are due.
+Schedule::command('royalties:update --scheduled')->everyMinute()->withoutOverlapping(120)->onOneServer();

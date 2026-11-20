@@ -83,6 +83,30 @@ creates the user `test@example.com` with the password `password` and a label cal
 
 ## Updating
 
+The application can update itself to each new tagged version of the repository it was cloned from.
+
+- **On demand:** open **Settings → Updates** and click **Update to …**, or run `php artisan royalties:update` on the server.
+- **Automatically:** under **Settings → Updates**, tick **Install new versions automatically** and choose the hour. The check runs once a day at that hour, in server time.
+
+The page **Updates** is shown to admins of the installation only. An update asked for there is carried out by the scheduler within a minute, so the scheduler from [Deployment](04-deployment.md) has to run.
+
+What an update does, in this order:
+
+1. It checks that it can run at all. It refuses when files of the application were changed on the server, when the installation has commits the new version does not contain, when `composer`, `npm` or `bash` is missing, and when the installation is put in place by a deployment tool such as Forge or Envoyer.
+2. It copies the database to `storage/app/update-backups`. The three newest copies are kept. Without a copy there is no update.
+3. It puts the site in maintenance mode, moves the code to the new version, installs the packages, builds the interface, runs the migrations and restarts the background worker.
+4. If any of that fails, it puts the previous version back and opens the site again. A version that failed is not tried again automatically; you can try it again on demand.
+
+What happened is shown under **Settings → Updates**; the details are in `storage/logs/update.log`.
+
+> **Note:** Versions are tags such as `v1.2.0`, also `v0.0.2beta` or `v1.3.0-rc.1`. Other tags are ignored. The newest by version number counts, and a beta counts as older than the version it leads to.
+
+> **Note:** The updater installs whatever the repository it was cloned from has tagged. It does not check signatures. Clone from a repository you trust.
+
+The database copy is made with `mysqldump` (or `mariadb-dump`) for MySQL and MariaDB, and by copying the file for SQLite. With another database, back it up yourself and run `php artisan royalties:update --without-backup`.
+
+### Updating by hand
+
 ```sh
 git pull
 composer install --no-dev --optimize-autoloader

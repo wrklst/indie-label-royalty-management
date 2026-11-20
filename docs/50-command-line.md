@@ -121,6 +121,25 @@ Creates an importer class for a new statement source, or a new layout of an exis
 php artisan make:importer ExampleDistributor
 ```
 
+## Updating
+
+### royalties:update
+
+Updates the installation to the newest tagged version of its repository, as described under [Installation](02-installation.md#updating).
+
+```sh
+php artisan royalties:update --check
+php artisan royalties:update
+```
+
+| Option             | Meaning                                                                                                  |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `--check`          | Only say whether a newer version exists.                                                                 |
+| `--without-backup` | Do not copy the database first. Use it only after backing it up yourself.                                |
+| `--scheduled`      | For the scheduler: run only when an update was asked for in the interface or an automatic update is due. |
+
+The command ends with an error when the update was refused or failed, and says whether the previous version runs again.
+
 ## Useful framework commands
 
 | Command                         | What it tells you                                                 |
