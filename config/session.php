@@ -1,7 +1,5 @@
 <?php
 
-use Illuminate\Support\Str;
-
 return [
 
     /*
@@ -127,10 +125,8 @@ return [
     |
     */
 
-    'cookie' => env(
-        'SESSION_COOKIE',
-        Str::slug((string) env('APP_NAME', 'laravel')).'-session',
-    ),
+    // A fixed name, so that renaming the application does not sign everyone out.
+    'cookie' => env('SESSION_COOKIE', 'label-office-session'),
 
     /*
     |--------------------------------------------------------------------------
