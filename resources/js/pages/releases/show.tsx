@@ -115,6 +115,9 @@ type Props = {
             is_additionals: boolean;
             track: string | null;
             contract: Option | null;
+            sources: string[];
+            transactions: number;
+            total: string;
         }[];
     };
     totals: {
@@ -901,34 +904,64 @@ export default function ShowRelease({
                 </Panel>
                 <Panel
                     title="Items"
-                    description="What transactions are booked against: one per track and format group, plus [Additionals] for manual entries."
+                    description="Every name a statement, shop or manual entry used for this release or one of its tracks. A line with that name is booked on the track shown, and counts for that track's contract."
                     flush
                 >
                     <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name on statements</TableHead>
+                                <TableHead>Booked on</TableHead>
+                                <TableHead className="text-right">
+                                    Bookings
+                                </TableHead>
+                                <TableHead className="text-right">
+                                    Amount
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
                         <TableBody>
                             {release.items.map((item) => (
-                                <TableRow key={item.id}>
-                                    <TableCell
-                                        className={
-                                            item.is_additionals
-                                                ? 'text-muted-foreground'
-                                                : ''
-                                        }
-                                    >
+                                <TableRow
+                                    key={item.id}
+                                    className={
+                                        item.transactions === 0
+                                            ? 'text-muted-foreground'
+                                            : ''
+                                    }
+                                >
+                                    <TableCell>
                                         {item.name}
+                                        <span className="block text-xs text-muted-foreground">
+                                            {[
+                                                item.is_additionals
+                                                    ? 'manual entries'
+                                                    : item.sources.join(', ') ||
+                                                      'nothing booked yet',
+                                                item.format_group,
+                                            ]
+                                                .filter(Boolean)
+                                                .join(' · ')}
+                                        </span>
                                     </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {item.format_group ?? '–'}
-                                    </TableCell>
-                                    <TableCell className="text-right text-muted-foreground">
+                                    <TableCell>
+                                        {item.track ?? 'Whole release'}
                                         {item.contract && (
-                                            <RecordLink
-                                                to="contract"
-                                                id={item.contract.id}
-                                            >
-                                                {item.contract.name}
-                                            </RecordLink>
+                                            <span className="block text-xs text-muted-foreground">
+                                                <RecordLink
+                                                    to="contract"
+                                                    id={item.contract.id}
+                                                >
+                                                    {item.contract.name}
+                                                </RecordLink>
+                                            </span>
                                         )}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums">
+                                        {item.transactions}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Amount value={item.total} />
                                     </TableCell>
                                 </TableRow>
                             ))}

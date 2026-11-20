@@ -112,6 +112,29 @@ test('a recording on several releases is listed once, with all its releases and 
         ->where('tracks.data.0.releases', [['id' => $single->id, 'name' => 'Example Single']]));
 });
 
+test('a release of another artist that carries a track of the artist is listed with what that track earned, and counted', function () {
+    $label = Label::factory()->create();
+    $remixer = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Sample Ensemble']);
+    $album = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release']);
+    $remix = Track::factory()->create(['label_id' => $label->id, 'release_id' => $album->id]);
+    $remix->artists()->attach($remixer->id, ['role' => 'remixer', 'position' => 0]);
+    $other = Track::factory()->create(['label_id' => $label->id, 'release_id' => $album->id]);
+    $booking = fn (array $attributes): Transaction => Transaction::factory()->create(['label_id' => $label->id, 'type' => 'income', 'release_id' => $album->id, ...$attributes]);
+    $booking(['track_id' => $remix->id, 'converted_total' => '4']);
+    $booking(['track_id' => $other->id, 'converted_total' => '100']);
+    $this->actingAs(labelAdmin($label));
+
+    $this->get(route('artists.show', $remixer->id))->assertInertia(fn (Assert $page) => $page
+        ->has('releases', 1)
+        ->where('releases.0.id', $album->id)
+        ->where('releases.0.income', fn ($income) => (float) $income === 4.0)
+        ->where('totals.income', fn ($income) => (float) $income === 4.0));
+
+    $this->get(route('artists.index', ['search' => 'Sample']))->assertInertia(fn (Assert $page) => $page
+        ->where('artists.data.0.releases_count', 1)
+        ->where('artists.data.0.tracks_count', 1));
+});
+
 test('an artist page lists the contracts of the artist\'s releases and tracks with their payees', function () {
     $label = Label::factory()->create();
     $artist = Artist::factory()->create(['label_id' => $label->id]);
@@ -163,7 +186,8 @@ test('an artist page totals what the artist\'s releases and tracks earned and co
             ->where('totals.units', fn (string $units): bool => (float) $units === 30.0)
             ->where('totals.transactions', 4)
             ->where('totals.airplays', 1)
-            ->where('releases.0.income', fn (string $total): bool => (float) $total === 55.0)
+            ->where('releases', fn ($releases) => (float) collect($releases)->firstWhere('id', $release->id)['income'] === 55.0
+                && (float) collect($releases)->firstWhere('id', $compilation->id)['income'] === 5.0)
             ->where('tracks', fn ($tracks) => (float) collect($tracks)->firstWhere('id', $track->id)['income'] === 40.0
                 && (float) collect($tracks)->firstWhere('id', $onCompilation->id)['income'] === 5.0));
 });

@@ -2,6 +2,7 @@
 
 use App\Models\Artist;
 use App\Models\Contract;
+use App\Models\Item;
 use App\Models\Label;
 use App\Models\Release;
 use App\Models\Track;
@@ -236,6 +237,24 @@ test('the release page totals income and expenses and breaks income down by trac
             ->where('retailers.1.retailer', 'Example Stream')
             ->where('retailers.1.total', $equals('10'))
             ->where('retailers.1.quantity', $equals('5')));
+});
+
+test('the release page says for each item where it is booked, how often, how much and by which source', function () {
+    $label = Label::factory()->create();
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track']);
+    $item = Item::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'track_id' => $track->id, 'name' => 'example track', 'is_additionals' => false]);
+    $booking = fn (array $attributes): Transaction => Transaction::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'item_id' => $item->id, 'type' => 'income', ...$attributes]);
+    $booking(['importer_source' => 'example-store', 'converted_total' => '3']);
+    $booking(['importer_source' => 'example-store', 'converted_total' => '2']);
+    $booking(['importer_source' => 'another-store', 'converted_total' => '1.5']);
+    Transaction::factory()->create(['label_id' => $label->id, 'converted_total' => '50']);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('releases.show', $release->id))
+        ->assertInertia(fn (Assert $page) => $page->where('release.items', fn ($items) => collect($items)->contains(fn (array $row): bool => $row['name'] === 'example track'
+            && $row['track'] === 'Example Track' && $row['transactions'] === 3 && (float) $row['total'] === 6.5 && $row['sources'] === ['another-store', 'example-store'])
+            && collect($items)->where('name', '!=', 'example track')->every(fn (array $row): bool => $row['transactions'] === 0 && $row['sources'] === [])));
 });
 
 test('the release form lists the tracks in track order', function () {

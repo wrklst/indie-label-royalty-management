@@ -116,6 +116,10 @@ class ReleaseController extends Controller
         $byRetailer = Transaction::query()->where('release_id', $release->id)->where('type', 'income')
             ->selectRaw('retailer, SUM(converted_total) as total, SUM(quantity) as quantity')->groupBy('retailer')->orderByDesc('total')->limit(15)->get();
 
+        $bookedByItem = Transaction::query()->whereIn('item_id', $release->items->modelKeys())
+            ->selectRaw('item_id, importer_source, COUNT(*) as transactions, SUM(converted_total) as total')
+            ->groupBy('item_id', 'importer_source')->orderBy('importer_source')->toBase()->get()->groupBy('item_id');
+
         return Inertia::render('releases/show', [
             'release' => [
                 ...$release->only([
@@ -155,6 +159,9 @@ class ReleaseController extends Controller
                     ...$item->only(['id', 'name', 'format_group', 'is_additionals']),
                     'track' => $item->track?->name,
                     'contract' => $item->contract?->only(['id', 'name']),
+                    'sources' => ($booked = $bookedByItem->get($item->id) ?? collect())->pluck('importer_source')->filter()->values(),
+                    'transactions' => (int) $booked->sum('transactions'),
+                    'total' => (string) $booked->sum('total'),
                 ]),
             ],
             'totals' => [

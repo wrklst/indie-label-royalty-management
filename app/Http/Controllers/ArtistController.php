@@ -32,14 +32,21 @@ class ArtistController extends Controller
             'notes' => Sorting::nullsLast('notes'),
         ], fn (Builder $query) => $query->orderBy('name'));
 
+        $onTrack = fn ($query) => $query
+            ->whereColumn('tracks.artist_id', 'artists.id')
+            ->orWhereExists(fn ($query) => $query->from('artist_track')
+                ->whereColumn('artist_track.track_id', 'tracks.id')->whereColumn('artist_track.artist_id', 'artists.id'));
+
         $artists = Artist::query()
             ->with('aliasOf:id,name')
-            ->withCount(['releases', 'aliases'])
-            // Tracks the artist is on in any role, as on the artist's own page.
-            ->selectSub(Track::query()->selectRaw('count(*)')->where(fn ($query) => $query
-                ->whereColumn('tracks.artist_id', 'artists.id')
-                ->orWhereExists(fn ($query) => $query->from('artist_track')
-                    ->whereColumn('artist_track.track_id', 'tracks.id')->whereColumn('artist_track.artist_id', 'artists.id'))), 'tracks_count')
+            ->withCount('aliases')
+            // Releases and tracks the artist is on in any role, as on the artist's own page.
+            ->selectSub(Release::query()->selectRaw('count(*)')->where(fn ($query) => $query
+                ->whereColumn('releases.artist_id', 'artists.id')
+                ->orWhereExists(fn ($query) => $query->from('artist_release')
+                    ->whereColumn('artist_release.release_id', 'releases.id')->whereColumn('artist_release.artist_id', 'artists.id'))
+                ->orWhereExists(fn ($query) => $query->from('tracks')->whereColumn('tracks.release_id', 'releases.id')->where($onTrack))), 'releases_count')
+            ->selectSub(Track::query()->selectRaw('count(*)')->where($onTrack), 'tracks_count')
             ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
             ->tap($sorting)
             ->paginate(50)
@@ -64,9 +71,12 @@ class ArtistController extends Controller
         $tracks = Track::query()->where(fn ($query) => $query->where('artist_id', $artist->id)->orWhereHas('artists', fn ($query) => $query->whereKey($artist->id)))
             ->with('release:id,name,contract_id')->withCount('airplays')->orderBy('name')->get();
 
-        $releases = Release::query()->where(fn ($query) => $query->where('artist_id', $artist->id)->orWhereHas('artists', fn ($query) => $query->whereKey($artist->id)))
+        // Also the releases of others that carry one of the artist's tracks, such as a remix or a compilation.
+        $releases = Release::query()->where(fn ($query) => $query->where('artist_id', $artist->id)->orWhereHas('artists', fn ($query) => $query->whereKey($artist->id))
+            ->orWhereIn('id', $tracks->pluck('release_id')->filter()))
             ->orderByDesc('released_on')->orderBy('name')->get(['id', 'name', 'catalog_number', 'released_on', 'artist_id', 'contract_id']);
         $albums = PlayableAudio::albums($releases);
+        $own = $releases->filter(fn (Release $release): bool => $release->artist_id === $artist->id || $release->artists->contains($artist))->modelKeys();
         // The contract of a track is its own, otherwise that of its release.
         $contracts = Contract::query()->with('splits.payee:id,name')->orderBy('name')
             ->findMany($tracks->toBase()->map(fn (Track $track): ?int => $track->contract_id ?? $track->release?->contract_id)->merge($releases->pluck('contract_id'))->filter()->unique());
@@ -74,10 +84,10 @@ class ArtistController extends Controller
         // Everything booked on the artist's releases, plus what their tracks earned on releases
         // of others, such as compilations. Each transaction counts once.
         $booked = fn () => Transaction::query()->where(fn ($query) => $query
-            ->whereIn('release_id', $releases->modelKeys())->orWhereIn('track_id', $tracks->modelKeys()));
+            ->whereIn('release_id', $own)->orWhereIn('track_id', $tracks->modelKeys()));
         $byType = $booked()->selectRaw('type, SUM(converted_total) as total, SUM(quantity) as quantity, COUNT(*) as transactions')
             ->groupBy('type')->toBase()->get()->keyBy('type');
-        $incomeByRelease = Transaction::query()->where('type', TransactionType::Income)->whereIn('release_id', $releases->modelKeys())
+        $incomeByRelease = Transaction::query()->where('type', TransactionType::Income)->whereIn('release_id', $own)
             ->selectRaw('release_id, SUM(converted_total) as total')->groupBy('release_id')->toBase()->pluck('total', 'release_id');
         $incomeByTrack = Transaction::query()->where('type', TransactionType::Income)->whereIn('track_id', $tracks->modelKeys())
             ->selectRaw('track_id, SUM(converted_total) as total')->groupBy('track_id')->toBase()->pluck('total', 'track_id');
@@ -99,7 +109,10 @@ class ArtistController extends Controller
                     ...$release->only(['id', 'name', 'catalog_number']),
                     'player_tracks' => $albums[$release->id],
                     'released_on' => $release->released_on?->toDateString(),
-                    'income' => Decimal::parse($incomeByRelease[$release->id] ?? 0) ?? '0',
+                    // On a release of others: what the artist's tracks on it earned.
+                    'income' => in_array($release->id, $own, true)
+                        ? Decimal::parse($incomeByRelease[$release->id] ?? 0) ?? '0'
+                        : $tracks->where('release_id', $release->id)->reduce(fn (string $sum, Track $track): string => Decimal::add($sum, Decimal::parse($incomeByTrack[$track->id] ?? 0) ?? '0'), '0'),
                 ]),
             'contracts' => $contracts->map(fn (Contract $contract): array => [
                 ...$contract->only(['id', 'name']),

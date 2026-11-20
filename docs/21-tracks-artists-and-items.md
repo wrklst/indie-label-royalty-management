@@ -140,7 +140,7 @@ An alias is a note for you. It does not merge the two artists: each keeps its ow
 
 Click an artist name anywhere to open the page. It shows:
 
-- **Releases**: every release the artist is on, as main artist or in any credit role, newest first, with **Catalog number**, **Released** and the buttons to play or queue the whole release.
+- **Releases**: every release the artist is on, as main artist, in any credit role or with one of their tracks, newest first. A release of another artist shows what this artist's tracks earned on it. Listed with **Catalog number**, **Released** and the buttons to play or queue the whole release.
 - **Tracks**: every track the artist is on, as main artist or in any credit role, with its releases, ISRC and the number of airplay entries. A recording that is on several releases is one row naming all of them, with airplay and income added up.
 - **Contracts and payees**: the contracts of these releases and tracks, each with its payees and their share. A track uses its own contract, otherwise that of its release.
 
@@ -228,7 +228,7 @@ An item contract beats the track and release contract. Only a contract set direc
 
 - Deleting a track keeps its transactions on the release, but they lose the track and any track-level contract. Items of the track without transactions are deleted with it.
 - Deleting an artist keeps the releases and tracks, which lose their artist. Aliases of the artist stay and are no longer aliases. Further credits of the artist are removed.
-- The release count in the artist list and the **All artists** filter of the release list only see the main artist. The track count in the artist list and the artist page also include tracks where the artist is a further credit, such as a remixer.
+- The **All artists** filter of the release list only sees the main artist of a release. The counts in the artist list and the artist page also include releases and tracks where the artist is a further credit, such as a remixer, and releases of others that carry one of the artist's tracks.
 - The artist column of the track list shows the main artist of the track only, without further credits.
 - The short edit dialog in the track list has no version, disc number or credits. Use **Details of …** on the release page for those.
 - When you choose a track for an item, the release of that track is used, whatever release was selected. When you move an item to another release, its track is cleared.

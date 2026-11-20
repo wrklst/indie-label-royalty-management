@@ -184,7 +184,7 @@ Example: with 1,250.00 of income and −400.00 of expenses, **Net** shows 850.00
 
 **Income by retailer.** The 15 retailers with the most income for this release, with units and amount. Lines without a retailer are listed as `Unknown`.
 
-**Items.** The items of the release with their format group and, if set, their contract override; see [Tracks, artists and items](21-tracks-artists-and-items.md#items).
+**Items.** Every name a statement, shop or manual entry used for the release or one of its tracks. Each row says which track it is booked on (or **Whole release**), which sources used the name, its format group, the number of bookings, their amount and, if set, the contract override; see [Tracks, artists and items](21-tracks-artists-and-items.md#items).
 
 **Notes.** Shown when the release has notes.
 
@@ -246,7 +246,7 @@ Example: `Example Release` has no contract and two tracks. The counter shows `2 
 
 ## Good to know
 
-- The **All artists** filter and the release count in the artist list only look at the main artist. A release where an artist is only a further credit is not found by them, but it is listed on the artist's own page.
+- The **All artists** filter only looks at the main artist. A release where an artist is only a further credit is not found by it, but it is counted in the artist list and listed on the artist's own page.
 - **Income to date** in the list counts income only. Use the **Net** tile on the release page to see income minus expenses.
 - Amounts are shown in your label currency, using the converted value of each transaction.
 - The track order in the form and on the release page is by track number. The disc number is not shown on the release form; set it in **Details of …** on the release page.
