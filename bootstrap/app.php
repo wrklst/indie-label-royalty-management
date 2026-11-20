@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
+        // The updater empties the web server's code cache before it opens the site again.
+        $middleware->preventRequestsDuringMaintenance(except: ['system/code-cache/reset']);
+
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,

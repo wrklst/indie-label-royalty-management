@@ -94,7 +94,7 @@ What an update does, in this order:
 
 1. It checks that it can run at all. It refuses when files of the application were changed on the server, when the installation has commits the new version does not contain, when `composer`, `npm` or `bash` is missing, and when the installation is put in place by a deployment tool such as Forge or Envoyer.
 2. It copies the database to `storage/app/update-backups`. The three newest copies are kept. Without a copy there is no update.
-3. It puts the site in maintenance mode, moves the code to the new version, installs the packages, builds the interface, runs the migrations and restarts the background worker.
+3. It puts the site in maintenance mode, removes the cached configuration and routes, moves the code to the new version, installs the packages, builds the interface, runs the migrations, has the web server empty its PHP code cache (OPcache) and restarts the background worker.
 4. If any of that fails, it puts the previous version back and opens the site again. A version that failed is not tried again automatically; you can try it again on demand.
 
 What happened is shown under **Settings → Updates**; the details are in `storage/logs/update.log`.
@@ -102,6 +102,8 @@ What happened is shown under **Settings → Updates**; the details are in `stora
 > **Note:** Versions are tags such as `v1.2.0`, also `v0.0.2beta` or `v1.3.0-rc.1`. Other tags are ignored. The newest by version number counts, and a beta counts as older than the version it leads to.
 
 > **Note:** The updater installs whatever the repository it was cloned from has tagged. It does not check signatures. Clone from a repository you trust.
+
+> **Note:** OPcache belongs to the web server's PHP, which a command cannot reach. The updater therefore calls the site itself, at the address in `APP_URL` and with a signed link, while it is still in maintenance mode. This matters on servers set up with `opcache.validate_timestamps=0`, which otherwise go on running the old code. If the server cannot reach its own address, the update still finishes and `storage/logs/update.log` says that the cache was not emptied; reload PHP-FPM then. A server that uses OPcache preloading has to reload PHP-FPM after every update in any case.
 
 The database copy is made with `mysqldump` (or `mariadb-dump`) for MySQL and MariaDB, and by copying the file for SQLite. With another database, back it up yourself and run `php artisan royalties:update --without-backup`.
 

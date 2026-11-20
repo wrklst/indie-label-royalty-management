@@ -47,6 +47,9 @@ main() {
 
     restart() {
         php artisan optimize || return 1
+        # A web server that never looks at its files again would go on running the code it has compiled.
+        php artisan royalties:reset-code-cache \
+            || say "The web server's code cache was not emptied. If the site shows the old version, reload PHP-FPM."
         # The process manager starts the queue workers again with the new code.
         php artisan horizon:terminate || true
         php artisan up
@@ -54,6 +57,8 @@ main() {
 
     say "Updating from $(git describe --tags --always) to $tag"
     php artisan down --retry=60 || say "Maintenance mode could not be switched on; going on."
+    # Configuration and routes cached for the old code must not steer the new one.
+    php artisan optimize:clear || say "The cached configuration could not be removed; going on."
 
     if git merge --ff-only --quiet "$tag" && install && php artisan migrate --force && restart; then
         say "Now running $tag"

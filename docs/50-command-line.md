@@ -140,6 +140,14 @@ php artisan royalties:update
 
 The command ends with an error when the update was refused or failed, and says whether the previous version runs again.
 
+### royalties:reset-code-cache
+
+Has the web server forget the PHP code it has compiled (OPcache), so that it runs the code on disk. The updater runs it; run it yourself after changing code by hand on a server set up with `opcache.validate_timestamps=0`.
+
+```sh
+php artisan royalties:reset-code-cache
+```
+
 ## Useful framework commands
 
 | Command                         | What it tells you                                                 |

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Support\Updater;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -14,8 +15,8 @@ use RuntimeException;
 
 /**
  * Which version the installation runs and whether it updates itself.
- * For the installation's own admins only. The update is done by the
- * scheduler, never by the request that asks for it.
+ * For the installation's own admins only, except resetCodeCache. The
+ * update is done by the scheduler, never by the request that asks for it.
  */
 class UpdatesController extends Controller
 {
@@ -81,6 +82,17 @@ class UpdatesController extends Controller
         Updater::remember(['requested' => true]);
 
         return $this->saved(__('The update starts within a minute. The site is in maintenance mode while it runs.'));
+    }
+
+    /**
+     * Forget the PHP code this web server has compiled. Reached without
+     * signing in, through an address signed by this installation: the
+     * updater calls it after replacing the code. A server set up never
+     * to look at its files again would go on running the old version.
+     */
+    public function resetCodeCache(): JsonResponse
+    {
+        return response()->json(['reset' => function_exists('opcache_reset') && opcache_reset()]);
     }
 
     /**

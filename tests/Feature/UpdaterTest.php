@@ -4,7 +4,9 @@ use App\Models\Label;
 use App\Support\Updater;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use PHPUnit\Framework\ExpectationFailedException;
@@ -229,3 +231,33 @@ test('updates are for admins of the installation only', function (string $method
 
     expect(Updater::settings())->toMatchArray(['requested' => false, 'auto' => false]);
 })->with([['get', 'updates.edit'], ['put', 'updates.update'], ['post', 'updates.check'], ['post', 'updates.install']]);
+
+test('the web server empties its code cache at an address only the installation can sign', function () {
+    $this->getJson(URL::temporarySignedRoute('updates.code-cache', now()->addMinute(), absolute: false))->assertOk()->assertJsonStructure(['reset']);
+
+    $this->getJson(route('updates.code-cache'))->assertForbidden();
+    $this->getJson(URL::temporarySignedRoute('updates.code-cache', now()->subMinute(), absolute: false))->assertForbidden();
+});
+
+test('the code cache can be emptied while the site is in maintenance mode', function () {
+    File::ensureDirectoryExists($this->storage.'/framework');
+    $this->artisan('down');
+
+    $this->getJson(URL::temporarySignedRoute('updates.code-cache', now()->addMinute(), absolute: false))->assertOk();
+    $this->get(route('login'))->assertServiceUnavailable();
+});
+
+test('the command asks the site itself to empty the code cache', function () {
+    config(['app.url' => 'https://royalties.example.com']);
+    Http::fake(['royalties.example.com/system/code-cache/reset*' => Http::response(['reset' => true])]);
+
+    $this->artisan('royalties:reset-code-cache')->expectsOutputToContain('compiles the code anew')->assertSuccessful();
+
+    Http::assertSent(fn ($request): bool => str_contains($request->url(), 'signature='));
+});
+
+test('the command fails when the site does not empty its code cache', function () {
+    Http::fake(['*' => Http::response('Not found', 404)]);
+
+    $this->artisan('royalties:reset-code-cache')->expectsOutputToContain('status 404')->assertFailed();
+});

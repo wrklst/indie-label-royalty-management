@@ -55,11 +55,13 @@ test('the script moves to the tag, installs, migrates and opens the site again',
         ->and(($this->version)())->toBe('v1.1.0')
         ->and(($this->calls)())->toBe(implode("\n", [
             'php artisan down --retry=60',
+            'php artisan optimize:clear',
             'composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev',
             'npm ci',
             'npm run build',
             'php artisan migrate --force',
             'php artisan optimize',
+            'php artisan royalties:reset-code-cache',
             'php artisan horizon:terminate',
             'php artisan up',
         ])."\n");

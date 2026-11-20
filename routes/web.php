@@ -30,6 +30,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 
+// Called by the updater on this server while the site is in maintenance mode; see bootstrap/app.php.
+Route::get('system/code-cache/reset', [UpdatesController::class, 'resetCodeCache'])
+    ->middleware(['signed:relative', 'throttle:10,1'])->name('updates.code-cache');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('labels/create', [LabelController::class, 'create'])->name('labels.create');
     Route::post('labels', [LabelController::class, 'store'])->name('labels.store');
