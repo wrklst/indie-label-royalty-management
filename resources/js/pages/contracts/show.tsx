@@ -1,4 +1,4 @@
-import { Link, setLayoutProps } from '@inertiajs/react';
+import { Link, setLayoutProps, usePage } from '@inertiajs/react';
 import { Pencil } from 'lucide-react';
 import ContractController from '@/actions/App/Http/Controllers/ContractController';
 import { DeleteButton } from '@/components/delete-button';
@@ -55,6 +55,7 @@ export default function ShowContract({
     tracks,
     filters,
 }: Props) {
+    const { url } = usePage();
     const { apply } = useFilters(show.url(contract.id), filters);
     const releaseSorter = serverSorter(filters, apply, 'releases');
     const trackSorter = serverSorter(filters, apply, 'tracks');
@@ -81,7 +82,11 @@ export default function ShowContract({
             actions={
                 <>
                     <Button variant="outline" asChild>
-                        <Link href={edit(contract.id)}>
+                        <Link
+                            href={edit(contract.id, {
+                                query: { return_to: url },
+                            })}
+                        >
                             <Pencil />
                             Edit
                         </Link>

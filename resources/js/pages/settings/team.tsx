@@ -1,10 +1,10 @@
-import { Form, Head, usePage } from '@inertiajs/react';
+import { Form, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import TeamController from '@/actions/App/Http/Controllers/Settings/TeamController';
 import { DeleteButton } from '@/components/delete-button';
 import { Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
-import Heading from '@/components/heading';
+import { Page, Panel } from '@/components/page';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,18 +90,12 @@ export default function Team({
     const { auth, label } = usePage().props;
 
     return (
-        <>
-            <Head title="Team" />
-            <h1 className="sr-only">Team</h1>
-
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Team"
-                    description={`Who can sign in to ${label?.name ?? 'this label'}.`}
-                />
-
-                <ul className="divide-y rounded-lg border text-sm">
+        <Page
+            title="Team"
+            description={`Who can sign in to ${label?.name ?? 'this label'}.`}
+        >
+            <Panel flush>
+                <ul className="divide-y text-sm">
                     {members.map((member) => (
                         <li
                             key={member.id}
@@ -153,22 +147,20 @@ export default function Team({
                                 <DeleteButton
                                     url={TeamController.destroy.url(member.id)}
                                     confirmLabel="Remove access"
-                                    title={`Delete ${member.name}?`}
+                                    title={`Remove ${member.name} from ${label?.name ?? 'this label'}?`}
+                                    triggerLabel={`Remove ${member.name}`}
                                     description={`They are removed from this label and can no longer sign in to ${label?.name ?? 'this label'}. Their account and access to other labels stay.`}
                                 />
                             </span>
                         </li>
                     ))}
                 </ul>
-            </div>
+            </Panel>
 
-            <div className="mt-10 space-y-6">
-                <Heading
-                    variant="small"
-                    title="Add a person"
-                    description="Someone without an account gets one, plus an email that leads to signing in with a one-time code."
-                />
-
+            <Panel
+                title="Add a person"
+                description="Someone without an account gets one, plus an email that leads to signing in with a one-time code."
+            >
                 <Form
                     {...TeamController.store.form()}
                     options={{ preserveScroll: true }}
@@ -210,8 +202,8 @@ export default function Team({
                         </>
                     )}
                 </Form>
-            </div>
-        </>
+            </Panel>
+        </Page>
     );
 }
 

@@ -116,7 +116,7 @@ export default function Ppd({
     return (
         <Page
             title="PPD"
-            description="Calculate royalties based on PPD (Published Price to Dealer) rates and transaction quantities. Pick the paid dates, check the report, then create the transactions."
+            description="Calculate royalties based on PPD (Published Price to Dealer) rates and transaction units. Pick the paid dates, check the report, then book the transactions."
         >
             <Panel
                 title="How it is booked"
@@ -147,8 +147,8 @@ export default function Ppd({
                     </p>
                     <p>
                         {settings.ignore_negative_quantities
-                            ? 'Returns (negative quantities) are ignored.'
-                            : 'Returns (negative quantities) reduce the units.'}{' '}
+                            ? 'Returns (negative units) are ignored.'
+                            : 'Returns (negative units) reduce the units.'}{' '}
                         Change this in the{' '}
                         <Link href={labelSettings()} className="underline">
                             label settings
@@ -291,11 +291,11 @@ export default function Ppd({
                                 {report.without_quantity_count === 1
                                     ? 'transaction has'
                                     : 'transactions have'}{' '}
-                                no quantity and{' '}
+                                no units and{' '}
                                 {report.without_quantity_count === 1
                                     ? 'is'
                                     : 'are'}{' '}
-                                not counted. Enter the quantity to include{' '}
+                                not counted. Enter the units to include{' '}
                                 {report.without_quantity_count === 1
                                     ? 'it'
                                     : 'them'}
@@ -393,7 +393,7 @@ export default function Ppd({
                         {report.rows.length === 0 ? (
                             <EmptyState
                                 compact
-                                title="No income with a quantity was paid in this range on anything that has a PPD rate."
+                                title="No income with units was paid in this range on anything that has a PPD rate."
                             />
                         ) : (
                             <Table>

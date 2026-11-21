@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { FileSpreadsheet, Plus } from 'lucide-react';
 import { FilterBar } from '@/components/filter-bar';
 import { Amount } from '@/components/amount';
@@ -63,6 +63,7 @@ export default function Releases({
     filters: Filters;
     artistOptions: Option[];
 }) {
+    const { url } = usePage();
     const { apply } = useFilters(index.url(), filters);
     const sorter = serverSorter(filters, apply);
     const filtered =
@@ -84,7 +85,7 @@ export default function Releases({
                         </a>
                     </Button>
                     <Button asChild>
-                        <Link href={create()}>
+                        <Link href={create({ query: { return_to: url } })}>
                             <Plus />
                             New release
                         </Link>

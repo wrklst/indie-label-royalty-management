@@ -12,12 +12,15 @@ use Illuminate\Pagination\LengthAwarePaginator;
  * own page parameter (`costs_page`, `files_page`) is kept apart.
  *
  * @template TKey of array-key
- * @template-covariant TValue
+ * @template TValue
  *
  * @extends LengthAwarePaginator<TKey, TValue>
  */
 class ClampedPaginator extends LengthAwarePaginator
 {
+    /**
+     * @param  array<string, mixed>  $options
+     */
     public function __construct($items, $total, $perPage, $currentPage = null, array $options = [])
     {
         parent::__construct($items, $total, $perPage, $currentPage, $options);

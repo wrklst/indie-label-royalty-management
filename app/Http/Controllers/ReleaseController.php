@@ -17,14 +17,11 @@ use App\Models\Transaction;
 use App\Services\Imports\Identifiers;
 use App\Services\Releases\ArtistCredits;
 use App\Services\Releases\PlayableAudio;
-use App\Services\Releases\ZebralutionGenres;
 use App\Services\Reports\IncomeReport;
-use App\Support\CurrentLabel;
 use App\Support\Filters;
 use App\Support\Options;
 use App\Support\PageSize;
 use App\Support\ReturnTo;
-use App\Support\Services;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -56,7 +53,13 @@ class ReleaseController extends Controller
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('catalog_number', 'like', "%{$search}%")
                 ->orWhere('upc', 'like', "%{$search}%")))
-            ->when($request->integer('artist'), fn ($query, int $artist) => $query->where('artist_id', $artist))
+            // An artist is on a release in any role: as its main or credited artist, or on one of its tracks, as the Artists list counts it.
+            ->when($request->integer('artist'), fn ($query, int $artist) => $query->where(fn ($query) => $query
+                ->where('releases.artist_id', $artist)
+                ->orWhereExists(fn ($query) => $query->from('artist_release')->whereColumn('artist_release.release_id', 'releases.id')->where('artist_release.artist_id', $artist))
+                ->orWhereExists(fn ($query) => $query->from('tracks')->whereColumn('tracks.release_id', 'releases.id')->where(fn ($query) => $query
+                    ->where('tracks.artist_id', $artist)
+                    ->orWhereExists(fn ($query) => $query->from('artist_track')->whereColumn('artist_track.track_id', 'tracks.id')->where('artist_track.artist_id', $artist))))))
             ->when($request->boolean('without_contract'), fn ($query) => $query->whereNull('contract_id'))
             ->when(ReleaseStatus::tryFrom(Filters::text($request, 'status')), fn ($query, ReleaseStatus $status) => $query->where('status', $status))
             ->tap($sorting)
@@ -188,6 +191,7 @@ class ReleaseController extends Controller
             'report' => IncomeReport::of(Transaction::query()->where('release_id', $release->id)),
             'movers' => IncomeReport::movers(Transaction::query()->where('release_id', $release->id), 'track_id', 30),
             'platformLinks' => PlatformLinkController::props($release),
+            'genreOptions' => Options::genres(),
             'artistOptions' => Options::artists(),
             'contractOptions' => Options::contracts(),
             'fileKinds' => array_map(fn (ReleaseFileKind $kind): array => ['value' => $kind->value, 'label' => $kind->label()], ReleaseFileKind::cases()),
@@ -314,7 +318,7 @@ class ReleaseController extends Controller
             'statusOptions' => array_map(fn (ReleaseStatus $status): array => ['value' => $status->value, 'label' => $status->label()], ReleaseStatus::cases()),
             'typeOptions' => array_map(fn (ReleaseType $type): array => ['value' => $type->value, 'label' => $type->label()], ReleaseType::cases()),
             // The genres a distributor takes are suggested; without one the field is free text.
-            'genreOptions' => app(CurrentLabel::class)->get()?->usesService(Services::ZEBRALUTION) ? ZebralutionGenres::names() : [],
+            'genreOptions' => Options::genres(),
             'roleOptions' => array_map(fn (ArtistRole $role): array => ['value' => $role->value, 'label' => $role->label()], ArtistRole::cases()),
         ];
     }

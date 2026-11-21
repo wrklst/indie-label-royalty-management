@@ -41,7 +41,7 @@ A split is a percentage of **net income**: income minus the recoupable expenses 
     - **Payee**,
     - **Split %**, a number above 0 and up to 100, with up to seven decimals,
     - **Ledger**, left on **Primary ledger** unless the balance must be kept apart,
-    - **Territory**, left on **World** unless the split only applies in some countries.
+    - **Territory**, left on **Worldwide** unless the split only applies in some countries.
 4. Choose **Create contract**. You land on the page of the new contract.
 
 The form shows the sum as you type, for example "Payees get 60% worldwide, the label keeps 40%." A contract whose splits add up to more than 100% is refused. A contract without splits is allowed: the label keeps everything booked on it.

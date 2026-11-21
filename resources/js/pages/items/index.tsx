@@ -350,16 +350,19 @@ export default function Items({
                                                         />
                                                     )}
                                                 </FormDialog>
-                                                {item.transactions_count ===
-                                                    0 && (
-                                                    <DeleteButton
-                                                        url={ItemController.destroy.url(
-                                                            item.id,
-                                                        )}
-                                                        title={`Delete ${item.name}?`}
-                                                        description="The item has no transactions and can be removed safely."
-                                                    />
-                                                )}
+                                                <DeleteButton
+                                                    url={ItemController.destroy.url(
+                                                        item.id,
+                                                    )}
+                                                    title={`Delete ${item.name}?`}
+                                                    blocked={
+                                                        item.transactions_count >
+                                                        0
+                                                            ? `This item has ${plural(item.transactions_count, 'transaction')}. Delete or reassign them first.`
+                                                            : null
+                                                    }
+                                                    description="The item has no transactions and can be removed safely."
+                                                />
                                             </div>
                                         )}
                                     </TableCell>

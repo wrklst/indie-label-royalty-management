@@ -68,7 +68,7 @@ class TeamController extends Controller
         }
 
         $label->users()->attach($user, $this->pivot($request));
-        $user->notify(new LabelInvitation($label));
+        $user->notify(new LabelInvitation($label, LabelRole::from($request->validated('role'))));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __(':name was added to the label.', ['name' => $user->name])]);
 

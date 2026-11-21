@@ -69,7 +69,7 @@ test('an artist page lists the releases and tracks credited to the artist', func
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('artists/show')
-            ->where('artist', ['id' => $artist->id, 'name' => 'Example Artist', 'alias_of' => null, 'aliases' => []])
+            ->where('artist', ['id' => $artist->id, 'name' => 'Example Artist', 'alias_of_id' => null, 'spotify_id' => null, 'discogs_search_name' => null, 'notes' => null, 'alias_of' => null, 'aliases' => []])
             ->has('releases.data', 1)
             ->where('releases.data.0.id', $release->id)
             ->has('tracks.data', 1)
@@ -257,4 +257,18 @@ test('the track page names the main artist first and then the further credits', 
             ['id' => $main->id, 'name' => 'Example Artist'],
             ['id' => $guest->id, 'name' => 'Guest Artist'],
         ]));
+});
+
+test('the releases count of the artists list opens a releases list with exactly that many releases', function () {
+    $label = Label::factory()->create();
+    $artist = Artist::factory()->create(['label_id' => $label->id]);
+    $own = Release::factory()->create(['label_id' => $label->id, 'artist_id' => $artist->id]);
+    $viaTrack = Release::factory()->create(['label_id' => $label->id]);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $viaTrack->id, 'artist_id' => $artist->id]);
+    Release::factory()->create(['label_id' => $label->id]);
+    $admin = labelAdmin($label);
+
+    $this->actingAs($admin)->get(route('artists.index'))->assertInertia(fn (Assert $page) => $page->where('artists.data.0.releases_count', 2));
+    $this->actingAs($admin)->get(route('releases.index', ['artist' => $artist->id]))->assertInertia(fn (Assert $page) => $page
+        ->where('releases.total', 2)->where('releases.data', fn ($rows) => collect($rows)->pluck('id')->sort()->values()->all() === collect([$own->id, $viaTrack->id])->sort()->values()->all()));
 });

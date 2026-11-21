@@ -33,7 +33,7 @@ export function LabelImageUpload({
                 {current && (
                     <DeleteButton
                         url={LabelBrandingController.destroy.url(kind)}
-                        title={`Delete the ${kind}?`}
+                        title={`Delete ${kind}?`}
                         description="The image is deleted. You can upload another one."
                     />
                 )}

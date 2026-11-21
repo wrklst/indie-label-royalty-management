@@ -28,6 +28,7 @@ type DataImport = {
     id: number;
     name: string;
     importer_name: string;
+    tags: string[] | null;
     original_filename: string | null;
     status: 'pending' | 'imported' | 'review' | 'failed' | 'deleted';
     rows_count: number;
@@ -109,7 +110,7 @@ export default function DataImports({
             <FilterBar
                 url={index.url()}
                 filters={filters}
-                search="Search name or file name…"
+                search="Search name, file name or tag…"
                 selects={[
                     {
                         name: 'source',
@@ -229,6 +230,20 @@ export default function DataImports({
                                         {dataImport.original_filename && (
                                             <span className="block truncate text-xs text-muted-foreground">
                                                 {dataImport.original_filename}
+                                            </span>
+                                        )}
+                                        {(dataImport.tags ?? []).length > 0 && (
+                                            <span className="mt-1 flex flex-wrap gap-1">
+                                                {(dataImport.tags ?? []).map(
+                                                    (tag) => (
+                                                        <Badge
+                                                            key={tag}
+                                                            variant="outline"
+                                                        >
+                                                            {tag}
+                                                        </Badge>
+                                                    ),
+                                                )}
                                             </span>
                                         )}
                                     </TableCell>

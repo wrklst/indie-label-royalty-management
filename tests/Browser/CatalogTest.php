@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Artist;
 use App\Models\Contract;
 use App\Models\ContractSplit;
 use App\Models\Label;
@@ -134,4 +135,37 @@ test('switching labels in the sidebar changes the data shown', function () {
         ->assertPathIs('/dashboard')
         ->navigate('/releases')
         ->assertSee('Only On Second');
+});
+
+test('the track dialog on the list loads the lyrics when it opens and saves them with the track', function () {
+    $label = Label::factory()->create();
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track', 'lyrics' => 'Example lyrics line']);
+    $this->actingAs(labelAdmin($label));
+
+    visit('/tracks')
+        ->click('[aria-label="Edit Example Track"]')
+        ->assertValue('#lyrics', 'Example lyrics line')
+        ->press('Save track')
+        ->assertSee('Track saved.')
+        ->assertNoJavaScriptErrors();
+
+    expect($track->refresh()->lyrics)->toBe('Example lyrics line');
+});
+
+test('an artist page has Edit and Delete in its header, and deleting returns to the list', function () {
+    $label = Label::factory()->create();
+    $artist = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
+    $this->actingAs(labelAdmin($label));
+
+    visit("/artists/{$artist->id}")
+        ->press('Edit')
+        ->fill('name', 'Example Artist Renamed')
+        ->press('Save')
+        ->assertSee('Artist saved.')
+        ->assertSee('Example Artist Renamed')
+        ->press('Delete')
+        ->click('[role="dialog"] button:has-text("Delete")')
+        ->assertPathIs('/artists')
+        ->assertNoJavaScriptErrors();
 });

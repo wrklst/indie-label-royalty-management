@@ -220,8 +220,8 @@ class LabelCostController extends Controller
         $booked = $this->booker->bookDue($this->label());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $booked > 0
-            ? trans_choice('Recurring cost added and :count past payment booked.|Recurring cost added and :count past payments booked.', $booked)
-            : __('Recurring cost added. It is booked on each due date.')]);
+            ? trans_choice('Recurring cost created and :count past payment booked.|Recurring cost created and :count past payments booked.', $booked)
+            : __('Recurring cost created. It is booked on each due date.')]);
 
         return back();
     }

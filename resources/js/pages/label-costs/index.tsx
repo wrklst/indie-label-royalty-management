@@ -261,7 +261,9 @@ function ReceiptUpload({ receiptReading }: { receiptReading: boolean }) {
         <div data-receipt-upload className="grid gap-2">
             {receiptReading && (
                 <fieldset className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
-                    <legend className="sr-only">What happens to an upload</legend>
+                    <legend className="sr-only">
+                        What happens to an upload
+                    </legend>
                     <label className="flex items-center gap-2">
                         <input
                             type="radio"

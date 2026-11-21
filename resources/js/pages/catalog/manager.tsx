@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import CatalogController from '@/actions/App/Http/Controllers/CatalogController';
 import { SelectInput } from '@/components/field';
 import { FilterBar } from '@/components/filter-bar';
@@ -52,6 +52,7 @@ export default function CatalogManager({
     hasReleases: boolean;
     contractOptions: Option[];
 }) {
+    const { url } = usePage();
     const contractName = (id: number | null) =>
         contractOptions.find((option) => option.id === id)?.name;
 
@@ -61,7 +62,9 @@ export default function CatalogManager({
             description="Assign contracts across the whole catalog in one place. A track uses its own contract if it has one, otherwise the contract of its release. Changes save immediately."
             actions={
                 <Button variant="outline" asChild>
-                    <Link href={createContract()}>New contract</Link>
+                    <Link href={createContract({ query: { return_to: url } })}>
+                        New contract
+                    </Link>
                 </Button>
             }
         >

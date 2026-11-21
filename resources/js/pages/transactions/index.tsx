@@ -395,6 +395,11 @@ export default function Transactions({
                                                     </span>
                                                 )}
                                             </span>
+                                        ) : transaction.type === 'expense' &&
+                                          !transaction.recoupable ? (
+                                            <Badge variant="outline">
+                                                Overhead
+                                            </Badge>
                                         ) : (
                                             <Badge variant="destructive">
                                                 Unassigned

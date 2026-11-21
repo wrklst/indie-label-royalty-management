@@ -1,7 +1,6 @@
 import { Link, setLayoutProps, useForm } from '@inertiajs/react';
 import { Plus, X } from 'lucide-react';
 import ContractController from '@/actions/App/Http/Controllers/ContractController';
-import { DeleteButton } from '@/components/delete-button';
 import { Field, SelectInput } from '@/components/field';
 import InputError from '@/components/input-error';
 import { Page, Panel } from '@/components/page';
@@ -115,16 +114,6 @@ export default function ContractForm({
         <Page
             title={contract ? `Edit ${contract.name}` : 'New contract'}
             description="Splits are percentages of net income: income minus the expenses booked on the same release or track."
-            actions={
-                contract && (
-                    <DeleteButton
-                        url={ContractController.destroy.url(contract.id)}
-                        label="Delete"
-                        title={`Delete ${contract.name}?`}
-                        description="Releases and tracks using this contract fall back to the next contract up the chain, or to no contract at all. Past statements keep their figures."
-                    />
-                )
-            }
         >
             <form onSubmit={submit} className="grid max-w-4xl gap-6">
                 <Panel>
@@ -278,7 +267,7 @@ export default function ContractForm({
                                             })
                                         }
                                         options={territoryOptions}
-                                        placeholder="World"
+                                        placeholder="Worldwide"
                                     />
                                     <Button
                                         type="button"

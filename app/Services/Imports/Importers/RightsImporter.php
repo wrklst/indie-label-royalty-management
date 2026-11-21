@@ -22,7 +22,7 @@ class RightsImporter extends TemplateImporter
 
     public function description(): string
     {
-        return 'Neighbouring rights income such as Rightz Audio, in the template layout. Category "Rights", format "Neighboring Rights" and the retailer are filled in for you.';
+        return 'Neighbouring rights income such as Rightz Audio, in the template layout. Category "Rights", format "Neighboring Rights" and the platform are filled in for you.';
     }
 
     public function requiresPaidDate(): bool

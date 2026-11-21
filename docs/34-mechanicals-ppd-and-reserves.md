@@ -22,7 +22,7 @@ Each tool you switch on adds an entry under **Accounting** in the sidebar and it
 | -------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
 | **Include physical sales**                   | Mechanicals        | Counts sold physical copies as units, next to downloads. Leave it off when you enter manufacturing runs instead.                     |
 | **Statutory rate conversion: 1 USD = ? EUR** | Mechanicals        | What one US dollar is worth in your label currency. Needed for tracks without their own rate when the label does not account in USD. |
-| **Ignore negative quantities**               | Mechanicals or PPD | Off (default): returns reduce the units. On: lines with a negative quantity count as zero.                                           |
+| **Ignore negative units**                    | Mechanicals or PPD | Off (default): returns reduce the units. On: lines with a negative quantity count as zero.                                           |
 
 ## Running a tool
 
@@ -202,7 +202,7 @@ The run calculates 400 × 25% = 100. You hold it on 31 March 2026 and liquidate 
 - A track with neither a duration nor a custom rate cannot be calculated, and neither can a statutory-rate track while the label has no USD conversion and does not account in USD. Both are listed in the mechanicals report.
 - A manufacturing run entered for a release on which no track accounts mechanicals adds nothing; the report names the release.
 - Mechanicals and PPD transactions carry the sale date and paid date you choose for the run, not the dates of the underlying sales.
-- **Ignore negative quantities** does not apply to reserves: returns always lower the reserve.
+- **Ignore negative units** does not apply to reserves: returns always lower the reserve.
 - Reserves are not liquidated automatically after a number of periods. You choose both dates when you run the tool, and both lines are booked at once.
 - Only the US statutory rates are included, and no Harry Fox Agency file is produced.
 - Rates are read when the tool runs. Changing a rate afterwards does not change transactions already created; delete the run and run it again.

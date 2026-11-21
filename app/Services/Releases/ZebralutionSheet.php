@@ -114,7 +114,7 @@ class ZebralutionSheet
 
             foreach ([
                 "{$name} has no ISRC." => Identifiers::isrc($track->isrc) === null,
-                "{$name} has no duration." => $track->duration === null || $track->duration < 1,
+                "{$name} has no length." => $track->duration === null || $track->duration < 1,
                 "{$name} does not say whether its ".implode(', ', $undeclared).($undeclared === [] ? '' : (count($undeclared) > 1 ? ' are' : ' is')).' AI-generated.' => $undeclared !== [],
                 "“{$track->genre}”, the genre of {$name}, is not one of Zebralution's genres." => filled($track->genre) && ZebralutionGenres::code($track->genre) === null,
                 "{$name} has no lyricist. Enter one, or set its language to zxx if it is instrumental." => ($track->credits['lyricists'] ?? []) === [] && $this->language($release, $track) !== self::INSTRUMENTAL,

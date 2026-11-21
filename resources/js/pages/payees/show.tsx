@@ -92,7 +92,7 @@ const SPLIT_COLUMNS = {
     contract: (row: Props['splits'][number]) => row.contract,
     split_amount: (row: Props['splits'][number]) => row.split_amount,
     ledger: (row: Props['splits'][number]) => row.ledger ?? 'Primary',
-    territory: (row: Props['splits'][number]) => row.territory ?? 'World',
+    territory: (row: Props['splits'][number]) => row.territory ?? 'Worldwide',
     used_by: (row: Props['splits'][number]) => row.used_by.join(', '),
 };
 
@@ -374,7 +374,7 @@ export default function ShowPayee({
                                         {split.ledger ?? 'Primary'}
                                     </TableCell>
                                     <TableCell>
-                                        {split.territory ?? 'World'}
+                                        {split.territory ?? 'Worldwide'}
                                     </TableCell>
                                     <TableCell className="max-w-md truncate text-muted-foreground">
                                         {split.used_by_links.length === 0
@@ -610,7 +610,7 @@ export default function ShowPayee({
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            {transfer.ledger ?? 'From contract'}
+                                            {transfer.ledger ?? 'Automatic'}
                                         </TableCell>
                                         <TableCell className="max-w-sm truncate text-muted-foreground">
                                             {transfer.memo}

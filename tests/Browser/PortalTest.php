@@ -1,6 +1,9 @@
 <?php
 
 use App\Enums\LabelRole;
+use App\Models\Label;
+use App\Models\Payee;
+use App\Models\Statement;
 use App\Models\User;
 use App\Notifications\LoginCodeNotification;
 use App\Services\Royalties\PayoutService;
@@ -60,5 +63,45 @@ test('a payee with nothing published is told what will appear', function () {
         ->assertSee('Nothing published yet')
         ->assertSee('As soon as this label publishes your first statement')
         ->assertDontSee('€50.00')
+        ->assertNoJavaScriptErrors();
+});
+
+test('someone who runs a label and is a payee elsewhere sees both sections on My statements, and a titled sidebar group for it', function () {
+    $mine = Label::factory()->create(['name' => 'Example Own Label']);
+    $payee = Payee::factory()->create(['label_id' => $mine->id, 'name' => 'Example Payee One']);
+    Statement::factory()->create(['label_id' => $mine->id, 'payee_id' => $payee->id, 'published_at' => now()]);
+    $other = Label::factory()->create(['name' => 'Example Other Label']);
+    $otherPayee = Payee::factory()->create(['label_id' => $other->id]);
+    Statement::factory()->create(['label_id' => $other->id, 'payee_id' => $otherPayee->id, 'published_at' => now()]);
+    $user = labelAdmin($mine);
+    $other->users()->attach($user, ['role' => LabelRole::Payee->value, 'payee_id' => $otherPayee->id]);
+    $this->actingAs($user);
+
+    visit('/my-statements')
+        ->assertSee('Your statements as a payee')
+        ->assertSee('Example Other Label')
+        ->assertSee('What the payees of Example Own Label see')
+        ->assertSee('Example Payee One')
+        ->assertSee('As a payee')
+        ->assertNoJavaScriptErrors();
+});
+
+test('a new operator with no label yet is not headed as a payee', function () {
+    $this->actingAs(User::factory()->create(['may_create_labels' => true]));
+
+    visit('/labels/create')
+        ->assertSee('Set up your label')
+        ->assertSee('No label yet')
+        ->assertDontSee('Payee')
+        ->assertNoJavaScriptErrors();
+});
+
+test('someone removed from their last label is told so and can sign out', function () {
+    $this->actingAs(User::factory()->create(['may_create_labels' => false]));
+
+    visit('/labels/create')
+        ->assertSee('You are not in a label')
+        ->assertSee('Settings → Team')
+        ->assertPresent('button:has-text("Log out")')
         ->assertNoJavaScriptErrors();
 });

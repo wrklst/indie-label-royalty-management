@@ -324,7 +324,7 @@ export default function ShowDataImport({
                         <Stat
                             label="Skipped"
                             value={count(dataImport.duplicates_count + skipped)}
-                            hint={`${count(dataImport.duplicates_count)} already imported, ${count(skipped)} not sales`}
+                            hint={`${count(dataImport.duplicates_count)} already imported, ${count(skipped)} left out (payouts, lines without an amount, or kinds of sale switched off)`}
                         />
                         <Stat
                             label="Added to catalog"

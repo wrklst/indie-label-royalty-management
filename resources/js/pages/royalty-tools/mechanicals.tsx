@@ -164,7 +164,7 @@ export default function Mechanicals({
     return (
         <Page
             title="Mechanicals"
-            description="Calculate mechanical royalties owed to songwriters for digital downloads and physical manufacturing or sales. Nothing is calculated on its own: pick the paid dates, check the report, then create the transactions."
+            description="Calculate mechanical royalties owed to songwriters for digital downloads and physical manufacturing or sales. Nothing is calculated on its own: pick the paid dates, check the report, then book the transactions."
         >
             <Panel
                 title="How it is booked"
@@ -211,7 +211,7 @@ export default function Mechanicals({
 
             <Panel
                 title="Rates and tracks"
-                description="Switch releases or single tracks on and give them their own rate per unit. Without one, the statutory rate for the track’s duration is used."
+                description="Switch releases or single tracks on and give them their own rate per unit. Without one, the statutory rate for the track’s length is used."
             >
                 <div className="flex flex-wrap items-end gap-3">
                     <Field
@@ -409,7 +409,7 @@ export default function Mechanicals({
                             {report.without_quantity === 1
                                 ? 'transaction has'
                                 : 'transactions have'}{' '}
-                            no quantity and{' '}
+                            no units and{' '}
                             {report.without_quantity === 1 ? 'is' : 'are'} not
                             counted.
                         </Notice>

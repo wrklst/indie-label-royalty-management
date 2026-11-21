@@ -1,5 +1,11 @@
 import { setLayoutProps } from '@inertiajs/react';
+import { Pencil } from 'lucide-react';
+import ArtistController from '@/actions/App/Http/Controllers/ArtistController';
 import { Amount } from '@/components/amount';
+import { ArtistFields } from '@/components/artist-fields';
+import type { EditableArtist } from '@/components/artist-fields';
+import { DeleteButton } from '@/components/delete-button';
+import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
 import { Pagination } from '@/components/pagination';
 import { SortableHead } from '@/components/sortable-head';
@@ -9,6 +15,7 @@ import { RecordLink } from '@/components/record-link';
 import { IncomeReport, MoversPanel } from '@/components/income-report';
 import type { Movers, Report } from '@/components/income-report';
 import { SegmentedBar } from '@/components/segmented-bar';
+import { Button } from '@/components/ui/button';
 import {
     Table,
     TableBody,
@@ -21,12 +28,11 @@ import { useFilters } from '@/hooks/use-filters';
 import { serverSorter } from '@/hooks/use-table-sort';
 import { count, date, percent, plural } from '@/lib/format';
 import { index, show } from '@/routes/artists';
-import type { Paginated } from '@/types';
+import type { Option, Paginated } from '@/types';
 
 type Props = {
-    artist: {
-        id: number;
-        name: string;
+    artistOptions: Option[];
+    artist: EditableArtist & {
         alias_of: { id: number; name: string } | null;
         aliases: { id: number; name: string }[];
     };
@@ -70,6 +76,7 @@ type Props = {
 
 export default function ShowArtist({
     artist,
+    artistOptions,
     totals,
     incomeByRelease,
     releases,
@@ -94,6 +101,34 @@ export default function ShowArtist({
         <Page
             title={artist.name}
             description={`${plural(releases.total, 'release')}, ${plural(tracks.total, 'track')}.`}
+            actions={
+                <>
+                    <FormDialog
+                        title={`Edit ${artist.name}`}
+                        form={ArtistController.update.form(artist.id)}
+                        trigger={
+                            <Button variant="outline">
+                                <Pencil />
+                                Edit
+                            </Button>
+                        }
+                    >
+                        {(errors) => (
+                            <ArtistFields
+                                artist={artist}
+                                options={artistOptions}
+                                errors={errors}
+                            />
+                        )}
+                    </FormDialog>
+                    <DeleteButton
+                        url={ArtistController.destroy.url(artist.id)}
+                        label="Delete"
+                        title={`Delete ${artist.name}?`}
+                        description="Releases and tracks of this artist stay in the catalog but lose their artist."
+                    />
+                </>
+            }
         >
             {(artist.alias_of || artist.aliases.length > 0) && (
                 <p className="text-sm text-muted-foreground">

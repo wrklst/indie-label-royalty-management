@@ -186,7 +186,7 @@ export default function Rates({
             title={`${isMechanicals ? 'Mechanicals' : 'PPD'} rates: ${release.name}`}
             description={
                 isMechanicals
-                    ? `A rate is an amount in ${currency} per unit and per track. A track uses its own rate, else the release rate, else the statutory rate for its duration. A track that follows the release accounts mechanicals when the release does.`
+                    ? `A rate is an amount in ${currency} per unit and per track. A track uses its own rate, else the release rate, else the statutory rate for its length. A track that follows the release accounts mechanicals when the release does.`
                     : `A rate is an amount in ${currency} per unit sold. An item uses its own rate, else the rate of its track, else the release rate. Anything without a rate takes no part in PPD.`
             }
         >

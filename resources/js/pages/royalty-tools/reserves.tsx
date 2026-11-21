@@ -28,7 +28,6 @@ import type { SortDirection } from '@/hooks/use-table-sort';
 import { today } from '@/lib/format';
 import type { Paginated } from '@/types';
 import { index as items } from '@/routes/items';
-import { edit as editRelease } from '@/routes/releases';
 import { index } from '@/routes/royalty-tools/reserves';
 
 type Row = {
@@ -102,7 +101,7 @@ export default function Reserves({
     return (
         <Page
             title="Reserves"
-            description="Hold a percentage of income for custom periods of time to account for returns etc. Pick the paid dates, check the report, then create the transactions."
+            description="Hold a percentage of income for custom periods of time to account for returns etc. Pick the paid dates, check the report, then book the transactions."
         >
             <Panel
                 title="How it is booked"
@@ -292,14 +291,12 @@ export default function Reserves({
                                     {rowRows.map((row) => (
                                         <TableRow key={row.release_id}>
                                             <TableCell className="font-medium">
-                                                <Link
-                                                    href={editRelease(
-                                                        row.release_id,
-                                                    )}
-                                                    className="hover:underline"
+                                                <RecordLink
+                                                    to="release"
+                                                    id={row.release_id}
                                                 >
                                                     {row.release_name}
-                                                </Link>
+                                                </RecordLink>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <Amount

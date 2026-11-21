@@ -31,7 +31,7 @@ Three optional tools. Each one adds an entry under **Accounting** in the sidebar
 | **PPD**         | none                                                                                                                                                                                                                    |
 | **Reserves**    | none                                                                                                                                                                                                                    |
 
-**Ignore negative quantities** applies to Mechanicals and PPD: by default returns reduce the units they are calculated on.
+**Ignore negative units** applies to Mechanicals and PPD: by default returns reduce the units they are calculated on.
 
 The tools are explained in [Mechanicals, PPD and reserves](34-mechanicals-ppd-and-reserves.md).
 

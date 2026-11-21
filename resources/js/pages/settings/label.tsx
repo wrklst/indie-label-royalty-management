@@ -182,7 +182,7 @@ export default function LabelSettings({
                                     withZero
                                     name="accounts_ppd"
                                     label="PPD"
-                                    hint="Calculate royalties based on PPD (Published Price to Dealer) rates and transaction quantities."
+                                    hint="Calculate royalties based on PPD (Published Price to Dealer) rates and transaction units."
                                     defaultChecked={settings.accounts_ppd}
                                     onChange={(event) =>
                                         setTools({
@@ -196,7 +196,7 @@ export default function LabelSettings({
                                         <CheckField
                                             withZero
                                             name="ignore_negative_quantities"
-                                            label="Ignore negative quantities"
+                                            label="Ignore negative units"
                                             hint="By default returns reduce the units mechanicals and PPD are calculated on."
                                             defaultChecked={
                                                 royaltyTools.ignore_negative_quantities

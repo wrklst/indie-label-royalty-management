@@ -30,7 +30,7 @@ final readonly class SyncResult
         }
 
         if ($this->linesWithErrors > 0) {
-            $summary .= ", {$this->linesWithErrors} lines with errors (see Imports)";
+            $summary .= ", {$this->linesWithErrors} lines with errors (see Data imports)";
         }
 
         $summary .= ". Sales are in up to {$this->syncedUntil->format('Y-m-d H:i')} UTC.";

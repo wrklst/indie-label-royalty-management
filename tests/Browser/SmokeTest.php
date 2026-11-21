@@ -33,7 +33,7 @@ test('a new user is led through creating their first label', function () {
         ->press('Create label')
         ->assertPathIs('/dashboard')
         ->assertSee('Example Records')
-        ->assertSee('Royalties · EUR')
+        ->assertSee('EUR')
         ->assertNoJavaScriptErrors();
 });
 

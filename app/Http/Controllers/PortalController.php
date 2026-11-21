@@ -63,8 +63,8 @@ class PortalController extends Controller
                 ...$sorting->toArray(),
             ];
             $preview = $this->adminStatements()->with(['period:id,name,starts_on,ends_on', 'payee:id,name'])
-                ->when($filters['period'], fn ($query, int $period) => $query->where('period_id', $period))
-                ->when($filters['payee'], fn ($query, int $payee) => $query->where('payee_id', $payee))
+                ->when($filters['period'], fn ($query) => $query->where('period_id', $filters['period']))
+                ->when($filters['payee'], fn ($query) => $query->where('payee_id', $filters['payee']))
                 ->tap($sorting)
                 ->paginate(PageSize::SECONDARY, pageName: 'statements_page')->withQueryString()
                 ->through(fn (Statement $statement): array => $this->row($statement));

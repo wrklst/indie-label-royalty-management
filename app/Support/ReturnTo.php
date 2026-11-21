@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /**
@@ -37,5 +38,16 @@ class ReturnTo
     public static function from(Request $request, string $fallback): string
     {
         return self::path($request->input('return_to')) ?? $fallback;
+    }
+
+    /**
+     * Where to go after a record was deleted: back to the page the request
+     * came from, unless that was the record's own page, which is gone.
+     */
+    public static function afterDelete(Request $request, string $recordUrl, string $list): RedirectResponse
+    {
+        $from = parse_url((string) $request->headers->get('referer'), PHP_URL_PATH);
+
+        return $from === parse_url($recordUrl, PHP_URL_PATH) ? redirect($list) : back();
     }
 }

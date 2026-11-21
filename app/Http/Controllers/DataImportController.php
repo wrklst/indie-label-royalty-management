@@ -55,7 +55,7 @@ class DataImportController extends Controller
             'imports' => DataImport::query()
                 ->with('user:id,name')
                 ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where(fn ($query) => $query
-                    ->where('name', 'like', "%{$search}%")->orWhere('original_filename', 'like', "%{$search}%")))
+                    ->where('name', 'like', "%{$search}%")->orWhere('original_filename', 'like', "%{$search}%")->orWhere('tags', 'like', "%{$search}%")))
                 ->when(Filters::text($request, 'source'), fn ($query, string $source) => $query->where('importer', $source))
                 ->when(ImportStatus::tryFrom(Filters::text($request, 'status')), fn ($query, ImportStatus $status) => $query->where('status', $status))
                 ->tap($sorting)

@@ -47,6 +47,7 @@ type Props = {
     };
     artistOptions: Option[];
     contractOptions: Option[];
+    genreOptions: string[];
     releaseOptions: Option[];
 };
 
@@ -55,6 +56,7 @@ export default function Tracks({
     filters,
     artistOptions,
     contractOptions,
+    genreOptions,
     releaseOptions,
 }: Props) {
     const { apply } = useFilters(index.url(), filters);
@@ -211,6 +213,7 @@ export default function Tracks({
                                                 contractOptions={
                                                     contractOptions
                                                 }
+                                                genreOptions={genreOptions}
                                                 inheritedContract={
                                                     track.inherited_contract
                                                 }

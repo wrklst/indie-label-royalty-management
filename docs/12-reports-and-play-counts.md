@@ -37,7 +37,7 @@ Statements name platforms in many ways. `Apple` and `Apple/iTunes` are one row, 
 
 **Where it was.** The twelve countries with the most income.
 
-**Releases that earned most** (dashboard and artist page) and **Tracks by income** (release page). Each row has a line of its last twelve months, the last three months held against the three before, its streams and what a stream paid. A row that earned nothing in the last three months is marked **quiet**.
+**Releases by income** (dashboard and artist page) and **Tracks by income** (release page). Each row has a line of its last twelve months, the last three months held against the three before, its streams and what a stream paid. A row that earned nothing in the last three months is marked **quiet**.
 
 ### Example
 

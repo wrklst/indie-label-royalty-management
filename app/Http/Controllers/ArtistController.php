@@ -18,6 +18,7 @@ use App\Support\Decimal;
 use App\Support\Filters;
 use App\Support\Options;
 use App\Support\PageSize;
+use App\Support\ReturnTo;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -126,8 +127,9 @@ class ArtistController extends Controller
         $trackPage = CollectionPage::of($trackRows, $request, ['name', 'release', 'isrc', 'airplays_count', 'income'], 'tracks');
 
         return Inertia::render('artists/show', [
+            'artistOptions' => Options::artists(),
             'artist' => [
-                ...$artist->only(['id', 'name']),
+                ...$artist->only(['id', 'name', 'alias_of_id', 'spotify_id', 'discogs_search_name', 'notes']),
                 'alias_of' => $artist->aliasOf?->only(['id', 'name']),
                 'aliases' => $artist->aliases()->orderBy('name')->get(['id', 'name'])->map->only(['id', 'name']),
             ],
@@ -174,12 +176,12 @@ class ArtistController extends Controller
         return back();
     }
 
-    public function destroy(Artist $artist): RedirectResponse
+    public function destroy(Request $request, Artist $artist): RedirectResponse
     {
         $artist->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Artist deleted.')]);
 
-        return back();
+        return ReturnTo::afterDelete($request, route('artists.show', $artist->id), route('artists.index'));
     }
 }

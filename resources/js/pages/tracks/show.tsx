@@ -3,7 +3,9 @@ import type { PlatformLinksProps } from '@/components/platform-links';
 import { Link, router, setLayoutProps } from '@inertiajs/react';
 import { ExternalLink, Pencil, Radar } from 'lucide-react';
 import AirplayResearchController from '@/actions/App/Http/Controllers/AirplayResearchController';
+import TrackController from '@/actions/App/Http/Controllers/TrackController';
 import { Amount } from '@/components/amount';
+import { DeleteButton } from '@/components/delete-button';
 import { IncomeReport } from '@/components/income-report';
 import type { Report } from '@/components/income-report';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
@@ -92,6 +94,7 @@ type Props = {
     searchAvailable: boolean;
     artistOptions: Option[];
     contractOptions: Option[];
+    genreOptions: string[];
 };
 
 function Fact({
@@ -125,6 +128,7 @@ export default function ShowTrack({
     platformLinks,
     artistOptions,
     contractOptions,
+    genreOptions,
 }: Props) {
     const title = track.version
         ? `${track.name} (${track.version})`
@@ -206,6 +210,7 @@ export default function ShowTrack({
                         track={track}
                         artistOptions={artistOptions}
                         contractOptions={contractOptions}
+                        genreOptions={genreOptions}
                         inheritedContract={track.inherited_contract}
                         trigger={
                             <Button variant="outline">
@@ -213,6 +218,12 @@ export default function ShowTrack({
                                 Edit
                             </Button>
                         }
+                    />
+                    <DeleteButton
+                        url={TrackController.destroy.url(track.id)}
+                        label="Delete"
+                        title={`Delete ${track.name}?`}
+                        description="Its transactions stay on the release but lose the track and any track-level contract."
                     />
                 </>
             }

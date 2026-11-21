@@ -185,7 +185,7 @@ test('the Zebralution ZIP is refused with everything Zebralution would send the 
             'The release has no genre.',
             "“Deep Space” is not one of Zebralution's genres. Pick one of the genres the field suggests.",
             'Track 1 “Opening” has no ISRC.',
-            'Track 1 “Opening” has no duration.',
+            'Track 1 “Opening” has no length.',
             'Track 1 “Opening” does not say whether its recording, lyrics are AI-generated.',
             "“Space Rock Opera”, the genre of Track 1 “Opening”, is not one of Zebralution's genres.",
             'Track 1 “Opening” has no lyricist. Enter one, or set its language to zxx if it is instrumental.',

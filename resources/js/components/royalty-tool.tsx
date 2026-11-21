@@ -260,7 +260,7 @@ export function RunsPanel({
                                             url={DataImportController.destroy.url(
                                                 run.id,
                                             )}
-                                            title={`Delete the run ${date(run.from)} – ${date(run.to)}?`}
+                                            title={`Delete run ${date(run.from)} – ${date(run.to)}?`}
                                             description={`The transactions it created (${count(run.transactions_count)}) are removed. Periods that included them change accordingly.`}
                                         />
                                     </TableCell>

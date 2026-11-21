@@ -22,6 +22,7 @@ use App\Services\Reports\IncomeReport;
 use App\Support\Filters;
 use App\Support\Options;
 use App\Support\PageSize;
+use App\Support\ReturnTo;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -101,6 +102,7 @@ class TrackController extends Controller
         return Inertia::render('tracks/index', [
             'tracks' => $tracks,
             'filters' => ['search' => Filters::text($request, 'search'), 'release' => $request->integer('release') ?: null, ...$sorting->toArray()],
+            'genreOptions' => Options::genres(),
             'artistOptions' => Options::artists(),
             'contractOptions' => Options::contracts(),
             'releaseOptions' => Options::releases(),
@@ -190,6 +192,7 @@ class TrackController extends Controller
                 ]),
             'searchAvailable' => $search->isConfigured(),
             'platformLinks' => PlatformLinkController::props($track),
+            'genreOptions' => Options::genres(),
             'artistOptions' => Options::artists(),
             'contractOptions' => Options::contracts(),
         ]);
@@ -214,12 +217,12 @@ class TrackController extends Controller
         return back();
     }
 
-    public function destroy(Track $track): RedirectResponse
+    public function destroy(Request $request, Track $track): RedirectResponse
     {
         $track->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Track deleted.')]);
 
-        return back();
+        return ReturnTo::afterDelete($request, route('tracks.show', $track->id), route('tracks.index'));
     }
 }

@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
+import { edit as editBandcamp } from '@/routes/bandcamp';
 import { edit as editConnections } from '@/routes/connections';
 import { edit as editLabel } from '@/routes/label-settings';
 import { edit } from '@/routes/profile';
@@ -85,7 +86,13 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                                 variant="ghost"
                                 asChild
                                 className={cn('w-full justify-start', {
-                                    'bg-muted': isCurrentOrParentUrl(item.href),
+                                    // The Bandcamp page is reached from its card on Connections.
+                                    'bg-muted':
+                                        isCurrentOrParentUrl(item.href) ||
+                                        (item.title === 'Connections' &&
+                                            isCurrentOrParentUrl(
+                                                editBandcamp(),
+                                            )),
                                 })}
                             >
                                 <Link href={item.href}>

@@ -3,10 +3,9 @@ import { Plus, X } from 'lucide-react';
 import ReleaseController from '@/actions/App/Http/Controllers/ReleaseController';
 import { ArtistCreditRows } from '@/components/artist-credit-rows';
 import type { ArtistCredit } from '@/components/artist-credit-rows';
-import { DeleteButton } from '@/components/delete-button';
 import { CheckField, Field, SelectInput } from '@/components/field';
 import InputError from '@/components/input-error';
-import { Page, Panel } from '@/components/page';
+import { Notice, Page, Panel } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -176,19 +175,7 @@ export default function ReleaseForm({
     });
 
     return (
-        <Page
-            title={release ? `Edit ${release.name}` : 'New release'}
-            actions={
-                release && (
-                    <DeleteButton
-                        url={ReleaseController.destroy.url(release.id)}
-                        label="Delete"
-                        title={`Delete ${release.name}?`}
-                        description="Deleted with the release: its tracks, its items that have no transactions, its platform links and all its files, which are also removed from storage. Its transactions are kept, with the items they were booked on, but become unassigned, so they stop earning for any payee."
-                    />
-                )
-            }
-        >
+        <Page title={release ? `Edit ${release.name}` : 'New release'}>
             <form onSubmit={submit} className="grid max-w-5xl gap-6">
                 <Panel title="Release">
                     <div className="grid gap-4 md:grid-cols-2">
@@ -850,11 +837,11 @@ export default function ReleaseForm({
                         </div>
                     )}
                     {removedExisting && (
-                        <p className="mt-3 text-sm text-amber-700 dark:text-amber-400">
+                        <Notice>
                             Saving deletes the removed tracks. Their
                             transactions stay on the release but lose the track
                             and any track-level contract.
-                        </p>
+                        </Notice>
                     )}
                 </Panel>
 

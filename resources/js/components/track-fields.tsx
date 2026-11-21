@@ -61,6 +61,7 @@ export function TrackFields({
     artistOptions,
     contractOptions,
     inheritedContract,
+    genreOptions = [],
     errors,
 }: {
     track: EditableTrack;
@@ -68,6 +69,8 @@ export function TrackFields({
     contractOptions: Option[];
     /** The contract the release gives the track while it has none of its own. */
     inheritedContract?: Option | null;
+    /** Genres to suggest: Zebralution's list while the label delivers there. */
+    genreOptions?: string[];
     errors: Record<string, string>;
 }) {
     const credit = (role: keyof TrackCredits) =>
@@ -270,9 +273,15 @@ export function TrackFields({
                     defaultValue={track.ai_lyrics ?? ''}
                 />
                 <Field label="Genre" htmlFor="genre" error={errors.genre}>
+                    <datalist id="track-genres">
+                        {genreOptions.map((genre) => (
+                            <option key={genre} value={genre} />
+                        ))}
+                    </datalist>
                     <Input
                         id="genre"
                         name="genre"
+                        list="track-genres"
                         defaultValue={track.genre ?? ''}
                         placeholder="Same as release"
                     />

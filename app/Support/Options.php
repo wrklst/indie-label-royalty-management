@@ -10,6 +10,7 @@ use App\Models\Period;
 use App\Models\Release;
 use App\Models\Territory;
 use App\Models\Track;
+use App\Services\Releases\ZebralutionGenres;
 
 /**
  * Select box options for the forms of the current label.
@@ -82,5 +83,15 @@ class Options
                 'name' => $track->isrc ? "{$track->name} ({$track->isrc})" : $track->name,
                 'release_id' => $track->release_id,
             ])->all();
+    }
+
+    /**
+     * The genres to suggest: Zebralution's list while the label delivers to Zebralution, otherwise none (any text goes).
+     *
+     * @return list<string>
+     */
+    public static function genres(): array
+    {
+        return app(CurrentLabel::class)->get()?->usesService(Services::ZEBRALUTION) ? ZebralutionGenres::names() : [];
     }
 }

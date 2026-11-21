@@ -44,9 +44,7 @@ export function LabelSwitcher() {
                                     {label?.name ?? name}
                                 </span>
                                 <span className="truncate text-xs text-muted-foreground">
-                                    {label
-                                        ? label.currency
-                                        : 'No label yet'}
+                                    {label ? label.currency : 'No label yet'}
                                 </span>
                             </div>
                             <ChevronsUpDown className="ml-auto size-4" />

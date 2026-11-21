@@ -70,6 +70,15 @@ test('the invitation names the label and links to the sign-in code page with the
         ->not->toContain('reset-password');
 });
 
+test('the invitation tells an admin what they can do, not that they can read their statements', function () {
+    $label = Label::factory()->create(['name' => 'Example Records']);
+    $user = User::factory()->create();
+
+    expect((string) (new LabelInvitation($label, LabelRole::Admin))->toMail($user)->render())
+        ->toContain('You can manage its catalog')->not->toContain('read your statements')
+        ->and((string) (new LabelInvitation($label))->toMail($user)->render())->toContain('You can read your statements and payouts there.');
+});
+
 test('the invitation escapes the label and user name', function () {
     $label = Label::factory()->create(['name' => 'Example <script>alert("label")</script>']);
     $user = User::factory()->create(['name' => 'Artist <img src=x onerror=alert(1)>']);

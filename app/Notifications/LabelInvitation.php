@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\LabelRole;
 use App\Models\Label;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
@@ -17,7 +18,7 @@ class LabelInvitation extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public readonly Label $label) {}
+    public function __construct(public readonly Label $label, public readonly LabelRole $role = LabelRole::Payee) {}
 
     /**
      * Get the notification's delivery channels.
@@ -37,7 +38,9 @@ class LabelInvitation extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject(__(':label gave you access to their royalty accounting', ['label' => $this->label->name]))
             ->greeting(__('Hello :name,', ['name' => self::plain($notifiable->name)]))
-            ->line(__(':label gave you access to their royalty accounting. You can read your statements and payouts there.', ['label' => self::plain($this->label->name)]))
+            ->line(__(':label gave you access to their royalty accounting.', ['label' => self::plain($this->label->name)]).' '.($this->role === LabelRole::Admin
+                ? __('You can manage its catalog, transactions, contracts and statements there.')
+                : __('You can read your statements and payouts there.')))
             ->action(__('Sign in'), route('login.code.create', ['email' => $notifiable->email]))
             ->line(__('You do not need a password: we email you a one-time code to sign in with.'));
     }

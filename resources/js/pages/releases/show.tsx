@@ -1,3 +1,5 @@
+import ReleaseController from '@/actions/App/Http/Controllers/ReleaseController';
+import { DeleteButton } from '@/components/delete-button';
 import { PlatformLinks } from '@/components/platform-links';
 import type { PlatformLinksProps } from '@/components/platform-links';
 import { Link, setLayoutProps, usePage } from '@inertiajs/react';
@@ -105,6 +107,7 @@ type Props = {
     movers: Movers;
     artistOptions: Option[];
     contractOptions: Option[];
+    genreOptions: string[];
     fileKinds: { value: string; label: string }[];
     maxUploadMegabytes: number;
 };
@@ -161,6 +164,7 @@ export default function ShowRelease({
     movers,
     artistOptions,
     contractOptions,
+    genreOptions,
     fileKinds,
     maxUploadMegabytes,
 }: Props) {
@@ -237,11 +241,21 @@ export default function ShowRelease({
                         </Link>
                     </Button>
                     <Button variant="outline" asChild>
-                        <Link href={edit(release.id)}>
+                        <Link
+                            href={edit(release.id, {
+                                query: { return_to: url },
+                            })}
+                        >
                             <Pencil />
                             Edit
                         </Link>
                     </Button>
+                    <DeleteButton
+                        url={ReleaseController.destroy.url(release.id)}
+                        label="Delete"
+                        title={`Delete ${release.name}?`}
+                        description="Deleted with the release: its tracks, its items that have no transactions, its platform links and all its files, which are also removed from storage. Its transactions are kept, with the items they were booked on, but become unassigned, so they stop earning for any payee."
+                    />
                 </>
             }
         >
@@ -461,6 +475,7 @@ export default function ShowRelease({
                                             track={track}
                                             artistOptions={artistOptions}
                                             contractOptions={contractOptions}
+                                            genreOptions={genreOptions}
                                         />
                                     </TableCell>
                                 </TableRow>

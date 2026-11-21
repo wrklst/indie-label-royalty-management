@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { FilterBar } from '@/components/filter-bar';
 import { SegmentedBar, partColours } from '@/components/segmented-bar';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
@@ -54,6 +54,7 @@ export default function Contracts({
         direction: SortDirection | null;
     };
 }) {
+    const { url } = usePage();
     const [hovered, setHovered] = useState<{
         contract: number;
         part: number;
@@ -67,7 +68,7 @@ export default function Contracts({
             description="A contract says who gets which share of the net income. Assign it to a release, or to a single track when that track has a different deal — a remix, for example. What is not split stays with the label."
             actions={
                 <Button asChild>
-                    <Link href={create()}>
+                    <Link href={create({ query: { return_to: url } })}>
                         <Plus />
                         New contract
                     </Link>
@@ -96,7 +97,11 @@ export default function Contracts({
                     action={
                         !filters.search && !filters.unused ? (
                             <Button asChild>
-                                <Link href={create()}>New contract</Link>
+                                <Link
+                                    href={create({ query: { return_to: url } })}
+                                >
+                                    New contract
+                                </Link>
                             </Button>
                         ) : undefined
                     }

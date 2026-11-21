@@ -26,7 +26,7 @@ test('the dashboard draws how income developed by platform and what a stream pai
         ->assertSee('Apple Music')
         ->assertSee('Counted by the platform')
         ->assertSee('6,600')
-        ->assertSee('Releases that earned most')
+        ->assertSee('Releases by income')
         ->assertPresent('[data-development="total"] [data-month="2026-03"]')
         ->assertPresent('[data-platform="spotify"] svg');
 

@@ -228,7 +228,7 @@ export function PlatformLinks({
                                     url={PlatformLinkController.destroy.url(
                                         link.id,
                                     )}
-                                    title={`Delete the ${link.platform_name} link?`}
+                                    title={`Delete ${link.platform_name} link?`}
                                     description="A link that was found is not found again after you remove it. You can still add it by hand."
                                 />
                             </div>

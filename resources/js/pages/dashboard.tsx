@@ -134,7 +134,7 @@ export default function Dashboard({
             <MoversPanel
                 movers={movers}
                 to="release"
-                title="Releases that earned most"
+                title="Releases by income"
             />
         </Page>
     );
