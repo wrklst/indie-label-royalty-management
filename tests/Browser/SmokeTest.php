@@ -114,6 +114,49 @@ test('a payee only gets the statement portal and can read a published statement'
         ->assertNoSmoke();
 });
 
+test('a payee of two labels sees their name, both labels and the statements of either without switching', function () {
+    $scenario = royaltyScenario();
+    app(StatementGenerator::class)->generate($scenario['period'])->sole()->update(['published_at' => now()]);
+    $quiet = Label::factory()->create(['name' => 'Example Quiet Label', 'currency' => 'USD']);
+    $quietPayee = Payee::factory()->create(['label_id' => $quiet->id]);
+    $user = User::factory()->create(['name' => 'Example Person', 'current_label_id' => $quiet->id]);
+    $quiet->users()->attach($user, ['role' => LabelRole::Payee->value, 'payee_id' => $quietPayee->id]);
+    $scenario['label']->users()->attach($user, ['role' => LabelRole::Payee->value, 'payee_id' => $scenario['payee']->id]);
+    $this->actingAs($user);
+
+    visit('/dashboard')
+        ->assertPathIs('/my-statements')
+        ->assertSeeIn('[data-payee-header]', 'Example Person')
+        ->assertDontSee('Dashboard')
+        ->assertSee($scenario['label']->name)
+        ->assertSee('Example Quiet Label')
+        ->assertSee('Nothing published yet')
+        ->click('2026 Q1')
+        ->assertSee('Example Payee – 2026 Q1')
+        ->assertSee('Download CSV')
+        ->assertNoSmoke();
+});
+
+test('someone who runs one label and is a payee of another keeps the label switcher and also has My statements', function () {
+    $scenario = royaltyScenario();
+    $other = Label::factory()->create(['name' => 'Example Other Label']);
+    $otherPayee = Payee::factory()->create(['label_id' => $other->id]);
+    Statement::factory()->create(['label_id' => $other->id, 'payee_id' => $otherPayee->id, 'name' => 'Other statement', 'published_at' => now()]);
+    $other->users()->attach($scenario['admin'], ['role' => LabelRole::Payee->value, 'payee_id' => $otherPayee->id]);
+    $this->actingAs($scenario['admin']);
+
+    visit('/dashboard')
+        ->assertPathIs('/dashboard')
+        ->assertSee($scenario['label']->name)
+        ->assertSee('Transactions')
+        ->click('a[href$="/my-statements"]')
+        ->assertPathIs('/my-statements')
+        ->assertSee('Example Other Label')
+        ->assertDontSee('Not linked')
+        ->assertSee('Transactions')
+        ->assertNoSmoke();
+});
+
 test('the settings opened from the profile list everything that belongs to the label', function () {
     $this->actingAs(labelAdmin(Label::factory()->create(['name' => 'Example Records'])));
 

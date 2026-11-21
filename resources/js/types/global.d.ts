@@ -14,6 +14,7 @@ declare module '@inertiajs/core' {
             auth: Auth;
             label: CurrentLabel | null;
             labels: { id: number; name: string }[];
+            isPayee: boolean;
             canCreateLabel: boolean;
             sidebarOpen: boolean;
             [key: string]: unknown;

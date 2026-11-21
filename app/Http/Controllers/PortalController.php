@@ -2,23 +2,27 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Settings\LabelBrandingController;
+use App\Models\Label;
 use App\Models\Payout;
 use App\Models\Period;
 use App\Models\Statement;
 use App\Support\CurrentLabel;
 use App\Support\Decimal;
+use App\Support\PayeeAccess;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
+use SortDirection;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * What a payee sees: their own published statements, an overview taken
- * from the latest of them and the payouts they received. Figures the
+ * What a payee sees: for every label they are a payee of, their own
+ * published statements, an overview taken from the latest of them and the
+ * payouts they received. Figures the
  * label has not published never reach this controller's responses.
  */
 class PortalController extends Controller
@@ -27,43 +31,86 @@ class PortalController extends Controller
 
     public function index(Request $request): Response
     {
-        $statementSorting = Sorting::for($request, [
-            'period' => Sorting::related(Period::class, 'period_id'),
-            'published_at' => 'published_at',
-            'balance' => 'balance',
-            'payable' => 'payable',
-        ], fn (Builder $query) => $query->latest('id'), 'statements');
-        $payoutSorting = Sorting::for($request, [
-            'paid_on' => 'paid_on',
-            'period' => Sorting::related(Period::class, 'period_id'),
-            'memo' => Sorting::nullsLast('memo'),
-            'total' => 'total',
-        ], fn (Builder $query) => $query->orderByDesc('paid_on')->orderByDesc('id'), 'payouts');
+        $access = new PayeeAccess($request->user());
+        $groups = $access->labels();
         $isAdmin = $this->currentLabel->isAdmin();
-        $payeeId = $isAdmin ? null : $this->currentLabel->payeeId();
+
+        $view = match (true) {
+            $groups->isNotEmpty() => 'payee',
+            $isAdmin && ! $access->isPayeeAnywhere() => 'admin',
+            default => 'unlinked',
+        };
+
+        if ($view === 'admin') {
+            $sorting = Sorting::for($request, [
+                'period' => Sorting::related(Period::class, 'period_id'),
+                'published_at' => 'published_at',
+                'balance' => 'balance',
+                'payable' => 'payable',
+            ], fn (Builder $query) => $query->latest('id'), 'statements');
+
+            return Inertia::render('portal/index', [
+                'view' => $view,
+                'groups' => [],
+                'statements' => $this->adminStatements()->with('period:id,name,starts_on,ends_on')->tap($sorting)
+                    ->paginate(25, pageName: 'statements_page')->withQueryString()
+                    ->through(fn (Statement $statement): array => $this->row($statement)),
+                'filters' => $sorting->toArray(),
+            ]);
+        }
+
+        $filters = [];
+        $payload = [];
+
+        foreach ($groups as $label) {
+            $statementSorting = Sorting::for($request, [
+                'period' => $access->periodOrder('period_id', 'name'),
+                'published_at' => 'published_at',
+                'balance' => 'balance',
+                'payable' => 'payable',
+            ], fn (Builder $query) => $query->orderByDesc('published_at')->orderByDesc('id'), "statements_{$label->id}");
+            $payoutSorting = Sorting::for($request, [
+                'paid_on' => 'paid_on',
+                'period' => $access->periodOrder('period_id', 'name'),
+                'memo' => Sorting::nullsLast('memo'),
+                'total' => 'total',
+            ], fn (Builder $query) => $query->orderByDesc('paid_on')->orderByDesc('id'), "payouts_{$label->id}");
+            $filters = [...$filters, ...$statementSorting->toArray(), ...$payoutSorting->toArray()];
+
+            $payload[] = [
+                'label' => [
+                    'id' => $label->id,
+                    'name' => $label->name,
+                    'currency' => $label->currency,
+                    'logo_url' => LabelBrandingController::url($label, 'logo'),
+                ],
+                'overview' => $this->overview($access, $label),
+                'payouts' => $access->payouts($label)->tap($payoutSorting)
+                    ->paginate(25, pageName: "payouts_{$label->id}_page")->withQueryString()
+                    ->through(fn (Payout $payout): array => [
+                        'id' => $payout->id,
+                        'paid_on' => $payout->paid_on->toDateString(),
+                        'period' => $payout->period?->name,
+                        'total' => $payout->total,
+                        'memo' => $payout->memo,
+                    ]),
+                'statements' => $access->statements($label)->tap($statementSorting)
+                    ->paginate(25, pageName: "statements_{$label->id}_page")->withQueryString()
+                    ->through(fn (Statement $statement): array => $this->row($statement)),
+            ];
+        }
 
         return Inertia::render('portal/index', [
-            'view' => match (true) {
-                $isAdmin => 'admin',
-                $payeeId === null => 'unlinked',
-                default => 'payee',
-            },
-            'overview' => $payeeId === null ? null : $this->overview($payeeId),
-            'payouts' => $this->payouts($payeeId ?? 0, $payoutSorting),
-            'statements' => $this->visible()->with('period:id,name,starts_on,ends_on')->tap($statementSorting)
-                ->paginate(25, pageName: 'statements_page')->withQueryString()
-                ->through(fn (Statement $statement): array => [
-                    ...$statement->only(['id', 'name', 'balance', 'payable']),
-                    'period' => $statement->period?->name,
-                    'published_at' => $statement->published_at?->toDateString(),
-                ]),
-            'filters' => [...$statementSorting->toArray(), ...$payoutSorting->toArray()],
+            'view' => $view,
+            'groups' => $payload,
+            'statements' => null,
+            'filters' => $filters,
         ]);
     }
 
-    public function show(int $statement): Response
+    public function show(Request $request, int $statement): Response
     {
-        $statement = $this->visible()->findOrFail($statement);
+        $statement = $this->find($request, $statement);
 
         return Inertia::render('statements/show', [
             'statement' => [
@@ -72,13 +119,54 @@ class PortalController extends Controller
                 'created_at' => $statement->created_at->toIso8601String(),
                 'data' => $statement->data,
             ],
+            'statementLabel' => $this->brand($statement->label_id),
             'portal' => true,
         ]);
     }
 
-    public function download(int $statement): StreamedResponse
+    public function download(Request $request, int $statement): StreamedResponse
     {
-        return StatementController::csv($this->visible()->findOrFail($statement));
+        return StatementController::csv($this->find($request, $statement));
+    }
+
+    /**
+     * A statement the user may read: their own in any label they are a
+     * payee of, or, for an admin, any published one of the label they
+     * work in. Anything else is not found, so nothing is revealed.
+     */
+    private function find(Request $request, int $id): Statement
+    {
+        $statement = (new PayeeAccess($request->user()))->statements()->find($id);
+
+        if ($statement === null && $this->currentLabel->isAdmin()) {
+            $statement = $this->adminStatements()->find($id);
+        }
+
+        return $statement ?? abort(404);
+    }
+
+    /**
+     * The label of a statement the user was just allowed to read.
+     *
+     * @return array{id: int, name: string, logo_url: string|null}
+     */
+    private function brand(int $labelId): array
+    {
+        $label = Label::query()->findOrFail($labelId);
+
+        return ['id' => $label->id, 'name' => $label->name, 'logo_url' => LabelBrandingController::url($label, 'logo')];
+    }
+
+    /**
+     * @return array{id: int, name: string, balance: string, payable: string, period: string|null, published_at: string|null}
+     */
+    private function row(Statement $statement): array
+    {
+        return [
+            ...$statement->only(['id', 'name', 'balance', 'payable']),
+            'period' => $statement->period?->name,
+            'published_at' => $statement->published_at?->toDateString(),
+        ];
     }
 
     /**
@@ -90,7 +178,7 @@ class PortalController extends Controller
      *     statement_id: int,
      *     period: string,
      *     published_at: string|null,
-     *     currency: string|null,
+     *     currency: string,
      *     owed: string,
      *     earned: string,
      *     paid: string,
@@ -98,12 +186,10 @@ class PortalController extends Controller
      *     ledgers: list<array{name: string, balance: string, unrecouped: bool}>
      * }|null
      */
-    private function overview(int $payeeId): ?array
+    private function overview(PayeeAccess $access, Label $label): ?array
     {
-        $statement = $this->visible()
-            ->where('payee_id', $payeeId)
-            ->with('period:id,name')
-            ->orderByDesc(Period::query()->select('ends_on')->whereColumn('periods.id', 'statements.period_id'))
+        $statement = $access->statements($label)
+            ->tap(fn (Builder $query) => $access->periodOrder('period_id', 'ends_on')($query, SortDirection::Descending))
             ->orderByDesc('id')
             ->first();
 
@@ -129,12 +215,11 @@ class PortalController extends Controller
             'statement_id' => $statement->id,
             'period' => (string) data_get($statement->data, 'period.name', $statement->period->name ?? $statement->name),
             'published_at' => $statement->published_at?->toDateString(),
-            'currency' => is_string($currency) ? $currency : null,
+            'currency' => is_string($currency) ? $currency : $label->currency,
             'owed' => (string) data_get($statement->data, 'totals.outstanding', $statement->payable),
             'earned' => (string) data_get($statement->data, 'totals.payee_share', '0'),
             'paid' => (string) data_get($statement->data, 'totals.total_paid', '0'),
-            'paid_since' => Decimal::add('0', (string) Payout::query()
-                ->where('payee_id', $payeeId)
+            'paid_since' => Decimal::add('0', (string) $access->payouts($label)
                 ->where('created_at', '>', $statement->created_at)
                 ->sum('total')),
             'ledgers' => $ledgers,
@@ -142,38 +227,12 @@ class PortalController extends Controller
     }
 
     /**
-     * Every payment the label recorded for the payee. Payouts are facts,
-     * so they show whether or not a statement mentions them yet.
+     * What the admin's portal view lists: published statements of the label they work in.
      *
-     * @return LengthAwarePaginator<int, array{id: int, paid_on: string, period: string|null, total: string, memo: string|null}>
-     */
-    private function payouts(int $payeeId, Sorting $sorting): LengthAwarePaginator
-    {
-        return Payout::query()
-            ->where('payee_id', $payeeId)
-            ->with('period:id,name')
-            ->tap($sorting)
-            ->paginate(25, pageName: 'payouts_page')->withQueryString()
-            ->through(fn (Payout $payout): array => [
-                'id' => $payout->id,
-                'paid_on' => $payout->paid_on->toDateString(),
-                'period' => $payout->period?->name,
-                'total' => $payout->total,
-                'memo' => $payout->memo,
-            ]);
-    }
-
-    /**
      * @return Builder<Statement>
      */
-    private function visible(): Builder
+    private function adminStatements(): Builder
     {
-        return Statement::query()
-            ->where('archived', false)
-            ->whereNotNull('published_at')
-            ->when(
-                ! $this->currentLabel->isAdmin(),
-                fn (Builder $query) => $query->where('payee_id', $this->currentLabel->payeeId() ?? 0),
-            );
+        return Statement::query()->where('archived', false)->whereNotNull('published_at');
     }
 }

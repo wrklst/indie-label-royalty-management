@@ -132,7 +132,7 @@ Generating again creates a new revision instead of changing the old statement:
 
 ## Publishing and downloading
 
-Open a statement and choose **Publish to payee**. From then on the payee sees it under **My statements**, see [Team, roles and sign-in](40-team-roles-and-sign-in.md). **Unpublish** takes it back.
+Open a statement and choose **Publish to payee**. From then on the payee sees it under **My statements**, in the section of your label (a payee of several labels reads them all on that page), see [Team, roles and sign-in](40-team-roles-and-sign-in.md). **Unpublish** takes it back.
 
 Publishing sends no email. Tell your payees yourself.
 

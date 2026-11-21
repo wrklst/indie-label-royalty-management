@@ -31,7 +31,7 @@ type Overview = {
     statement_id: number;
     period: string;
     published_at: string | null;
-    currency: string | null;
+    currency: string;
     owed: string;
     earned: string;
     paid: string;
@@ -47,11 +47,22 @@ type Payout = {
     memo: string | null;
 };
 
-type Props = {
-    view: 'admin' | 'payee' | 'unlinked';
+type Group = {
+    label: {
+        id: number;
+        name: string;
+        currency: string;
+        logo_url: string | null;
+    };
     overview: Overview | null;
     payouts: Paginated<Payout>;
     statements: Paginated<Statement>;
+};
+
+type Props = {
+    view: 'admin' | 'payee' | 'unlinked';
+    groups: Group[];
+    statements: Paginated<Statement> | null;
     filters: Record<string, string | null>;
 };
 
@@ -65,7 +76,7 @@ function OverviewSection({ overview }: { overview: Overview }) {
         overview.ledgers,
         LEDGER_COLUMNS,
     );
-    const currency = overview.currency ?? undefined;
+    const currency = overview.currency;
 
     return (
         <>
@@ -163,9 +174,11 @@ function OverviewSection({ overview }: { overview: Overview }) {
 function PayoutsSection({
     payouts,
     sorter,
+    currency,
 }: {
     payouts: Paginated<Payout>;
     sorter: Sorter;
+    currency: string;
 }) {
     return (
         <Panel
@@ -218,7 +231,10 @@ function PayoutsSection({
                                         {payout.memo ?? '–'}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Amount value={payout.total} />
+                                        <Amount
+                                            value={payout.total}
+                                            currency={currency}
+                                        />
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -234,9 +250,11 @@ function PayoutsSection({
 function StatementsTable({
     statements,
     sorter,
+    currency,
 }: {
     statements: Paginated<Statement>;
     sorter: Sorter;
+    currency?: string;
 }) {
     return (
         <>
@@ -286,10 +304,16 @@ function StatementsTable({
                                 {date(statement.published_at)}
                             </TableCell>
                             <TableCell className="text-right">
-                                <Amount value={statement.balance} />
+                                <Amount
+                                    value={statement.balance}
+                                    currency={currency}
+                                />
                             </TableCell>
                             <TableCell className="text-right">
-                                <Amount value={statement.payable} />
+                                <Amount
+                                    value={statement.payable}
+                                    currency={currency}
+                                />
                             </TableCell>
                         </TableRow>
                     ))}
@@ -300,21 +324,92 @@ function StatementsTable({
     );
 }
 
-export default function Portal({
-    view,
-    overview,
-    payouts,
-    statements,
+/**
+ * Everything of one label the payee has a statement from: where they
+ * stand, what was paid and the statements. Amounts are in the label's
+ * currency; they are never added up across labels.
+ */
+function LabelGroup({
+    group,
     filters,
-}: Props) {
+}: {
+    group: Group;
+    filters: Record<string, string | null>;
+}) {
+    const { label, overview, payouts, statements } = group;
+    const { apply } = useFilters(index.url(), filters);
+    const statementSorter = serverSorter(
+        filters,
+        apply,
+        `statements_${label.id}`,
+    );
+    const payoutSorter = serverSorter(filters, apply, `payouts_${label.id}`);
+
+    return (
+        <section
+            className="grid gap-6"
+            aria-labelledby={`label-${label.id}`}
+            data-label-group={label.id}
+        >
+            <div className="flex items-center gap-3 border-b pb-3">
+                {label.logo_url && (
+                    <img
+                        src={label.logo_url}
+                        alt=""
+                        className="max-h-10 max-w-32 object-contain"
+                    />
+                )}
+                <h2
+                    id={`label-${label.id}`}
+                    className="text-lg font-semibold tracking-tight"
+                >
+                    {label.name}
+                </h2>
+                <Badge variant="outline">{label.currency}</Badge>
+            </div>
+
+            {overview ? (
+                <OverviewSection overview={overview} />
+            ) : (
+                <EmptyState
+                    title="Nothing published yet"
+                    description="As soon as this label publishes your first statement, you will see here what you earned in that period, what you are owed and the balance of each of your ledgers. Payouts made to you are listed as well."
+                />
+            )}
+
+            {(overview || payouts.total > 0) && (
+                <PayoutsSection
+                    payouts={payouts}
+                    sorter={payoutSorter}
+                    currency={label.currency}
+                />
+            )}
+
+            {statements.total > 0 && (
+                <Panel
+                    flush
+                    title="Published statements"
+                    description="Open a statement for the full breakdown per release and track."
+                >
+                    <StatementsTable
+                        statements={statements}
+                        sorter={statementSorter}
+                        currency={label.currency}
+                    />
+                </Panel>
+            )}
+        </section>
+    );
+}
+
+export default function Portal({ view, groups, statements, filters }: Props) {
     const title = 'My statements';
     const { apply } = useFilters(index.url(), filters);
     const statementSorter = serverSorter(filters, apply, 'statements');
-    const payoutSorter = serverSorter(filters, apply, 'payouts');
 
     setLayoutProps({ breadcrumbs: [{ title, href: index() }] });
 
-    if (view === 'admin') {
+    if (view === 'admin' && statements) {
         return (
             <Page
                 title={title}
@@ -339,7 +434,10 @@ export default function Portal({
 
     if (view === 'unlinked') {
         return (
-            <Page title={title} description="Your royalties from this label.">
+            <Page
+                title={title}
+                description="Your royalties from the labels you are a payee of."
+            >
                 <EmptyState
                     title="Your access is not linked to a payee yet"
                     description="The label has to connect your account to the payee your royalties are booked on. Ask them to do that in their team settings; your statements and payouts will show up here afterwards."
@@ -351,33 +449,16 @@ export default function Portal({
     return (
         <Page
             title={title}
-            description="What you earned, what you are owed and what you have been paid, according to the statements this label has published."
+            description="What you earned, what you are owed and what you have been paid, according to the statements each of your labels has published."
+            className="gap-10"
         >
-            {overview ? (
-                <OverviewSection overview={overview} />
-            ) : (
-                <EmptyState
-                    title="Nothing published yet"
-                    description="As soon as the label publishes your first statement, you will see here what you earned in that period, what you are owed and the balance of each of your ledgers. Payouts made to you are listed as well."
+            {groups.map((group) => (
+                <LabelGroup
+                    key={group.label.id}
+                    group={group}
+                    filters={filters}
                 />
-            )}
-
-            {(overview || payouts.total > 0) && (
-                <PayoutsSection payouts={payouts} sorter={payoutSorter} />
-            )}
-
-            {statements.total > 0 && (
-                <Panel
-                    flush
-                    title="Published statements"
-                    description="Open a statement for the full breakdown per release and track."
-                >
-                    <StatementsTable
-                        statements={statements}
-                        sorter={statementSorter}
-                    />
-                </Panel>
-            )}
+            ))}
         </Page>
     );
 }

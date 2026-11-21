@@ -21,6 +21,7 @@ import {
     Tags,
     TrendingUp,
     Upload,
+    UserRound,
     Users,
 } from 'lucide-react';
 import { LabelSwitcher } from '@/components/label-switcher';
@@ -32,6 +33,9 @@ import {
     SidebarContent,
     SidebarFooter,
     SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard, handbook } from '@/routes';
 import { index as airplays } from '@/routes/airplays';
@@ -154,22 +158,56 @@ function withTools(
     );
 }
 
+/**
+ * Someone who only is a payee sees their own name at the top: they work in
+ * no label, so there is nothing to switch.
+ */
+function PayeeHeader() {
+    const { auth } = usePage().props;
+
+    return (
+        <SidebarMenu>
+            <SidebarMenuItem>
+                <SidebarMenuButton size="lg" asChild>
+                    <div data-payee-header>
+                        <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+                            <UserRound className="size-5" />
+                        </div>
+                        <div className="grid flex-1 text-left text-sm leading-tight">
+                            <span className="truncate font-semibold">
+                                {auth.user?.name}
+                            </span>
+                            <span className="truncate text-xs text-muted-foreground">
+                                Payee
+                            </span>
+                        </div>
+                    </div>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+        </SidebarMenu>
+    );
+}
+
 export function AppSidebar() {
-    const { label } = usePage().props;
+    const { label, labels, isPayee } = usePage().props;
+    const runsLabel = labels.length > 0;
 
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
-                <LabelSwitcher />
+                {runsLabel ? <LabelSwitcher /> : <PayeeHeader />}
             </SidebarHeader>
 
             <SidebarContent>
                 {label && (
                     <NavMain
                         groups={
-                            label.role === 'payee'
-                                ? payeeGroups
-                                : withTools(adminGroups, label.tools)
+                            runsLabel
+                                ? [
+                                      ...withTools(adminGroups, label.tools),
+                                      ...(isPayee ? payeeGroups : []),
+                                  ]
+                                : payeeGroups
                         }
                     />
                 )}

@@ -42,10 +42,12 @@ One installation can hold any number of labels. Each has its own catalog, contra
 
 The **label switcher** is the button at the top of the sidebar. It shows the current label and its currency. Open it to:
 
-- switch to another label you belong to,
+- switch to another label you run,
 - choose **New label** to create another one. The entry is shown to people who run a label or have none yet, not to people who were only invited as payees.
 
-One account can belong to several labels with a different role in each, for example admin of your own label and payee of a label that releases your music.
+One account can belong to several labels with a different role in each, for example admin of your own label and payee of a label that releases your music. The switcher lists only the labels you run. The labels you are a payee of are never "worked in": you read them in **My statements**, whichever label you are working in.
+
+Someone who is only a payee has no label switcher. The top of the sidebar shows their own name, and **My statements** is the only entry.
 
 ## Roles
 
@@ -65,7 +67,7 @@ A role belongs to the combination of a person and a label. There are two.
 
 **Admin** means full access to everything in that label. There are no finer permissions: every admin can see all contracts and balances, change settings and manage the team.
 
-**Payee** means access to **My statements** and nothing else. A payee who opens any other page of the label is sent back to **My statements**. A payee user is linked to exactly one payee record of the label, and that link decides whose statements they see.
+**Payee** means access to **My statements** and nothing else. A payee who opens any other page of the label is sent back to **My statements**. In every label a payee user is linked to exactly one payee record, and that link decides whose statements they see in that label. A payee role without a linked payee gives access to nothing. Someone who runs one label and is a payee of another is a full admin of the first and sees nothing of the second beyond their own published statements.
 
 A label always keeps at least one admin: the last admin cannot be removed or turned into a payee.
 
@@ -104,7 +106,11 @@ To let several people see the same payee's statements, for example an artist and
 
 ## My statements, the payee's area
 
-A payee who signs in sees one menu entry, **My statements**. Everything on it comes from statements the label has published. Live figures, drafts and archived revisions never reach **My statements**.
+A payee who signs in sees one menu entry, **My statements**, and their own name at the top of the sidebar. The page covers every label they are a payee of, so they never switch labels: each label is a section with its name and logo as the heading, in the label's currency. Amounts of different labels are never added up. Labels are listed by name; a label that has not published anything for them yet is listed with "Nothing published yet". Everything on the page comes from statements the labels have published. Live figures, drafts and archived revisions never reach **My statements**.
+
+Someone who also runs a label finds **My statements** in the sidebar below the label's own pages, and the page then lists only the labels they are a payee of.
+
+Each section of a label has the parts below. Payouts and statements are listed 25 to a page, newest first, and each list has its own page and can be sorted.
 
 | Section                  | What the payee sees                                                                                                                                                                              |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -115,9 +121,9 @@ A payee who signs in sees one menu entry, **My statements**. Everything on it co
 | **Payouts**              | Every payment the label recorded for them: date, period, memo and amount. Payouts appear as soon as they are recorded, whether or not a statement mentions them yet.                             |
 | **Published statements** | Their published statements with period, publication date, balance and payable amount.                                                                                                            |
 
-Opening a statement shows the full breakdown: a summary, one tab per ledger, and the income, expenses, transfers and payouts behind the figures. **Download CSV** saves it as a file. The content of a statement is described in [Periods, statements and payouts](32-periods-statements-and-payouts.md).
+Opening a statement, also one of a label you are not currently working in, shows the full breakdown: a summary, one tab per ledger, and the income, expenses, transfers and payouts behind the figures. **Download CSV** saves it as a file. The content of a statement is described in [Periods, statements and payouts](32-periods-statements-and-payouts.md).
 
-Before the first statement is published, **My statements** says "Nothing published yet". If the payee record a user was linked to has been deleted, it says "Your access is not linked to a payee yet"; link them again on the team page.
+Before the first statement of a label is published, its section says "Nothing published yet". When someone is removed from a label under **Settings → Team**, that label's section and its statements are gone from **My statements** at once. If the payee record a user was linked to has been deleted, it says "Your access is not linked to a payee yet"; link them again on the team page.
 
 ## Signing in
 

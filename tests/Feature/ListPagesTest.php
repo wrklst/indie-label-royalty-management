@@ -181,12 +181,12 @@ test('the statements and payouts a payee sees have pages of their own and sort a
     $label->users()->attach($user, ['role' => LabelRole::Payee->value, 'payee_id' => $payee->id]);
 
     $this->actingAs($user)->get(route('portal.index'))->assertInertia(fn (Assert $page) => $page
-        ->has('statements.data', 25)->where('statements.total', 26)->has('payouts.data', 25)->where('payouts.total', 26));
-    $this->actingAs($user)->get(route('portal.index', ['statements_page' => 2, 'payouts_page' => 2]))->assertInertia(fn (Assert $page) => $page
-        ->has('statements.data', 1)->has('payouts.data', 1));
-    $this->actingAs($user)->get(route('portal.index', ['statements_sort' => 'payable', 'statements_direction' => 'desc', 'payouts_sort' => 'total', 'payouts_direction' => 'desc']))->assertInertia(fn (Assert $page) => $page
-        ->where('statements.data.0.payable', fn (string $payable): bool => (float) $payable === 26.0)
-        ->where('payouts.data.0.total', fn (string $total): bool => (float) $total === 26.0));
+        ->has('groups.0.statements.data', 25)->where('groups.0.statements.total', 26)->has('groups.0.payouts.data', 25)->where('groups.0.payouts.total', 26));
+    $this->actingAs($user)->get(route('portal.index', ["statements_{$label->id}_page" => 2, "payouts_{$label->id}_page" => 2]))->assertInertia(fn (Assert $page) => $page
+        ->has('groups.0.statements.data', 1)->has('groups.0.payouts.data', 1));
+    $this->actingAs($user)->get(route('portal.index', ["statements_{$label->id}_sort" => 'payable', "statements_{$label->id}_direction" => 'desc', "payouts_{$label->id}_sort" => 'total', "payouts_{$label->id}_direction" => 'desc']))->assertInertia(fn (Assert $page) => $page
+        ->where('groups.0.statements.data.0.payable', fn (string $payable): bool => (float) $payable === 26.0)
+        ->where('groups.0.payouts.data.0.total', fn (string $total): bool => (float) $total === 26.0));
 });
 
 test('the catalog manager pages the releases, and its search and filter cover every page', function () {

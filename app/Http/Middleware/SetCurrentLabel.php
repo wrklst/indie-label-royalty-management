@@ -23,6 +23,12 @@ class SetCurrentLabel
         $labels = $user->labels()->orderBy('name')->get();
         $label = $labels->firstWhere('id', $user->current_label_id) ?? $labels->first();
 
+        // Someone who runs a label always works in one they run; the labels they are only a
+        // payee of are reached through My statements, so they never become the working label.
+        if ($label !== null && $label->pivot->role !== LabelRole::Admin->value) {
+            $label = $labels->first(fn ($candidate): bool => $candidate->pivot->role === LabelRole::Admin->value) ?? $label;
+        }
+
         if ($label === null) {
             return redirect()->route('labels.create');
         }

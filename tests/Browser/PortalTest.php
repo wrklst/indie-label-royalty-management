@@ -58,7 +58,7 @@ test('a payee with nothing published is told what will appear', function () {
 
     visit('/my-statements')
         ->assertSee('Nothing published yet')
-        ->assertSee('As soon as the label publishes your first statement')
+        ->assertSee('As soon as this label publishes your first statement')
         ->assertDontSee('€50.00')
         ->assertNoJavaScriptErrors();
 });

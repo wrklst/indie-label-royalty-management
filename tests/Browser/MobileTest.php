@@ -1,6 +1,11 @@
 <?php
 
+use App\Enums\LabelRole;
+use App\Models\Label;
+use App\Models\Payee;
 use App\Models\PlayCount;
+use App\Models\Statement;
+use App\Models\User;
 use App\Services\Royalties\StatementGenerator;
 
 test('on a phone nothing runs off the screen: wide tables scroll inside their panels', function () {
@@ -30,4 +35,29 @@ test('on a phone nothing runs off the screen: wide tables scroll inside their pa
 
         expect($offScreen)->toBe([], $url);
     }
+});
+
+test('on a phone the page of a payee of two labels does not run off the screen', function () {
+    $scenario = royaltyScenario();
+    app(StatementGenerator::class)->generate($scenario['period'])->sole()->update(['published_at' => now()]);
+    $other = Label::factory()->create(['name' => 'Example Second Label with a rather long name', 'currency' => 'USD']);
+    $otherPayee = Payee::factory()->create(['label_id' => $other->id]);
+    Statement::factory()->create(['label_id' => $other->id, 'payee_id' => $otherPayee->id, 'published_at' => now()]);
+    $user = User::factory()->create(['current_label_id' => $other->id]);
+    $other->users()->attach($user, ['role' => LabelRole::Payee->value, 'payee_id' => $otherPayee->id]);
+    $scenario['label']->users()->attach($user, ['role' => LabelRole::Payee->value, 'payee_id' => $scenario['payee']->id]);
+    $this->actingAs($user);
+
+    $offScreen = visit('/my-statements')->resize(390, 844)->script(<<<'JS'
+        (() => {
+            const width = document.documentElement.clientWidth;
+            const scrolls = (el) => { for (let p = el.parentElement; p; p = p.parentElement) { if (['auto', 'scroll'].includes(getComputedStyle(p).overflowX)) return true; } return false; };
+
+            return [...document.querySelectorAll('main *')]
+                .filter((el) => el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().right > width + 1 && !scrolls(el))
+                .map((el) => el.tagName + ' ' + (el.textContent || '').trim().slice(0, 30)).slice(0, 5);
+        })()
+    JS);
+
+    expect($offScreen)->toBe([]);
 });

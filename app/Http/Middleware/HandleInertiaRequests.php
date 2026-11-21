@@ -2,9 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\LabelRole;
 use App\Enums\RoyaltyTool;
 use App\Http\Controllers\Settings\LabelBrandingController;
 use App\Support\CurrentLabel;
+use App\Support\PayeeAccess;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -45,8 +47,10 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'label' => fn () => $this->currentLabel($request),
-            'labels' => fn () => $request->user()?->labels()->orderBy('name')->get(['labels.id', 'labels.name'])
+            // Only the labels the user runs: the ones they are a payee of are reached through My statements.
+            'labels' => fn () => $request->user()?->labels()->wherePivot('role', LabelRole::Admin->value)->orderBy('name')->get(['labels.id', 'labels.name'])
                 ->map(fn ($label): array => ['id' => $label->id, 'name' => $label->name])->all() ?? [],
+            'isPayee' => fn () => $request->user() !== null && (new PayeeAccess($request->user()))->isPayeeAnywhere(),
             'canCreateLabel' => fn () => $request->user()?->canCreateLabel() ?? false,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
@@ -58,14 +62,15 @@ class HandleInertiaRequests extends Middleware
     private function currentLabel(Request $request): ?array
     {
         $current = app(CurrentLabel::class);
-        $label = $current->get() ?? $request->user()?->currentLabel;
-
-        // Account pages such as the profile are not tied to a label, so the role is looked up
-        // there: without it the settings would hide everything that belongs to the label.
+        $label = $current->get();
         $role = $current->role()?->value;
 
-        if ($role === null && $label !== null && $request->user() !== null) {
-            $role = $request->user()->labels()->whereKey($label->id)->value('label_user.role');
+        // Account pages such as the profile are not tied to a label, so it is looked up among the
+        // user's own labels (never one they left): without it the settings would hide everything
+        // that belongs to the label.
+        if ($label === null && $request->user() !== null) {
+            $label = $request->user()->labels()->whereKey($request->user()->current_label_id)->first();
+            $role = $label?->pivot->role;
         }
 
         return $label === null ? null : [

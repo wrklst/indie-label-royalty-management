@@ -28,7 +28,7 @@ class LabelBrandingController extends Controller
     {
         $stored = $label->{"{$kind}_path"};
 
-        return $stored === null ? null : route('label-branding.show', ['kind' => $kind, 'v' => substr(md5($stored), 0, 8)]);
+        return $stored === null ? null : route('label-branding.show', ['kind' => $kind, 'v' => substr(md5($stored), 0, 8), 'label' => $label->id]);
     }
 
     /**
@@ -57,9 +57,13 @@ class LabelBrandingController extends Controller
     /**
      * Show the image to anyone who belongs to the label, payees included.
      */
-    public function show(string $kind, CurrentLabel $currentLabel): Response
+    public function show(Request $request, string $kind, CurrentLabel $currentLabel): Response
     {
-        $stored = ($currentLabel->get() ?? abort(404))->{"{$kind}_path"} ?? abort(404);
+        // The label named in the address only selects among the labels the user belongs to.
+        $label = $request->query('label') === null
+            ? $currentLabel->get()
+            : $request->user()->labels()->whereKey($request->integer('label'))->first();
+        $stored = ($label ?? abort(404))->{"{$kind}_path"} ?? abort(404);
         [$disk, $path] = explode(':', $stored, 2);
 
         abort_unless(Storage::disk($disk)->exists($path), 404);

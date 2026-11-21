@@ -62,7 +62,7 @@ test('the overview shows the figures of the published statement, not the live on
         ->assertInertia(fn (Assert $page) => $page
             ->component('portal/index')
             ->where('view', 'payee')
-            ->where('overview', [
+            ->where('groups.0.overview', [
                 'statement_id' => $statement->id,
                 'period' => '2026 Q1',
                 'published_at' => '2026-04-05',
@@ -91,10 +91,10 @@ test('a regenerated draft does not change the overview until it is published', f
     $this->actingAs(portalPayee($scenario['label'], $scenario['payee']))
         ->get(route('portal.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('overview.statement_id', $published->id)
-            ->where('overview.owed', '50.000000000000000')
-            ->has('statements.data', 1)
-            ->where('statements.data.0.id', $published->id));
+            ->where('groups.0.overview.statement_id', $published->id)
+            ->where('groups.0.overview.owed', '50.000000000000000')
+            ->has('groups.0.statements.data', 1)
+            ->where('groups.0.statements.data.0.id', $published->id));
 });
 
 test('the overview follows the latest period, not the statement created last', function () {
@@ -108,10 +108,10 @@ test('the overview follows the latest period, not the statement created last', f
     $this->actingAs(portalPayee($label, $payee))
         ->get(route('portal.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('overview.statement_id', $latest->id)
-            ->where('overview.period', '2026 Q2')
-            ->where('overview.owed', '80')
-            ->has('statements.data', 2));
+            ->where('groups.0.overview.statement_id', $latest->id)
+            ->where('groups.0.overview.period', '2026 Q2')
+            ->where('groups.0.overview.owed', '80')
+            ->has('groups.0.statements.data', 2));
 });
 
 test('drafts, archived statements and other payees never feed the overview', function () {
@@ -128,10 +128,10 @@ test('drafts, archived statements and other payees never feed the overview', fun
     $this->actingAs(portalPayee($label, $payee))
         ->get(route('portal.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('overview.statement_id', $own->id)
-            ->where('overview.period', '2026 Q1')
-            ->where('overview.owed', '30')
-            ->has('statements.data', 1));
+            ->where('groups.0.overview.statement_id', $own->id)
+            ->where('groups.0.overview.period', '2026 Q1')
+            ->where('groups.0.overview.owed', '30')
+            ->has('groups.0.statements.data', 1));
 });
 
 test('a negative ledger is marked as unrecouped and does not reduce what is owed', function () {
@@ -151,10 +151,10 @@ test('a negative ledger is marked as unrecouped and does not reduce what is owed
     $this->actingAs(portalPayee($label, $payee))
         ->get(route('portal.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('overview.owed', '50')
-            ->where('overview.earned', '70')
-            ->where('overview.paid', '20')
-            ->where('overview.ledgers', [
+            ->where('groups.0.overview.owed', '50')
+            ->where('groups.0.overview.earned', '70')
+            ->where('groups.0.overview.paid', '20')
+            ->where('groups.0.overview.ledgers', [
                 ['name' => 'Primary', 'balance' => '50', 'unrecouped' => false],
                 ['name' => 'Album advance', 'balance' => '-200', 'unrecouped' => true],
             ]));
@@ -170,10 +170,10 @@ test('a statement without a snapshot falls back to its stored payable amount', f
         ->get(route('portal.index'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->where('overview.period', '2026 Q1')
-            ->where('overview.currency', null)
-            ->where('overview.owed', '40.000000000000000')
-            ->where('overview.ledgers', []));
+            ->where('groups.0.overview.period', '2026 Q1')
+            ->where('groups.0.overview.currency', $label->currency)
+            ->where('groups.0.overview.owed', '40.000000000000000')
+            ->where('groups.0.overview.ledgers', []));
 });
 
 test('a payee sees all of their own payouts, newest first', function () {
@@ -188,7 +188,7 @@ test('a payee sees all of their own payouts, newest first', function () {
     $this->actingAs(portalPayee($label, $payee))
         ->get(route('portal.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('payouts.data', [
+            ->where('groups.0.payouts.data', [
                 ['id' => $newer->id, 'paid_on' => '2026-05-02', 'period' => '2026 Q1', 'total' => '30.000000000000000', 'memo' => null],
                 ['id' => $older->id, 'paid_on' => '2026-04-10', 'period' => '2026 Q1', 'total' => '20.000000000000000', 'memo' => 'Bank transfer'],
             ]));
@@ -204,15 +204,15 @@ test('a payout recorded after the statement is reported as paid since', function
     $this->actingAs(portalPayee($scenario['label'], $scenario['payee']))
         ->get(route('portal.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('overview.owed', '50.000000000000000')
-            ->where('overview.paid_since', '20.000000000000000')
-            ->has('payouts.data', 1)
-            ->where('payouts.data.0.memo', 'Bank transfer'));
+            ->where('groups.0.overview.owed', '50.000000000000000')
+            ->where('groups.0.overview.paid_since', '20.000000000000000')
+            ->has('groups.0.payouts.data', 1)
+            ->where('groups.0.payouts.data.0.memo', 'Bank transfer'));
 });
 
-test('someone who is a payee of two labels only sees the label they are working in', function () {
-    $label = Label::factory()->create();
-    $otherLabel = Label::factory()->create();
+test('someone who is a payee of two labels sees both on one page without switching', function () {
+    $label = Label::factory()->create(['name' => 'Example Alpha', 'currency' => 'EUR']);
+    $otherLabel = Label::factory()->create(['name' => 'Example Beta', 'currency' => 'USD']);
     $payee = Payee::factory()->create(['label_id' => $label->id]);
     $otherPayee = Payee::factory()->create(['label_id' => $otherLabel->id]);
     $period = Period::factory()->create(['label_id' => $label->id, 'name' => '2026 Q1']);
@@ -220,22 +220,47 @@ test('someone who is a payee of two labels only sees the label they are working 
     $own = publishedStatement($payee, $period, '30');
     $elsewhere = publishedStatement($otherPayee, $otherPeriod, '700');
     $payout = Payout::factory()->create(['label_id' => $label->id, 'payee_id' => $payee->id, 'period_id' => $period->id]);
-    Payout::factory()->create(['label_id' => $otherLabel->id, 'payee_id' => $otherPayee->id, 'period_id' => $otherPeriod->id, 'total' => '700']);
+    $otherPayout = Payout::factory()->create(['label_id' => $otherLabel->id, 'payee_id' => $otherPayee->id, 'period_id' => $otherPeriod->id, 'total' => '700']);
     $user = portalPayee($label, $payee);
     $otherLabel->users()->attach($user, ['role' => LabelRole::Payee->value, 'payee_id' => $otherPayee->id]);
 
     $this->actingAs($user)
         ->get(route('portal.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('overview.statement_id', $own->id)
-            ->where('overview.owed', '30')
-            ->has('payouts.data', 1)
-            ->where('payouts.data.0.id', $payout->id)
-            ->has('statements.data', 1)
-            ->where('statements.data.0.id', $own->id));
+            ->where('view', 'payee')
+            ->has('groups', 2)
+            ->where('groups.0.label.name', 'Example Alpha')
+            ->where('groups.0.label.currency', 'EUR')
+            ->where('groups.0.overview.statement_id', $own->id)
+            ->where('groups.0.overview.owed', '30')
+            ->has('groups.0.payouts.data', 1)
+            ->where('groups.0.payouts.data.0.id', $payout->id)
+            ->has('groups.0.statements.data', 1)
+            ->where('groups.0.statements.data.0.id', $own->id)
+            ->where('groups.1.label.name', 'Example Beta')
+            ->where('groups.1.label.currency', 'USD')
+            ->where('groups.1.overview.statement_id', $elsewhere->id)
+            ->where('groups.1.overview.currency', 'EUR')
+            ->where('groups.1.statements.data.0.period', '2026 Q4')
+            ->where('groups.1.payouts.data.0.id', $otherPayout->id));
+});
 
-    $this->actingAs($user)->get(route('portal.show', $elsewhere->id))->assertNotFound();
-    $this->actingAs($user)->get(route('portal.download', $elsewhere->id))->assertNotFound();
+test('a label without a published statement is still listed, empty', function () {
+    $label = Label::factory()->create(['name' => 'Example Alpha']);
+    $quiet = Label::factory()->create(['name' => 'Example Quiet']);
+    $payee = Payee::factory()->create(['label_id' => $label->id]);
+    $quietPayee = Payee::factory()->create(['label_id' => $quiet->id]);
+    publishedStatement($payee, Period::factory()->create(['label_id' => $label->id]), '30');
+    $user = portalPayee($label, $payee);
+    $quiet->users()->attach($user, ['role' => LabelRole::Payee->value, 'payee_id' => $quietPayee->id]);
+
+    $this->actingAs($user)->get(route('portal.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('groups', 2)
+            ->where('groups.1.label.name', 'Example Quiet')
+            ->where('groups.1.overview', null)
+            ->where('groups.1.statements.data', [])
+            ->where('groups.1.payouts.data', []));
 });
 
 test('the statement of another payee or label is not found', function () {
@@ -263,9 +288,9 @@ test('a payee with nothing published gets an empty portal, not live figures', fu
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('view', 'payee')
-            ->where('overview', null)
-            ->where('payouts.data', [])
-            ->where('statements.data', []));
+            ->where('groups.0.overview', null)
+            ->where('groups.0.payouts.data', [])
+            ->where('groups.0.statements.data', []));
 });
 
 test('a payee user without a linked payee gets an explanation instead of figures', function () {
@@ -280,9 +305,8 @@ test('a payee user without a linked payee gets an explanation instead of figures
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('view', 'unlinked')
-            ->where('overview', null)
-            ->where('payouts.data', [])
-            ->where('statements.data', []));
+            ->where('groups', [])
+            ->where('statements', null));
 });
 
 test('an admin previews every published statement without a personal overview or payouts', function () {
@@ -298,8 +322,7 @@ test('an admin previews every published statement without a personal overview or
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('view', 'admin')
-            ->where('overview', null)
-            ->where('payouts.data', [])
+            ->where('groups', [])
             ->has('statements.data', 2)
             ->where('statements.data.1.id', $statement->id));
 });

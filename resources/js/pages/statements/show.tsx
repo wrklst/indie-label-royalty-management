@@ -23,10 +23,15 @@ type Props = {
         created_at: string;
         data: StatementData;
     };
+    statementLabel?: { id: number; name: string; logo_url: string | null };
     portal: boolean;
 };
 
-export default function ShowStatement({ statement, portal: isPortal }: Props) {
+export default function ShowStatement({
+    statement,
+    statementLabel,
+    portal: isPortal,
+}: Props) {
     const data = statement.data;
 
     setLayoutProps({
@@ -129,7 +134,7 @@ export default function ShowStatement({ statement, portal: isPortal }: Props) {
                 </>
             }
         >
-            <StatementView data={data} />
+            <StatementView data={data} brand={statementLabel} />
         </Page>
     );
 }

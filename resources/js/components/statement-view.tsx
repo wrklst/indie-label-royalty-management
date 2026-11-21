@@ -253,8 +253,16 @@ const MOVEMENT_COLUMNS = {
  * A payee's figures for one period: summary, one tab per ledger, and the
  * income, expense and transfer detail behind them.
  */
-export function StatementView({ data }: { data: StatementData }) {
-    const { label } = usePage().props;
+export function StatementView({
+    data,
+    brand,
+}: {
+    data: StatementData;
+    brand?: { name: string; logo_url: string | null };
+}) {
+    // A payee reads statements of labels that are not the one they work in.
+    const { label: workingLabel } = usePage().props;
+    const label = brand ?? workingLabel;
     const tabs = [
         { key: 'summary', label: 'Summary' },
         ...data.ledgers.map((ledger) => ({

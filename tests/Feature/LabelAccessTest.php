@@ -114,8 +114,8 @@ test('a payee sees only their own published statements', function () {
     $this->actingAs($user)->get(route('portal.index'))
         ->assertInertia(fn (Assert $page) => $page
             ->component('portal/index')
-            ->has('statements.data', 1)
-            ->where('statements.data.0.id', $own->id));
+            ->has('groups.0.statements.data', 1)
+            ->where('groups.0.statements.data.0.id', $own->id));
 
     $this->actingAs($user)->get(route('portal.show', $draft->id))->assertNotFound();
     $this->actingAs($user)->get(route('portal.show', $someoneElses->id))->assertNotFound();

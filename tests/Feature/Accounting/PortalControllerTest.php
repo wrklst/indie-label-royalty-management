@@ -51,7 +51,7 @@ test('an archived statement is hidden from the payee even though it was publishe
     $user = portalUser($label, $payee);
 
     $this->actingAs($user)->get(route('portal.index'))
-        ->assertInertia(fn (Assert $page) => $page->has('statements.data', 0));
+        ->assertInertia(fn (Assert $page) => $page->has('groups.0.statements.data', 0));
     $this->actingAs($user)->get(route('portal.show', $archived->id))->assertNotFound();
     $this->actingAs($user)->get(route('portal.download', $archived->id))->assertNotFound();
 });
@@ -110,7 +110,7 @@ test('a portal user without a linked payee sees no statements', function () {
     $user = portalUser($label, null);
 
     $this->actingAs($user)->get(route('portal.index'))
-        ->assertInertia(fn (Assert $page) => $page->has('statements.data', 0));
+        ->assertInertia(fn (Assert $page) => $page->where('view', 'unlinked')->where('groups', []));
     $this->actingAs($user)->get(route('portal.show', $statement->id))->assertNotFound();
 });
 
