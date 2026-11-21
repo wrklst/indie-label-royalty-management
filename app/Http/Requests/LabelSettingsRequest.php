@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Services\Releases\ZebralutionSheet;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Validation\Rule;
 
 class LabelSettingsRequest extends LabelFormRequest
 {
@@ -14,6 +16,12 @@ class LabelSettingsRequest extends LabelFormRequest
         if (is_string($this->input('currency'))) {
             $this->merge(['currency' => strtoupper($this->input('currency'))]);
         }
+
+        if (is_string($this->input('zebralution_origin_country'))) {
+            $this->merge(['zebralution_origin_country' => strtoupper(trim($this->input('zebralution_origin_country')))]);
+        }
+
+        $this->nullify(['zebralution_number', 'zebralution_origin_country', 'zebralution_price_group', 'zebralution_work_rights']);
 
         if (is_string($this->input('airplay_markets'))) {
             $this->merge(['airplay_markets' => array_values(array_unique(array_filter(
@@ -43,6 +51,10 @@ class LabelSettingsRequest extends LabelFormRequest
             'ignore_negative_quantities' => ['boolean'],
             'airplay_markets' => ['array', 'min:1', 'max:10'],
             'airplay_markets.*' => ['string', 'size:2', 'alpha:ascii'],
+            'zebralution_number' => ['nullable', 'string', 'max:32'],
+            'zebralution_origin_country' => ['nullable', 'string', 'size:2', 'alpha:ascii'],
+            'zebralution_price_group' => ['nullable', 'integer', Rule::in(ZebralutionSheet::PRICE_GROUPS)],
+            'zebralution_work_rights' => ['nullable', Rule::in(ZebralutionSheet::WORK_RIGHTS)],
         ];
     }
 

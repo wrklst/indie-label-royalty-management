@@ -25,7 +25,7 @@ class ReleaseRequest extends LabelFormRequest
             $this->merge(['artists' => []]);
         }
 
-        $this->nullify(['artist_id', 'contract_id', 'released_on', 'mechanicals_rate', 'ppd_rate', 'reserves_rate', 'release_type', 'explicit', 'original_released_on', 'preorder_on', 'files_url']);
+        $this->nullify(['artist_id', 'contract_id', 'released_on', 'mechanicals_rate', 'ppd_rate', 'reserves_rate', 'release_type', 'explicit', 'ai_artwork', 'original_released_on', 'preorder_on', 'files_url']);
 
         // Lists may arrive as "Spotify, Tidal" from a text field.
         foreach (['blocked_services' => false, 'blocked_territories' => true] as $key => $uppercase) {
@@ -86,6 +86,7 @@ class ReleaseRequest extends LabelFormRequest
             'subgenre' => ['nullable', 'string', 'max:255'],
             'language' => ['nullable', 'string', 'max:8'],
             'explicit' => ['nullable', Rule::in(['explicit', 'clean'])],
+            'ai_artwork' => ['nullable', Rule::in(['none', 'partly', 'all'])],
             'p_line' => ['nullable', 'string', 'max:255'],
             'c_line' => ['nullable', 'string', 'max:255'],
             'original_released_on' => ['nullable', 'date'],

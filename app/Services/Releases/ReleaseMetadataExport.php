@@ -19,6 +19,7 @@ class ReleaseMetadataExport
         'status', 'blocked_services', 'blocked_territories', 'disc_number', 'track_number', 'track_title', 'track_version',
         'track_artist', 'featuring', 'remixers', 'isrc', 'iswc', 'duration', 'duration_seconds', 'track_explicit', 'track_language',
         'track_genre', 'bpm', 'key', 'composers', 'lyricists', 'producers', 'publishers', 'track_p_line', 'preview_start_seconds',
+        'ai_artwork', 'ai_recording', 'ai_composition', 'ai_lyrics',
     ];
 
     /**
@@ -48,6 +49,7 @@ class ReleaseMetadataExport
             'status' => $release->status->label(),
             'blocked_services' => implode(', ', $release->blocked_services ?? []),
             'blocked_territories' => implode(', ', $release->blocked_territories ?? []),
+            'ai_artwork' => $release->ai_artwork,
         ];
 
         $tracks = $release->tracks->sortBy([['disc_number', 'asc'], ['track_number', 'asc'], ['id', 'asc']])->values();
@@ -81,6 +83,9 @@ class ReleaseMetadataExport
             'publishers' => implode(', ', $track->credits['publishers'] ?? []),
             'track_p_line' => $track->p_line ?? $release->p_line,
             'preview_start_seconds' => $track->preview_start,
+            'ai_recording' => $track->ai_recording,
+            'ai_composition' => $track->ai_composition,
+            'ai_lyrics' => $track->ai_lyrics,
         ])->all());
     }
 

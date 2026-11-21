@@ -70,6 +70,9 @@ type Track = {
     p_line: string | null;
     lyrics: string | null;
     credits: Credits | null;
+    ai_recording: string | null;
+    ai_composition: string | null;
+    ai_lyrics: string | null;
     artist: string | null;
     artists: ArtistCredit[];
     audio_file_id: number | null;
@@ -97,6 +100,7 @@ type Props = {
         subgenre: string | null;
         language: string | null;
         explicit: string | null;
+        ai_artwork: string | null;
         p_line: string | null;
         c_line: string | null;
         press_release: string | null;
@@ -330,6 +334,54 @@ function TrackFields({
                     >
                         <option value="explicit">Explicit</option>
                         <option value="clean">Clean</option>
+                    </SelectInput>
+                </Field>
+                <Field
+                    label="AI in the recording"
+                    htmlFor="ai_recording"
+                    error={errors.ai_recording}
+                >
+                    <SelectInput
+                        id="ai_recording"
+                        name="ai_recording"
+                        defaultValue={track.ai_recording ?? ''}
+                        placeholder="Not declared"
+                    >
+                        <option value="none">None</option>
+                        <option value="partly">Partly AI-generated</option>
+                        <option value="all">Fully AI-generated</option>
+                    </SelectInput>
+                </Field>
+                <Field
+                    label="AI in the composition"
+                    htmlFor="ai_composition"
+                    error={errors.ai_composition}
+                >
+                    <SelectInput
+                        id="ai_composition"
+                        name="ai_composition"
+                        defaultValue={track.ai_composition ?? ''}
+                        placeholder="Not declared"
+                    >
+                        <option value="none">None</option>
+                        <option value="partly">Partly AI-generated</option>
+                        <option value="all">Fully AI-generated</option>
+                    </SelectInput>
+                </Field>
+                <Field
+                    label="AI in the lyrics"
+                    htmlFor="ai_lyrics"
+                    error={errors.ai_lyrics}
+                >
+                    <SelectInput
+                        id="ai_lyrics"
+                        name="ai_lyrics"
+                        defaultValue={track.ai_lyrics ?? ''}
+                        placeholder="Not declared"
+                    >
+                        <option value="none">None</option>
+                        <option value="partly">Partly AI-generated</option>
+                        <option value="all">Fully AI-generated</option>
                     </SelectInput>
                 </Field>
                 <Field label="Genre" htmlFor="genre" error={errors.genre}>
@@ -817,6 +869,14 @@ export default function ShowRelease({
                             (release.explicit === 'explicit'
                                 ? 'Explicit'
                                 : 'Clean')}
+                    </Detail>
+                    <Detail label="AI in the artwork">
+                        {release.ai_artwork &&
+                            {
+                                none: 'None',
+                                partly: 'Partly AI-generated',
+                                all: 'Fully AI-generated',
+                            }[release.ai_artwork]}
                     </Detail>
                     <Detail label="℗ line">{release.p_line}</Detail>
                     <Detail label="© line">{release.c_line}</Detail>

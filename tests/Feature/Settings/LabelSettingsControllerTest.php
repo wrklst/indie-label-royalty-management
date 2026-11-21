@@ -29,6 +29,8 @@ test('the label settings page shows the stored settings and territories', functi
                 'accounts_mechanicals' => true, 'accounts_ppd' => false, 'accounts_reserves' => true,
                 'bandcamp_disable_fee' => true, 'bandcamp_exclude_physical' => false,
                 'airplay_markets' => ['DE', 'GB', 'US'],
+                'zebralution_number' => null, 'zebralution_origin_country' => null, 'zebralution_price_group' => 20,
+                'zebralution_work_rights' => 'administered by collecting society',
             ])
             ->where('territories', [
                 ['id' => $first->id, 'name' => 'GSA', 'countries' => ['DE', 'AT', 'CH']],
@@ -83,6 +85,29 @@ test('the bandcamp options can be switched off again', function () {
     expect($label->refresh()->importer_settings)->toBe(['bandcamp' => ['disable_fee' => false, 'exclude_physical' => true]]);
 });
 
+test('the Zebralution delivery settings are stored, and a form without them leaves them alone', function () {
+    $label = Label::factory()->create(['name' => 'Example Records', 'currency' => 'EUR']);
+    $this->actingAs(labelAdmin($label));
+
+    $this->put(route('label-settings.update'), [
+        'name' => 'Example Records', 'currency' => 'EUR', 'zebralution_number' => '1100a1', 'zebralution_origin_country' => 'de',
+        'zebralution_price_group' => '30', 'zebralution_work_rights' => '',
+    ])->assertSessionHasNoErrors();
+
+    $stored = ['zebralution' => ['number' => '1100a1', 'origin_country' => 'DE', 'price_group' => 30, 'work_rights' => 'administered by collecting society']];
+
+    expect($label->refresh()->delivery_settings)->toBe($stored);
+
+    $this->put(route('label-settings.update'), ['name' => 'Example Records', 'currency' => 'EUR'])->assertSessionHasNoErrors();
+
+    expect($label->refresh()->delivery_settings)->toBe($stored);
+
+    $this->get(route('label-settings.edit'))->assertInertia(fn ($page) => $page
+        ->where('settings.zebralution_number', '1100a1')
+        ->where('settings.zebralution_price_group', 30)
+        ->where('zebralutionWorkRights.1', 'licensed to distributor by label'));
+});
+
 test('the airplay research countries are stored split, upper-cased and deduplicated', function () {
     $label = Label::factory()->create(['name' => 'Example Records', 'currency' => 'EUR']);
 
@@ -133,6 +158,9 @@ test('invalid label settings are rejected', function (string $field, mixed $valu
     'contact address that is no email' => ['contact_email', 'office'],
     'flag that is no boolean' => ['accounts_ppd', 'maybe'],
     'bandcamp option that is no boolean' => ['bandcamp_disable_fee', 'maybe'],
+    'Zebralution price group that does not exist' => ['zebralution_price_group', 15],
+    'Zebralution rights in other words' => ['zebralution_work_rights', 'ours'],
+    'country of origin that is no code' => ['zebralution_origin_country', 'Germany'],
 ]);
 
 test('the slug of a label cannot be changed through the settings', function () {

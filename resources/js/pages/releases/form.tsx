@@ -46,6 +46,7 @@ type Release = {
     subgenre: string | null;
     language: string | null;
     explicit: string | null;
+    ai_artwork: string | null;
     p_line: string | null;
     c_line: string | null;
     original_released_on: string | null;
@@ -78,12 +79,14 @@ export default function ReleaseForm({
     contractOptions,
     statusOptions,
     typeOptions,
+    genreOptions,
 }: {
     release: Release | null;
     artistOptions: Option[];
     contractOptions: Option[];
     statusOptions: { value: string; label: string }[];
     typeOptions: { value: string; label: string }[];
+    genreOptions: string[];
 }) {
     const { label } = usePage().props;
     const form = useForm({
@@ -107,6 +110,7 @@ export default function ReleaseForm({
         subgenre: release?.subgenre ?? '',
         language: release?.language ?? '',
         explicit: release?.explicit ?? '',
+        ai_artwork: release?.ai_artwork ?? '',
         p_line: release?.p_line ?? '',
         c_line: release?.c_line ?? '',
         original_released_on: release?.original_released_on ?? '',
@@ -395,8 +399,14 @@ export default function ReleaseForm({
                             htmlFor="genre"
                             error={errors.genre}
                         >
+                            <datalist id="genres">
+                                {genreOptions.map((genre) => (
+                                    <option key={genre} value={genre} />
+                                ))}
+                            </datalist>
                             <Input
                                 id="genre"
+                                list="genres"
                                 value={form.data.genre}
                                 onChange={(event) =>
                                     form.setData('genre', event.target.value)
@@ -410,6 +420,7 @@ export default function ReleaseForm({
                         >
                             <Input
                                 id="subgenre"
+                                list="genres"
                                 value={form.data.subgenre}
                                 onChange={(event) =>
                                     form.setData('subgenre', event.target.value)
@@ -474,6 +485,29 @@ export default function ReleaseForm({
                             >
                                 <option value="explicit">Explicit</option>
                                 <option value="clean">Clean version</option>
+                            </SelectInput>
+                        </Field>
+                        <Field
+                            label="AI in the artwork"
+                            htmlFor="ai_artwork"
+                            error={errors.ai_artwork}
+                        >
+                            <SelectInput
+                                id="ai_artwork"
+                                value={form.data.ai_artwork}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'ai_artwork',
+                                        event.target.value,
+                                    )
+                                }
+                                placeholder="Not declared"
+                            >
+                                <option value="none">None</option>
+                                <option value="partly">
+                                    Partly AI-generated
+                                </option>
+                                <option value="all">Fully AI-generated</option>
                             </SelectInput>
                         </Field>
                         <Field

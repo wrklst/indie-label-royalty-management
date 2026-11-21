@@ -129,6 +129,7 @@ test('a track update is rejected when a value is invalid', function (array $inpu
     'negative mechanicals rate' => [['mechanicals_rate' => '-1'], 'mechanicals_rate'],
     'negative PPD rate' => [['ppd_rate' => '-1'], 'ppd_rate'],
     'ISRC longer than 16 characters' => [['isrc' => 'ZZ-TST-26-00001-X'], 'isrc'],
+    'AI declaration that is none of the three' => [['ai_recording' => 'some'], 'ai_recording'],
 ]);
 
 test('a track cannot reference records of another label', function (string $field, string $model) {

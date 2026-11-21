@@ -50,10 +50,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string|null $files_url
  * @property list<string>|null $blocked_services
  * @property list<string>|null $blocked_territories
+ * @property string|null $ai_artwork How much of the artwork AI made: "none", "partly", "all"; null is not declared.
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['label_id', 'artist_id', 'contract_id', 'name', 'catalog_number', 'upc', 'image_path', 'released_on', 'spotify_id', 'discogs_id', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'reserves_rate', 'notes', 'status', 'release_type', 'version', 'genre', 'subgenre', 'language', 'explicit', 'p_line', 'c_line', 'original_released_on', 'preorder_on', 'press_release', 'key_facts', 'todo', 'files_url', 'blocked_services', 'blocked_territories'])]
+#[Fillable(['label_id', 'artist_id', 'contract_id', 'name', 'catalog_number', 'upc', 'image_path', 'released_on', 'spotify_id', 'discogs_id', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'reserves_rate', 'notes', 'status', 'release_type', 'version', 'genre', 'subgenre', 'language', 'explicit', 'p_line', 'c_line', 'original_released_on', 'preorder_on', 'press_release', 'key_facts', 'todo', 'files_url', 'blocked_services', 'blocked_territories', 'ai_artwork'])]
 class Release extends Model
 {
     /** @use HasFactory<ReleaseFactory> */

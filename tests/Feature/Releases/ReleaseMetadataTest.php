@@ -30,6 +30,7 @@ test('a release is saved with its delivery details and artist credits', function
     $this->post(route('releases.store'), [
         'name' => 'Example Release', 'artist_id' => $main->id, 'status' => 'in_progress', 'release_type' => 'ep', 'version' => 'The Remixes',
         'genre' => 'Electronic', 'language' => 'zxx', 'explicit' => 'clean', 'p_line' => '2026 Example Records', 'preorder_on' => '2026-05-01',
+        'ai_artwork' => 'partly',
         'press_release' => "First paragraph.\n\nSecond paragraph.", 'blocked_services' => 'Example Stream, Other Store', 'blocked_territories' => 'ru, il',
         'artists' => [['artist_id' => $guest->id, 'role' => 'featuring']],
     ])->assertSessionHasNoErrors();
@@ -41,6 +42,7 @@ test('a release is saved with its delivery details and artist credits', function
         ->and($release->blocked_services)->toBe(['Example Stream', 'Other Store'])
         ->and($release->blocked_territories)->toBe(['RU', 'IL'])
         ->and($release->preorder_on?->toDateString())->toBe('2026-05-01')
+        ->and($release->ai_artwork)->toBe('partly')
         ->and($release->artists()->sole()->pivot->role)->toBe('featuring');
 
     $this->get(route('releases.show', $release))
@@ -75,6 +77,7 @@ test('track details and credits are saved from the track dialog', function () {
 
     $this->put(route('tracks.update', $track->id), [
         'name' => 'Example Track', 'version' => 'Club Mix', 'bpm' => '128.5', 'musical_key' => 'F minor', 'explicit' => 'explicit', 'disc_number' => 1,
+        'ai_recording' => 'none', 'ai_composition' => 'all', 'ai_lyrics' => '',
         'credits' => ['composers' => 'First Writer, Second Writer', 'publishers' => '', 'producers' => 'Example Producer'],
         'artists' => [['artist_id' => $remixer->id, 'role' => 'remixer']],
     ])->assertSessionHasNoErrors();
@@ -83,6 +86,7 @@ test('track details and credits are saved from the track dialog', function () {
 
     expect($track->version)->toBe('Club Mix')
         ->and((float) $track->bpm)->toBe(128.5)
+        ->and($track->only(['ai_recording', 'ai_composition', 'ai_lyrics']))->toBe(['ai_recording' => 'none', 'ai_composition' => 'all', 'ai_lyrics' => null])
         ->and($track->credits)->toBe(['composers' => ['First Writer', 'Second Writer'], 'producers' => ['Example Producer']])
         ->and($track->artists()->sole()->id)->toBe($remixer->id);
 });

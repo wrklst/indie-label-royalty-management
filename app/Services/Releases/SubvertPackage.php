@@ -37,7 +37,7 @@ class SubvertPackage
     protected const string ACCEPTS = 'MP3, FLAC, WAV or AIFF';
 
     /** Formats the store accepts, by file extension, with the lossless ones first. */
-    private const array LOSSLESS = ['wav', 'aif', 'aiff', 'flac'];
+    protected const array LOSSLESS = ['wav', 'aif', 'aiff', 'flac'];
 
     protected const array LOSSY = ['mp3'];
 
@@ -114,7 +114,7 @@ class SubvertPackage
         $cover = $this->cover($release);
 
         if ($cover !== null) {
-            $entries['cover'.$this->suffix($cover)] = $cover;
+            $entries[$this->coverName($release).$this->suffix($cover)] = $cover;
         }
 
         $tracks = $this->tracks($release);
@@ -129,15 +129,7 @@ class SubvertPackage
                 continue;
             }
 
-            $name = SafeFileName::from(sprintf(
-                '%s%s %s%s',
-                $severalDiscs ? ($track->disc_number ?? 1).'-' : '',
-                str_pad((string) $numbers[$track->id], $width, '0', STR_PAD_LEFT),
-                $track->name,
-                $track->version ? " ({$track->version})" : '',
-            ));
-
-            $entries[$name.$this->suffix($audio)] = $audio;
+            $entries[$this->audioName($release, $track, $numbers[$track->id], $width, $severalDiscs).$this->suffix($audio)] = $audio;
         }
 
         return $entries;
@@ -189,7 +181,31 @@ class SubvertPackage
         return [];
     }
 
-    private function cover(Release $release): ?ReleaseFile
+    /**
+     * What the cover is called in the ZIP, without its extension.
+     */
+    protected function coverName(Release $release): string
+    {
+        return 'cover';
+    }
+
+    /**
+     * What the audio file of a track is called in the ZIP, without its
+     * extension: "01 Title (Version)", with the disc in front when the
+     * release has several.
+     */
+    protected function audioName(Release $release, Track $track, int $number, int $width, bool $severalDiscs): string
+    {
+        return SafeFileName::from(sprintf(
+            '%s%s %s%s',
+            $severalDiscs ? ($track->disc_number ?? 1).'-' : '',
+            str_pad((string) $number, $width, '0', STR_PAD_LEFT),
+            $track->name,
+            $track->version ? " ({$track->version})" : '',
+        ));
+    }
+
+    protected function cover(Release $release): ?ReleaseFile
     {
         return $release->files->where('kind', ReleaseFileKind::Cover)->sortByDesc('id')->first();
     }
@@ -197,7 +213,7 @@ class SubvertPackage
     /**
      * @return Collection<int, Track>
      */
-    private function tracks(Release $release): Collection
+    protected function tracks(Release $release): Collection
     {
         return $release->tracks
             ->sortBy(fn (Track $track): array => [$track->disc_number ?? 1, $track->track_number ?? PHP_INT_MAX, $track->id])
@@ -212,7 +228,7 @@ class SubvertPackage
      * @param  Collection<int, Track>  $tracks
      * @return array<int, int>
      */
-    private function numbers(Collection $tracks): array
+    protected function numbers(Collection $tracks): array
     {
         $own = $tracks->map(fn (Track $track): string => ($track->disc_number ?? 1).'-'.($track->track_number ?? ''));
         $usable = $tracks->every(fn (Track $track): bool => $track->track_number !== null && $track->track_number > 0)
@@ -249,11 +265,11 @@ class SubvertPackage
      */
     private function pick(Collection $files): ?ReleaseFile
     {
-        return $files->first(fn (ReleaseFile $file): bool => in_array($this->extension($file), self::LOSSLESS, true))
+        return $files->first(fn (ReleaseFile $file): bool => in_array($this->extension($file), static::LOSSLESS, true))
             ?? $files->first(fn (ReleaseFile $file): bool => in_array($this->extension($file), static::LOSSY, true));
     }
 
-    private function extension(ReleaseFile $file): string
+    protected function extension(ReleaseFile $file): string
     {
         return strtolower(pathinfo($file->original_name, PATHINFO_EXTENSION));
     }

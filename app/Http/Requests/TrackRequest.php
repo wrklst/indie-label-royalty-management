@@ -19,7 +19,7 @@ class TrackRequest extends LabelFormRequest
             $this->merge(['artists' => []]);
         }
 
-        $this->nullify(['artist_id', 'contract_id', 'track_number', 'duration', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'disc_number', 'explicit', 'bpm', 'preview_start']);
+        $this->nullify(['artist_id', 'contract_id', 'track_number', 'duration', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'disc_number', 'explicit', 'bpm', 'preview_start', 'ai_recording', 'ai_composition', 'ai_lyrics']);
 
         // Credits may arrive as "Name One, Name Two" per role from text fields.
         $credits = $this->input('credits');
@@ -63,6 +63,9 @@ class TrackRequest extends LabelFormRequest
             'genre' => ['nullable', 'string', 'max:255'],
             'language' => ['nullable', 'string', 'max:8'],
             'explicit' => ['nullable', Rule::in(['explicit', 'clean'])],
+            'ai_recording' => ['nullable', Rule::in(['none', 'partly', 'all'])],
+            'ai_composition' => ['nullable', Rule::in(['none', 'partly', 'all'])],
+            'ai_lyrics' => ['nullable', Rule::in(['none', 'partly', 'all'])],
             'bpm' => ['nullable', 'numeric', 'decimal:0,2', 'min:20', 'max:400'],
             'musical_key' => ['nullable', 'string', 'max:20'],
             'preview_start' => ['nullable', 'integer', 'min:0', 'max:36000'],

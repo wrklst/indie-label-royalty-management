@@ -16,6 +16,7 @@ use App\Models\Transaction;
 use App\Services\Imports\Identifiers;
 use App\Services\Releases\ArtistCredits;
 use App\Services\Releases\PlayableAudio;
+use App\Services\Releases\ZebralutionGenres;
 use App\Services\Reports\IncomeReport;
 use App\Support\Options;
 use App\Support\Sorting;
@@ -123,7 +124,7 @@ class ReleaseController extends Controller
             'release' => [
                 ...$release->only([
                     'id', 'name', 'artist_id', 'catalog_number', 'upc', 'spotify_id', 'discogs_id', 'notes', 'version', 'genre', 'subgenre', 'language', 'explicit',
-                    'p_line', 'c_line', 'press_release', 'key_facts', 'todo', 'files_url', 'blocked_services', 'blocked_territories',
+                    'p_line', 'c_line', 'press_release', 'key_facts', 'todo', 'files_url', 'blocked_services', 'blocked_territories', 'ai_artwork',
                 ]),
                 'released_on' => $release->released_on?->toDateString(),
                 'original_released_on' => $release->original_released_on?->toDateString(),
@@ -144,7 +145,7 @@ class ReleaseController extends Controller
                 'tracks' => $release->tracks->sortBy([['track_number', 'asc'], ['id', 'asc']])->values()->map(fn (Track $track): array => [
                     ...$track->only([
                         'id', 'name', 'isrc', 'iswc', 'track_number', 'duration', 'artist_id', 'contract_id', 'disc_number', 'version', 'genre',
-                        'language', 'explicit', 'musical_key', 'preview_start', 'p_line', 'lyrics', 'credits',
+                        'language', 'explicit', 'musical_key', 'preview_start', 'p_line', 'lyrics', 'credits', 'ai_recording', 'ai_composition', 'ai_lyrics',
                     ]),
                     'bpm' => $track->bpm === null ? null : rtrim(rtrim((string) $track->bpm, '0'), '.'),
                     'artist' => ArtistCredits::display($track),
@@ -188,7 +189,7 @@ class ReleaseController extends Controller
                 ...$release->only([
                     'id', 'name', 'artist_id', 'contract_id', 'catalog_number', 'upc', 'spotify_id', 'discogs_id', 'accounts_mechanicals', 'mechanicals_rate',
                     'ppd_rate', 'reserves_rate', 'notes', 'version', 'genre', 'subgenre', 'language', 'explicit', 'p_line', 'c_line', 'press_release',
-                    'key_facts', 'todo', 'files_url',
+                    'key_facts', 'todo', 'files_url', 'ai_artwork',
                 ]),
                 'released_on' => $release->released_on?->toDateString(),
                 'original_released_on' => $release->original_released_on?->toDateString(),
@@ -296,6 +297,7 @@ class ReleaseController extends Controller
             'contractOptions' => Options::contracts(),
             'statusOptions' => array_map(fn (ReleaseStatus $status): array => ['value' => $status->value, 'label' => $status->label()], ReleaseStatus::cases()),
             'typeOptions' => array_map(fn (ReleaseType $type): array => ['value' => $type->value, 'label' => $type->label()], ReleaseType::cases()),
+            'genreOptions' => ZebralutionGenres::names(),
             'roleOptions' => array_map(fn (ArtistRole $role): array => ['value' => $role->value, 'label' => $role->label()], ArtistRole::cases()),
         ];
     }

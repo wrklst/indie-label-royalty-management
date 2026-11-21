@@ -7,6 +7,7 @@ use App\Services\Releases\BandcampPackage;
 use App\Services\Releases\ReleaseMetadataExport;
 use App\Services\Releases\ReleasePackage;
 use App\Services\Releases\SubvertPackage;
+use App\Services\Releases\ZebralutionPackage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -76,9 +77,20 @@ class ReleaseExportController extends Controller
         return $this->storePackage($release, $package, 'bandcamp_package');
     }
 
+    /**
+     * Zebralution's metadata sheet filled in, the cover, and the WAV
+     * masters in the folder and under the names its FTP server asks
+     * for. When Zebralution would send the release back, the release
+     * page says why instead.
+     */
+    public function zebralutionPackage(Release $release, ZebralutionPackage $package): BinaryFileResponse|RedirectResponse
+    {
+        return $this->storePackage($release, $package, 'zebralution_package');
+    }
+
     private function storePackage(Release $release, SubvertPackage $package, string $errors): BinaryFileResponse|RedirectResponse
     {
-        $release->load(['files', 'tracks']);
+        $release->load(['artist', 'artists', 'label', 'files', 'tracks.artist', 'tracks.artists']);
         $problems = $package->problems($release);
 
         if ($problems !== []) {

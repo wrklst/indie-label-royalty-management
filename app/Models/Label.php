@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property array<string, mixed>|null $importer_settings
  * @property array<string, mixed>|null $royalty_tool_settings
  * @property list<string>|null $airplay_markets
+ * @property array<string, mixed>|null $delivery_settings What the label has agreed with its distributors, by distributor.
  * @property string|null $dataforseo_login
  * @property string|null $dataforseo_password
  * @property string|null $ai_provider The AI service receipts are read with, a key of AiConnection::SERVICES.
@@ -36,7 +37,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property CarbonImmutable|null $updated_at
  * @property-read Pivot&object{role: string, payee_id: int|null} $pivot Membership of the user when loaded through User::labels().
  */
-#[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'signet_path', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings', 'royalty_tool_settings', 'airplay_markets', 'dataforseo_login', 'dataforseo_password', 'ai_provider', 'ai_key', 'ai_endpoint', 'ai_model', 'ai_trial'])]
+#[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'signet_path', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings', 'royalty_tool_settings', 'airplay_markets', 'delivery_settings', 'dataforseo_login', 'dataforseo_password', 'ai_provider', 'ai_key', 'ai_endpoint', 'ai_model', 'ai_trial'])]
 #[Hidden(['dataforseo_login', 'dataforseo_password', 'ai_key'])]
 class Label extends Model
 {
@@ -55,6 +56,7 @@ class Label extends Model
             'importer_settings' => 'array',
             'royalty_tool_settings' => 'array',
             'airplay_markets' => 'array',
+            'delivery_settings' => 'array',
             'dataforseo_login' => 'encrypted',
             'dataforseo_password' => 'encrypted',
             'ai_key' => 'encrypted',
@@ -78,6 +80,14 @@ class Label extends Model
     public function airplayMarkets(): array
     {
         return $this->airplay_markets ?: ['DE', 'GB', 'US'];
+    }
+
+    /**
+     * Read a delivery setting, e.g. "zebralution.number".
+     */
+    public function deliverySetting(string $key, mixed $default = null): mixed
+    {
+        return data_get($this->delivery_settings, $key, $default);
     }
 
     /**

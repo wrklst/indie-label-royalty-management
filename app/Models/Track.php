@@ -37,6 +37,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $p_line
  * @property array<string, list<string>>|null $credits
  * @property string|null $lyrics
+ * @property string|null $ai_recording How much of the recording AI made: "none", "partly", "all"; null is not declared.
+ * @property string|null $ai_composition
+ * @property string|null $ai_lyrics
  * @property CarbonImmutable|null $researched_at
  * @property string|null $research_state
  * @property string|null $research_step
@@ -44,7 +47,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['label_id', 'release_id', 'artist_id', 'contract_id', 'name', 'isrc', 'iswc', 'track_number', 'duration', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'disc_number', 'version', 'genre', 'language', 'explicit', 'bpm', 'musical_key', 'preview_start', 'p_line', 'credits', 'lyrics', 'researched_at'])]
+#[Fillable(['label_id', 'release_id', 'artist_id', 'contract_id', 'name', 'isrc', 'iswc', 'track_number', 'duration', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'disc_number', 'version', 'genre', 'language', 'explicit', 'bpm', 'musical_key', 'preview_start', 'p_line', 'credits', 'lyrics', 'researched_at', 'ai_recording', 'ai_composition', 'ai_lyrics'])]
 class Track extends Model
 {
     /** @use HasFactory<TrackFactory> */

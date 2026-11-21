@@ -2,7 +2,7 @@ import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import LabelSettingsController from '@/actions/App/Http/Controllers/Settings/LabelSettingsController';
 import { DeleteButton } from '@/components/delete-button';
-import { CheckField, Field } from '@/components/field';
+import { CheckField, Field, SelectInput } from '@/components/field';
 import Heading from '@/components/heading';
 import { LabelImageUpload } from '@/components/label-image-upload';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,12 @@ type Props = {
         bandcamp_disable_fee: boolean;
         bandcamp_exclude_physical: boolean;
         airplay_markets: string[];
+        zebralution_number: string | null;
+        zebralution_origin_country: string | null;
+        zebralution_price_group: number;
+        zebralution_work_rights: string;
     };
+    zebralutionWorkRights: string[];
     royaltyTools: {
         mechanicals_usd_rate: string | null;
         mechanicals_include_physical: boolean;
@@ -62,6 +67,7 @@ export default function LabelSettings({
     settings,
     royaltyTools,
     territories,
+    zebralutionWorkRights,
 }: Props) {
     const { label } = usePage().props;
     const [tools, setTools] = useState({
@@ -175,6 +181,105 @@ export default function LabelSettings({
                                         settings.bandcamp_exclude_physical
                                     }
                                 />
+                            </div>
+
+                            <div className="grid gap-3">
+                                <p className="text-sm font-medium">
+                                    Zebralution delivery
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Goes into every metadata sheet made under
+                                    Delivery on a release.
+                                </p>
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <Field
+                                        label="Zebralution number"
+                                        htmlFor="zebralution_number"
+                                        error={errors.zebralution_number}
+                                        hint="The number Zebralution gave the label."
+                                    >
+                                        <Input
+                                            id="zebralution_number"
+                                            name="zebralution_number"
+                                            defaultValue={
+                                                settings.zebralution_number ??
+                                                ''
+                                            }
+                                            className="font-mono"
+                                        />
+                                    </Field>
+                                    <Field
+                                        label="Country of origin"
+                                        htmlFor="zebralution_origin_country"
+                                        error={
+                                            errors.zebralution_origin_country
+                                        }
+                                        hint="Where the label's music comes from, as a two-letter code."
+                                    >
+                                        <Input
+                                            id="zebralution_origin_country"
+                                            name="zebralution_origin_country"
+                                            defaultValue={
+                                                settings.zebralution_origin_country ??
+                                                ''
+                                            }
+                                            placeholder="DE"
+                                            maxLength={2}
+                                            className="font-mono uppercase"
+                                        />
+                                    </Field>
+                                    <Field
+                                        label="Price group"
+                                        htmlFor="zebralution_price_group"
+                                        error={errors.zebralution_price_group}
+                                        hint="For tracks and releases alike."
+                                    >
+                                        <SelectInput
+                                            id="zebralution_price_group"
+                                            name="zebralution_price_group"
+                                            defaultValue={String(
+                                                settings.zebralution_price_group,
+                                            )}
+                                        >
+                                            <option value="5">5: back</option>
+                                            <option value="10">10: mid</option>
+                                            <option value="20">
+                                                20: standard
+                                            </option>
+                                            <option value="25">
+                                                25: standard plus
+                                            </option>
+                                            <option value="30">30: high</option>
+                                            <option value="35">
+                                                35: high plus
+                                            </option>
+                                        </SelectInput>
+                                    </Field>
+                                    <Field
+                                        label="Rights in compositions and lyrics"
+                                        htmlFor="zebralution_work_rights"
+                                        error={errors.zebralution_work_rights}
+                                    >
+                                        <SelectInput
+                                            id="zebralution_work_rights"
+                                            name="zebralution_work_rights"
+                                            defaultValue={
+                                                settings.zebralution_work_rights
+                                            }
+                                        >
+                                            {zebralutionWorkRights.map(
+                                                (rights) => (
+                                                    <option
+                                                        key={rights}
+                                                        value={rights}
+                                                    >
+                                                        {rights}
+                                                    </option>
+                                                ),
+                                            )}
+                                        </SelectInput>
+                                    </Field>
+                                </div>
                             </div>
 
                             <Field

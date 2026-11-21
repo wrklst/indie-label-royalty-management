@@ -22,6 +22,7 @@ import {
     metadata,
     packageMethod,
     subvertPackage,
+    zebralutionPackage,
 } from '@/routes/releases';
 
 /**
@@ -31,8 +32,17 @@ import {
  */
 export function DeliveryMenu({ releaseId }: { releaseId: number }) {
     const { errors } = usePage().props;
-    const store = errors?.bandcamp_package ? 'Bandcamp' : 'Subvert';
-    const problems = (errors?.bandcamp_package ?? errors?.subvert_package ?? '')
+    const store = errors?.zebralution_package
+        ? 'Zebralution'
+        : errors?.bandcamp_package
+          ? 'Bandcamp'
+          : 'Subvert';
+    const problems = (
+        errors?.zebralution_package ??
+        errors?.bandcamp_package ??
+        errors?.subvert_package ??
+        ''
+    )
         .split('\n')
         .filter((problem) => problem !== '');
     const [open, setOpen] = useState(problems.length > 0);
@@ -54,6 +64,12 @@ export function DeliveryMenu({ releaseId }: { releaseId: number }) {
             description:
                 'Cover, one lossless file per track and a sheet to copy from, to unpack and add on Bandcamp.',
             href: bandcampPackage.url(releaseId),
+        },
+        {
+            label: 'Zebralution ZIP',
+            description:
+                "Zebralution's metadata sheet filled in, the cover, and the WAV masters named for its FTP server.",
+            href: zebralutionPackage.url(releaseId),
         },
         {
             label: 'Metadata CSV',
@@ -98,9 +114,9 @@ export function DeliveryMenu({ releaseId }: { releaseId: number }) {
                             The {store} ZIP cannot be made yet
                         </DialogTitle>
                         <DialogDescription>
-                            {store} needs the cover and one audio file per
-                            track. Fix the following under Files, then try
-                            again.
+                            {store === 'Zebralution'
+                                ? 'Zebralution sends a release back when any of this is missing. Fix the following, then try again.'
+                                : `${store} needs the cover and one audio file per track. Fix the following under Files, then try again.`}
                         </DialogDescription>
                     </DialogHeader>
                     <ul
