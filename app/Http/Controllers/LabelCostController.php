@@ -42,7 +42,7 @@ class LabelCostController extends Controller
         $year = now()->year;
         $search = $request->string('search')->trim()->value();
         $costSorting = Sorting::for($request, [
-            'paid_on' => 'paid_timestamp',
+            'paid_timestamp' => 'paid_timestamp',
             'name' => fn (Builder $query, SortDirection $direction) => $query->orderBy(new Expression('COALESCE(source, memo)'), $direction),
             'category' => Sorting::nullsLast('category'),
             'amount' => Sorting::nullsLast('converted_total'),
@@ -93,13 +93,16 @@ class LabelCostController extends Controller
                 ]),
             'costs' => $listed->through(fn (Transaction $cost): array => [
                 ...$cost->only(['id', 'category', 'memo', 'source', 'total', 'converted_total', 'currency']),
-                'paid_on' => $cost->paid_timestamp->toDateString(),
+                'conversion_rate' => $cost->conversion_rate === null || $cost->currency === $label->currency ? null : rtrim(rtrim((string) $cost->conversion_rate, '0'), '.'),
+                // Typed and shown as the positive amount; a credit booked positive keeps its sign when saved.
+                'amount' => Decimal::abs($cost->total),
+                'paid_timestamp' => $cost->paid_timestamp->toDateString(),
                 'recurring' => $cost->recurring_expense_id !== null,
                 'receipt_id' => $withReceipt->get($cost->id)?->id,
             ]),
             'attachableCosts' => $withoutReceipt->map(fn (Transaction $cost): array => [
                 ...$cost->only(['id', 'source', 'memo', 'total', 'currency']),
-                'paid_on' => $cost->paid_timestamp->toDateString(),
+                'paid_timestamp' => $cost->paid_timestamp->toDateString(),
             ])->values(),
             'receiptReading' => AiConnection::isConfigured($label),
             // Receipts that belong to no cost yet, with what was read off them.
@@ -122,19 +125,19 @@ class LabelCostController extends Controller
         $label = $this->label();
         $validated = $request->validate([
             ...$this->amountRules(),
-            'paid_on' => ['required', 'date'],
+            'paid_timestamp' => ['required', 'date'],
             'receipt_id' => ['nullable', 'integer', Rule::exists('receipts', 'id')->where('label_id', $label->id)->whereNull('transaction_id')],
         ]);
 
         $currency = strtoupper($validated['currency']);
         $total = Decimal::sub('0', Decimal::parse($validated['amount']));
-        $rate = $this->rates->for($currency, $label->currency, $validated['conversion_rate'] ?? null, $validated['paid_on']);
+        $rate = $this->rates->for($currency, $label->currency, $validated['conversion_rate'] ?? null, $validated['paid_timestamp']);
 
         $cost = Transaction::query()->create([
             'type' => TransactionType::Expense,
             'recoupable' => false,
-            'timestamp' => $validated['paid_on'],
-            'paid_timestamp' => $validated['paid_on'],
+            'timestamp' => $validated['paid_timestamp'],
+            'paid_timestamp' => $validated['paid_timestamp'],
             'total' => $total,
             'currency' => $currency,
             'conversion_rate' => $rate,
@@ -150,6 +153,43 @@ class LabelCostController extends Controller
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Cost booked.')]);
+
+        return back();
+    }
+
+    /**
+     * Change a booked cost in the dialog it was booked in. Only costs of the label itself:
+     * an expense without a release that the label bears alone.
+     */
+    public function update(Request $request, Transaction $transaction): RedirectResponse
+    {
+        abort_unless($transaction->type === TransactionType::Expense && ! $transaction->recoupable && $transaction->release_id === null, 404);
+
+        $validated = $request->validate([
+            ...$this->amountRules(),
+            'paid_timestamp' => ['required', 'date'],
+        ]);
+
+        $label = $this->label();
+        $currency = strtoupper($validated['currency']);
+        $amount = Decimal::parse($validated['amount']);
+        // A cost is stored negative; a credit that was booked positive stays a credit.
+        $total = Decimal::isPositive($transaction->total) ? $amount : Decimal::sub('0', $amount);
+        $rate = $this->rates->for($currency, $label->currency, $validated['conversion_rate'] ?? null, $validated['paid_timestamp']);
+
+        $transaction->update([
+            'timestamp' => $validated['paid_timestamp'],
+            'paid_timestamp' => $validated['paid_timestamp'],
+            'total' => $total,
+            'currency' => $currency,
+            'conversion_rate' => $rate,
+            'converted_total' => $rate === null ? null : Decimal::mul($total, $rate),
+            'category' => $validated['category'] ?? null,
+            'source' => $validated['name'],
+            'memo' => $validated['memo'] ?? $validated['name'],
+        ]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Cost saved.')]);
 
         return back();
     }

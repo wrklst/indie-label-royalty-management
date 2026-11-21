@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { index, show } from '@/routes/releases';
 import type { Option } from '@/types';
 import { AiField } from '@/components/ai-field';
+import { TRACK_FIELD } from '@/components/track-fields';
 
 type TrackRow = {
     id: number | null;
@@ -76,6 +77,7 @@ const numberOrBlank = (value: string): number | '' =>
 
 export default function ReleaseForm({
     release,
+    returnTo,
     artistOptions,
     contractOptions,
     statusOptions,
@@ -83,6 +85,8 @@ export default function ReleaseForm({
     genreOptions,
 }: {
     release: Release | null;
+    /** The page the form was opened from, where saving returns to. */
+    returnTo: string | null;
     artistOptions: Option[];
     contractOptions: Option[];
     statusOptions: { value: string; label: string }[];
@@ -91,6 +95,7 @@ export default function ReleaseForm({
 }) {
     const { label } = usePage().props;
     const form = useForm({
+        return_to: returnTo ?? '',
         name: release?.name ?? '',
         artist_id: (release?.artist_id ?? '') as number | '',
         contract_id: (release?.contract_id ?? '') as number | '',
@@ -179,7 +184,7 @@ export default function ReleaseForm({
                         url={ReleaseController.destroy.url(release.id)}
                         label="Delete"
                         title={`Delete ${release.name}?`}
-                        description="The release, its tracks and items are deleted. Its transactions are kept but become unassigned, so they stop earning for any payee."
+                        description="Deleted with the release: its tracks, its items that have no transactions, its platform links and all its files, which are also removed from storage. Its transactions are kept, with the items they were booked on, but become unassigned, so they stop earning for any payee."
                     />
                 )
             }
@@ -721,10 +726,10 @@ export default function ReleaseForm({
                         <div className="grid gap-3">
                             <div className="hidden grid-cols-[3.5rem_1.6fr_1fr_9rem_1.2fr_2.25rem] gap-2 text-xs font-medium text-muted-foreground lg:grid">
                                 <span>#</span>
-                                <span>Title</span>
-                                <span>Artist</span>
-                                <span>ISRC</span>
-                                <span>Contract</span>
+                                <span>{TRACK_FIELD.name.label}</span>
+                                <span>{TRACK_FIELD.artist_id.label}</span>
+                                <span>{TRACK_FIELD.isrc.label}</span>
+                                <span>{TRACK_FIELD.contract_id.label}</span>
                                 <span />
                             </div>
                             {form.data.tracks.map((track, position) => (
@@ -733,7 +738,9 @@ export default function ReleaseForm({
                                     className="grid gap-2 lg:grid-cols-[3.5rem_1.6fr_1fr_9rem_1.2fr_2.25rem]"
                                 >
                                     <Input
-                                        aria-label="Track number"
+                                        aria-label={
+                                            TRACK_FIELD.track_number.label
+                                        }
                                         type="number"
                                         min="1"
                                         value={track.track_number}
@@ -747,14 +754,16 @@ export default function ReleaseForm({
                                     />
                                     <div>
                                         <Input
-                                            aria-label="Title"
+                                            aria-label={TRACK_FIELD.name.label}
                                             value={track.name}
                                             onChange={(event) =>
                                                 setTrack(position, {
                                                     name: event.target.value,
                                                 })
                                             }
-                                            placeholder="Track title"
+                                            placeholder={
+                                                TRACK_FIELD.name.placeholder
+                                            }
                                             required
                                         />
                                         <InputError
@@ -766,7 +775,7 @@ export default function ReleaseForm({
                                         />
                                     </div>
                                     <SelectInput
-                                        aria-label="Artist"
+                                        aria-label={TRACK_FIELD.artist_id.label}
                                         value={track.artist_id}
                                         onChange={(event) =>
                                             setTrack(position, {
@@ -776,18 +785,22 @@ export default function ReleaseForm({
                                             })
                                         }
                                         options={artistOptions}
-                                        placeholder="Artist…"
+                                        placeholder={
+                                            TRACK_FIELD.artist_id.blank
+                                        }
                                     />
                                     <div>
                                         <Input
-                                            aria-label="ISRC"
+                                            aria-label={TRACK_FIELD.isrc.label}
                                             value={track.isrc}
                                             onChange={(event) =>
                                                 setTrack(position, {
                                                     isrc: event.target.value,
                                                 })
                                             }
-                                            placeholder="DEXXX2600001"
+                                            placeholder={
+                                                TRACK_FIELD.isrc.placeholder
+                                            }
                                             className="font-mono"
                                         />
                                         <InputError
@@ -799,7 +812,9 @@ export default function ReleaseForm({
                                         />
                                     </div>
                                     <SelectInput
-                                        aria-label="Contract"
+                                        aria-label={
+                                            TRACK_FIELD.contract_id.label
+                                        }
                                         value={track.contract_id}
                                         onChange={(event) =>
                                             setTrack(position, {
@@ -809,7 +824,9 @@ export default function ReleaseForm({
                                             })
                                         }
                                         options={contractOptions}
-                                        placeholder="Same as release"
+                                        placeholder={
+                                            TRACK_FIELD.contract_id.blank
+                                        }
                                     />
                                     <Button
                                         type="button"
@@ -940,7 +957,12 @@ export default function ReleaseForm({
                         {release ? 'Save release' : 'Create release'}
                     </Button>
                     <Button variant="ghost" asChild>
-                        <Link href={release ? show(release.id) : index()}>
+                        <Link
+                            href={
+                                returnTo ??
+                                (release ? show(release.id) : index())
+                            }
+                        >
                             Cancel
                         </Link>
                     </Button>

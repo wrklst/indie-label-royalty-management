@@ -31,7 +31,9 @@ class TransactionRequest extends LabelFormRequest
             'type' => ['required', Rule::enum(TransactionType::class)],
             'timestamp' => ['required', 'date'],
             'paid_timestamp' => ['required', 'date'],
-            'total' => ['required', 'numeric', 'decimal:0,15', 'between:-999999999999,999999999999'],
+            // An expense is typed as a positive amount and stored negative; a refund or credit is stored positive.
+            'total' => ['required', 'numeric', 'decimal:0,15', 'between:-999999999999,999999999999', ...($this->input('type') === TransactionType::Expense->value ? ['min:0'] : [])],
+            'refund' => ['boolean'],
             'currency' => ['required', 'string', 'size:3', 'alpha'],
             'conversion_rate' => ['nullable', 'numeric', 'decimal:0,10', 'min:0.0000000001', 'max:9999999999'],
             'quantity' => ['nullable', 'numeric', 'decimal:0,8', 'between:-999999999999,999999999999'],
@@ -60,6 +62,9 @@ class TransactionRequest extends LabelFormRequest
      */
     public function messages(): array
     {
-        return ['payee_id.required_if' => 'A transfer needs a payee.'];
+        return [
+            'payee_id.required_if' => 'A transfer needs a payee.',
+            'total.min' => 'Enter an expense as a positive amount. For a refund or credit, tick “Refund or credit”.',
+        ];
     }
 }

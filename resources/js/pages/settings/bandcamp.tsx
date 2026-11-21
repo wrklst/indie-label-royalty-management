@@ -81,7 +81,7 @@ function Credentials() {
                         <Button disabled={processing}>
                             {processing
                                 ? 'Asking Bandcamp…'
-                                : 'Connect and load my bands'}
+                                : 'Test and connect'}
                         </Button>
                     </div>
                 </>
@@ -282,7 +282,7 @@ export default function Bandcamp({
                         ]}
                         disconnect={BandcampController.destroy.url()}
                         disconnectLabel="Disconnect Bandcamp"
-                        confirm="Disconnect Bandcamp? The stored client ID, secret and tokens are deleted and the weekly sync stops. Imported sales stay. To connect again you need your client ID and secret, and you may have to regenerate the client on Bandcamp."
+                        confirm="The stored client ID, secret and tokens are deleted and the weekly sync stops. Imported sales stay. To connect again you need your client ID and secret, and you may have to regenerate the client on Bandcamp."
                     />
                 ) : (
                     <>

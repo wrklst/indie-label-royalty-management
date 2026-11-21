@@ -14,7 +14,9 @@ import {
 } from '@/components/ui/dialog';
 
 /**
- * Delete with a confirmation that says what will be lost.
+ * Delete with a confirmation that says what will be lost. Every destructive
+ * action asks here, titled "Delete {name}?"; when the server would refuse the
+ * delete, pass its reason as `blocked` and the button is disabled with it.
  */
 export function DeleteButton({
     url,
@@ -23,7 +25,16 @@ export function DeleteButton({
     label,
     confirmLabel = 'Delete',
     alternative,
+    blocked,
+    icon,
+    triggerLabel,
 }: {
+    /** Why the server would refuse this delete; the button is disabled and shows it. */
+    blocked?: string | null;
+    /** Replaces the bin on the icon button, e.g. a cross to disconnect. */
+    icon?: ReactNode;
+    /** The accessible name of the icon button; the title when omitted. */
+    triggerLabel?: string;
     /** A second, further-reaching way to delete, offered beside the first. */
     alternative?: { label: string; url: string };
     url: string;
@@ -44,6 +55,29 @@ export function DeleteButton({
             },
         });
 
+    if (blocked) {
+        return (
+            <span title={blocked} className="inline-flex">
+                {label ? (
+                    <Button variant="outline" size="sm" disabled>
+                        <Trash2 />
+                        {label}
+                    </Button>
+                ) : (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled
+                        aria-label={triggerLabel ?? title}
+                    >
+                        {icon ?? <Trash2 className="text-muted-foreground" />}
+                    </Button>
+                )}
+                <span className="sr-only">{blocked}</span>
+            </span>
+        );
+    }
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -53,8 +87,13 @@ export function DeleteButton({
                         {label}
                     </Button>
                 ) : (
-                    <Button variant="ghost" size="icon" aria-label={title}>
-                        <Trash2 className="text-muted-foreground" />
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={triggerLabel ?? title}
+                        title={triggerLabel}
+                    >
+                        {icon ?? <Trash2 className="text-muted-foreground" />}
                     </Button>
                 )}
             </DialogTrigger>

@@ -15,7 +15,7 @@ The Bandcamp API is not open to everyone. Bandcamp gives access to labels and to
 ## Connecting
 
 1. Open **Settings → Bandcamp**. You also reach it from **Settings → Label**, in the section "Bandcamp imports".
-2. Enter the **Client ID** and the **Client secret** and choose **Connect and load my bands**. The credentials are proven against Bandcamp right away; if Bandcamp refuses them, nothing is stored.
+2. Enter the **Client ID** and the **Client secret** and choose **Test and connect**. The credentials are proven against Bandcamp right away; if Bandcamp refuses them, nothing is stored.
 3. Under **What to import** choose:
     - **Bandcamp account**: the label or artist account whose sales are imported.
     - **Only this artist**: leave it empty to import the sales of every artist on a label account.
@@ -49,7 +49,7 @@ Choosing another account or an earlier start date makes the next sync fetch from
 
 ## Disconnecting
 
-**Disconnect** deletes the stored client ID, secret and tokens and stops the weekly sync. Transactions that were imported stay. To connect again you need the client ID and secret, and you may have to regenerate the client on Bandcamp.
+The cross on the connection card opens **Disconnect Bandcamp?**; **Disconnect** deletes the stored client ID, secret and tokens and stops the weekly sync. Transactions that were imported stay. To connect again you need the client ID and secret, and you may have to regenerate the client on Bandcamp.
 
 ## From the command line
 

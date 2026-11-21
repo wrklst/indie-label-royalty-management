@@ -70,7 +70,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('platform-links/{platform_link}', [PlatformLinkController::class, 'destroy'])->name('platform-links.destroy');
             Route::resource('tracks', TrackController::class)->only(['index', 'show', 'update', 'destroy']);
             Route::resource('items', ItemController::class)->only(['index', 'update', 'destroy']);
-            Route::resource('contracts', ContractController::class)->except(['show']);
+            Route::resource('contracts', ContractController::class);
             Route::resource('payees', PayeeController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
             Route::resource('ledgers', LedgerController::class)->only(['index', 'store', 'update', 'destroy']);
 

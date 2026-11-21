@@ -1,7 +1,7 @@
 import { PlatformLinks } from '@/components/platform-links';
 import type { PlatformLinksProps } from '@/components/platform-links';
 import { Link, router, setLayoutProps } from '@inertiajs/react';
-import { ExternalLink, Radar } from 'lucide-react';
+import { ExternalLink, Pencil, Radar } from 'lucide-react';
 import AirplayResearchController from '@/actions/App/Http/Controllers/AirplayResearchController';
 import { Amount } from '@/components/amount';
 import { IncomeReport } from '@/components/income-report';
@@ -11,6 +11,8 @@ import { Pagination } from '@/components/pagination';
 import { TrackActions } from '@/components/player/track-actions';
 import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
+import { TrackDialog } from '@/components/track-dialog';
+import type { EditableTrack } from '@/components/track-fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,7 +28,7 @@ import { serverSorter } from '@/hooks/use-table-sort';
 import { count, country, date, dateTime, duration, plural } from '@/lib/format';
 import { index as airplayIndex } from '@/routes/airplays';
 import { index, show as showTrack } from '@/routes/tracks';
-import type { Paginated } from '@/types';
+import type { Option, Paginated } from '@/types';
 import { index as transactions } from '@/routes/transactions';
 import { ORIGINS } from '@/lib/origins';
 
@@ -49,19 +51,9 @@ type Airplay = {
 
 type Props = {
     platformLinks: PlatformLinksProps;
-    track: {
-        id: number;
-        name: string;
-        version: string | null;
-        isrc: string | null;
-        iswc: string | null;
-        track_number: number | null;
-        duration: number | null;
-        genre: string | null;
-        bpm: number | null;
-        musical_key: string | null;
+    track: EditableTrack & {
         credited_artist: string | null;
-        artists: Named[];
+        credited_artists: Named[];
         release: (Named & { catalog_number: string | null }) | null;
         cover_file_id: number | null;
         audio_file_id: number | null;
@@ -98,6 +90,8 @@ type Props = {
         created_at: string;
     }>;
     searchAvailable: boolean;
+    artistOptions: Option[];
+    contractOptions: Option[];
 };
 
 function Fact({
@@ -129,6 +123,8 @@ export default function ShowTrack({
     searches,
     searchAvailable,
     platformLinks,
+    artistOptions,
+    contractOptions,
 }: Props) {
     const title = track.version
         ? `${track.name} (${track.version})`
@@ -152,8 +148,8 @@ export default function ShowTrack({
             title={title}
             description={
                 <span>
-                    {track.artists.length > 0
-                        ? track.artists.map((artist, position) => (
+                    {track.credited_artists.length > 0
+                        ? track.credited_artists.map((artist, position) => (
                               <span key={artist.id}>
                                   {position > 0 && ', '}
                                   <RecordLink to="artist" id={artist.id}>
@@ -181,7 +177,7 @@ export default function ShowTrack({
                                 fileId: track.audio_file_id,
                                 title,
                                 artist: track.credited_artist,
-                                artistId: track.artists[0]?.id ?? null,
+                                artistId: track.credited_artists[0]?.id ?? null,
                                 release: track.release && {
                                     id: track.release.id,
                                     name: track.release.name,
@@ -206,6 +202,18 @@ export default function ShowTrack({
                             {busy ? 'Research queued' : 'Research airplay'}
                         </Button>
                     )}
+                    <TrackDialog
+                        track={track}
+                        artistOptions={artistOptions}
+                        contractOptions={contractOptions}
+                        inheritedContract={track.inherited_contract}
+                        trigger={
+                            <Button variant="outline">
+                                <Pencil />
+                                Edit
+                            </Button>
+                        }
+                    />
                 </>
             }
         >

@@ -1,8 +1,7 @@
-import { router } from '@inertiajs/react';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { DeleteButton } from '@/components/delete-button';
 
 /**
  * A stored connection: what it is, with secrets cut down to a hint, and
@@ -23,7 +22,8 @@ export function ConnectionCard({
     note?: ReactNode;
     disconnect?: string;
     disconnectLabel?: string;
-    confirm?: string;
+    /** What disconnecting removes, shown in the confirmation. */
+    confirm?: ReactNode;
 }) {
     return (
         <div
@@ -49,19 +49,14 @@ export function ConnectionCard({
                 {children}
             </div>
             {disconnect && (
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    title={disconnectLabel}
-                    aria-label={disconnectLabel}
-                    onClick={() =>
-                        window.confirm(confirm) &&
-                        router.delete(disconnect, { preserveScroll: true })
-                    }
-                >
-                    <X />
-                </Button>
+                <DeleteButton
+                    url={disconnect}
+                    title={`Disconnect ${title}?`}
+                    description={confirm}
+                    confirmLabel="Disconnect"
+                    triggerLabel={disconnectLabel}
+                    icon={<X />}
+                />
             )}
         </div>
     );

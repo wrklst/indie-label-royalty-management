@@ -6,7 +6,6 @@ use App\Enums\ArtistRole;
 use App\Enums\ReleaseStatus;
 use App\Enums\ReleaseType;
 use App\Models\Release;
-use App\Rules\Isrc;
 use App\Rules\Upc;
 use App\Services\Imports\Identifiers;
 use Closure;
@@ -104,14 +103,8 @@ class ReleaseRequest extends LabelFormRequest
             'artists.*.role' => ['required', Rule::enum(ArtistRole::class)],
             'tracks' => ['array'],
             'tracks.*.id' => ['nullable', 'integer', 'distinct', $this->inLabel('tracks')->where('release_id', $release instanceof Release ? $release->id : 0)],
-            'tracks.*.name' => ['required', 'string', 'max:255'],
-            'tracks.*.artist_id' => ['nullable', 'integer', $this->inLabel('artists')],
-            'tracks.*.contract_id' => ['nullable', 'integer', $this->inLabel('contracts')],
-            'tracks.*.isrc' => ['nullable', 'string', 'max:16', new Isrc],
-            'tracks.*.iswc' => ['nullable', 'string', 'max:16'],
-            'tracks.*.track_number' => ['nullable', 'integer', 'min:1', 'max:999'],
-            'tracks.*.duration' => ['nullable', 'integer', 'min:0'],
-            'tracks.*.version' => ['nullable', 'string', 'max:255'],
+            // The track rows validate like the track form does.
+            ...TrackRequest::sharedRules('tracks.*.'),
         ];
     }
 

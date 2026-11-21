@@ -22,7 +22,7 @@ import { useFilters } from '@/hooks/use-filters';
 import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
 import { percent, plural } from '@/lib/format';
-import { create, edit, index } from '@/routes/contracts';
+import { create, index, show } from '@/routes/contracts';
 import type { Paginated } from '@/types';
 
 type Contract = {
@@ -166,7 +166,7 @@ export default function Contracts({
                                     <TableRow key={contract.id}>
                                         <TableCell>
                                             <Link
-                                                href={edit(contract.id)}
+                                                href={show(contract.id)}
                                                 className="font-medium underline decoration-muted-foreground/40 underline-offset-4"
                                             >
                                                 {contract.name}

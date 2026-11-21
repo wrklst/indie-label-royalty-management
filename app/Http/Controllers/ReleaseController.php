@@ -22,6 +22,7 @@ use App\Services\Reports\IncomeReport;
 use App\Support\CurrentLabel;
 use App\Support\Distributors;
 use App\Support\Options;
+use App\Support\ReturnTo;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -86,9 +87,9 @@ class ReleaseController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        return Inertia::render('releases/form', ['release' => null, ...$this->options()]);
+        return Inertia::render('releases/form', ['release' => null, 'returnTo' => ReturnTo::path($request->query('return_to')), ...$this->options()]);
     }
 
     public function store(ReleaseRequest $request): RedirectResponse
@@ -103,7 +104,7 @@ class ReleaseController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Release created.')]);
 
-        return to_route('releases.show', $release);
+        return redirect(ReturnTo::from($request, route('releases.show', $release)));
     }
 
     public function show(Request $request, Release $release): Response
@@ -159,13 +160,8 @@ class ReleaseController extends Controller
                     'uploaded_at' => $file->created_at?->toDateString(),
                 ]),
                 'tracks' => $release->tracks->sortBy([['track_number', 'asc'], ['id', 'asc']])->values()->map(fn (Track $track): array => [
-                    ...$track->only([
-                        'id', 'name', 'isrc', 'iswc', 'track_number', 'duration', 'artist_id', 'contract_id', 'disc_number', 'version', 'genre',
-                        'language', 'explicit', 'musical_key', 'preview_start', 'p_line', 'lyrics', 'credits', 'ai_recording', 'ai_composition', 'ai_lyrics',
-                    ]),
-                    'bpm' => $track->bpm === null ? null : rtrim(rtrim((string) $track->bpm, '0'), '.'),
+                    ...TrackController::editable($track),
                     'artist' => ArtistCredits::display($track),
-                    'artists' => $track->artists->map(fn (Artist $artist): array => ['artist_id' => $artist->id, 'role' => $artist->pivot->role])->values(),
                     'audio_file_id' => PlayableAudio::pick($audioByTrack->get($track->id))?->id,
                     'contract' => $track->contract?->only(['id', 'name']),
                     'income' => (string) ($incomeByTrack[$track->id]->total ?? '0'),
@@ -197,11 +193,12 @@ class ReleaseController extends Controller
         ]);
     }
 
-    public function edit(Release $release): Response
+    public function edit(Request $request, Release $release): Response
     {
         $release->load(['tracks', 'artists:id,name']);
 
         return Inertia::render('releases/form', [
+            'returnTo' => ReturnTo::path($request->query('return_to')),
             'release' => [
                 ...$release->only([
                     'id', 'name', 'artist_id', 'contract_id', 'catalog_number', 'upc', 'spotify_id', 'discogs_id', 'accounts_mechanicals', 'mechanicals_rate',
@@ -233,7 +230,7 @@ class ReleaseController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Release saved.')]);
 
-        return to_route('releases.show', $release);
+        return redirect(ReturnTo::from($request, route('releases.show', $release)));
     }
 
     public function destroy(Release $release): RedirectResponse

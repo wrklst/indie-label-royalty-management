@@ -29,11 +29,11 @@ A recording that is on several releases is one row in this list, naming all its 
 
 - Click a column heading to sort, again to reverse, and a third time to return to the default order.
 
-The pencil at the end of a row opens a short edit dialog with **Title**, **Artist**, **Contract**, **ISRC**, **ISWC**, **Track number** and **Length (seconds)**. The bin deletes the track.
+The pencil at the end of a row opens the track dialog **Edit {track title}**. The bin deletes the track.
 
-### All track details
+### Editing a track: the track dialog
 
-The full set of details is edited on the release page: open the release and click the pencil at the end of the track row. The dialog **Details of …** has these fields:
+One dialog edits a track wherever you open it: the pencil in the track list, the pencil at the end of a track row on the release page, and **Edit** in the header of the track page. It always has the same fields, and the release form's quick track rows use the same labels and are checked by the same rules:
 
 | Field                                       | Notes                                                                          |
 | ------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -234,7 +234,6 @@ An item contract beats the track and release contract. Only a contract set direc
 - Deleting an artist keeps the releases and tracks, which lose their artist. Aliases of the artist stay and are no longer aliases. Further credits of the artist are removed.
 - The **All artists** filter of the release list only sees the main artist of a release. The counts in the artist list and the artist page also include releases and tracks where the artist is a further credit, such as a remixer, and releases of others that carry one of the artist's tracks.
 - The artist column of the track list shows the main artist of the track only, without further credits.
-- The short edit dialog in the track list has no version, disc number or credits. Use **Details of …** on the release page for those.
 - When you choose a track for an item, the release of that track is used, whatever release was selected. When you move an item to another release, its track is cleared.
 - Changing only the contract override of an item does not move any transactions.
 - An item can be deleted only when it has no transactions; the bin is shown only then.

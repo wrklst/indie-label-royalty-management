@@ -185,7 +185,7 @@ export default function Payouts({
                                             url={PayoutController.destroy.url(
                                                 payout.id,
                                             )}
-                                            title="Delete this payout?"
+                                            title={`Delete payout to ${payout.payee}?`}
                                             description={`The ${money(payout.total, currency)} paid to ${payout.payee} for ${payout.period} becomes payable again. Statements already generated keep showing it until you regenerate them.`}
                                         />
                                     </TableCell>

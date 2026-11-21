@@ -119,6 +119,14 @@ class Decimal
         return self::cmp($value, '0') === 1;
     }
 
+    /**
+     * @return numeric-string
+     */
+    public static function abs(?string $value): string
+    {
+        return self::cmp($value, '0') < 0 ? self::sub('0', $value) : self::add($value, '0');
+    }
+
     public static function max(string $left, string $right): string
     {
         return self::cmp($left, $right) >= 0 ? $left : $right;

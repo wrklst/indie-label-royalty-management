@@ -83,7 +83,7 @@ test('an expense entered by hand lowers the payee share', function () {
     $release = Release::query()->withoutGlobalScopes()->sole();
 
     $this->post(route('transactions.store'), [
-        'type' => 'expense', 'timestamp' => '2026-02-01', 'paid_timestamp' => '2026-02-01', 'total' => '-40',
+        'type' => 'expense', 'timestamp' => '2026-02-01', 'paid_timestamp' => '2026-02-01', 'total' => '40',
         'currency' => 'EUR', 'release_id' => $release->id, 'category' => 'Mastering',
     ])->assertSessionHasNoErrors();
 

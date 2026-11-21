@@ -1,16 +1,11 @@
 import { PlatformLinks } from '@/components/platform-links';
 import type { PlatformLinksProps } from '@/components/platform-links';
-import { Link, setLayoutProps } from '@inertiajs/react';
+import { Link, setLayoutProps, usePage } from '@inertiajs/react';
 import { Pencil, Plus } from 'lucide-react';
-import TrackController from '@/actions/App/Http/Controllers/TrackController';
 import { Amount } from '@/components/amount';
 import { IncomeReport, MoversPanel } from '@/components/income-report';
 import type { Movers, Report } from '@/components/income-report';
-import { ArtistCreditRows } from '@/components/artist-credit-rows';
-import type { ArtistCredit } from '@/components/artist-credit-rows';
 import { DeliveryMenu } from '@/components/delivery-menu';
-import { Field, SelectInput } from '@/components/field';
-import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
 import type { PlayerTrack } from '@/components/player/player-store';
 import {
@@ -18,13 +13,14 @@ import {
     TrackActions,
 } from '@/components/player/track-actions';
 import { RecordLink } from '@/components/record-link';
+import { TrackDialog } from '@/components/track-dialog';
+import type { EditableTrack } from '@/components/track-fields';
 import { ReleaseFiles } from '@/components/release-files';
 import type { ReleaseFile } from '@/components/release-files';
 import { Pagination } from '@/components/pagination';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
@@ -33,7 +29,6 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Textarea } from '@/components/ui/textarea';
 import { useFilters } from '@/hooks/use-filters';
 import { serverSorter, useTableSort } from '@/hooks/use-table-sort';
 import { count, country, date, duration, quantity } from '@/lib/format';
@@ -44,40 +39,10 @@ import {
     index as transactions,
 } from '@/routes/transactions';
 import type { Option, Paginated } from '@/types';
-import { AI_LEVELS, AiField } from '@/components/ai-field';
+import { AI_LEVELS } from '@/components/ai-field';
 
-type Credits = Partial<
-    Record<
-        'composers' | 'lyricists' | 'producers' | 'remixers' | 'publishers',
-        string[]
-    >
->;
-
-type Track = {
-    id: number;
-    name: string;
-    isrc: string | null;
-    iswc: string | null;
-    track_number: number | null;
-    disc_number: number | null;
-    duration: number | null;
-    artist_id: number | null;
-    contract_id: number | null;
-    version: string | null;
-    genre: string | null;
-    language: string | null;
-    explicit: string | null;
-    bpm: string | null;
-    musical_key: string | null;
-    preview_start: number | null;
-    p_line: string | null;
-    lyrics: string | null;
-    credits: Credits | null;
-    ai_recording: string | null;
-    ai_composition: string | null;
-    ai_lyrics: string | null;
+type Track = EditableTrack & {
     artist: string | null;
-    artists: ArtistCredit[];
     audio_file_id: number | null;
     contract: Option | null;
     income: string;
@@ -160,279 +125,6 @@ export function ReleaseStatusBadge({
     );
 }
 
-function TrackFields({
-    track,
-    artistOptions,
-    contractOptions,
-    errors,
-}: {
-    track: Track;
-    artistOptions: Option[];
-    contractOptions: Option[];
-    errors: Record<string, string>;
-}) {
-    const credit = (role: keyof Credits) =>
-        (track.credits?.[role] ?? []).join(', ');
-
-    return (
-        <>
-            <div className="grid gap-4 sm:grid-cols-2">
-                <Field
-                    label="Title"
-                    htmlFor="name"
-                    error={errors.name}
-                    required
-                >
-                    <Input
-                        id="name"
-                        name="name"
-                        defaultValue={track.name}
-                        required
-                    />
-                </Field>
-                <Field
-                    label="Version"
-                    htmlFor="version"
-                    error={errors.version}
-                    hint="e.g. Radio Edit, Remix name"
-                >
-                    <Input
-                        id="version"
-                        name="version"
-                        defaultValue={track.version ?? ''}
-                    />
-                </Field>
-                <Field
-                    label="Main artist"
-                    htmlFor="artist_id"
-                    error={errors.artist_id}
-                >
-                    <SelectInput
-                        id="artist_id"
-                        name="artist_id"
-                        defaultValue={track.artist_id ?? ''}
-                        options={artistOptions}
-                        placeholder="Same as release"
-                    />
-                </Field>
-                <Field
-                    label="Contract"
-                    htmlFor="contract_id"
-                    error={errors.contract_id}
-                >
-                    <SelectInput
-                        id="contract_id"
-                        name="contract_id"
-                        defaultValue={track.contract_id ?? ''}
-                        options={contractOptions}
-                        placeholder="Same as release"
-                    />
-                </Field>
-            </div>
-            <Field label="Further artist credits" error={errors.artists}>
-                <ArtistCreditRows
-                    artistOptions={artistOptions}
-                    defaultValue={track.artists}
-                />
-            </Field>
-            <div className="grid gap-4 sm:grid-cols-3">
-                <Field label="ISRC" htmlFor="isrc" error={errors.isrc}>
-                    <Input
-                        id="isrc"
-                        name="isrc"
-                        defaultValue={track.isrc ?? ''}
-                        className="font-mono"
-                    />
-                </Field>
-                <Field label="ISWC" htmlFor="iswc" error={errors.iswc}>
-                    <Input
-                        id="iswc"
-                        name="iswc"
-                        defaultValue={track.iswc ?? ''}
-                        className="font-mono"
-                    />
-                </Field>
-                <Field
-                    label="Length (seconds)"
-                    htmlFor="duration"
-                    error={errors.duration}
-                >
-                    <Input
-                        id="duration"
-                        name="duration"
-                        type="number"
-                        min="0"
-                        defaultValue={track.duration ?? ''}
-                    />
-                </Field>
-                <Field
-                    label="Disc"
-                    htmlFor="disc_number"
-                    error={errors.disc_number}
-                >
-                    <Input
-                        id="disc_number"
-                        name="disc_number"
-                        type="number"
-                        min="1"
-                        defaultValue={track.disc_number ?? ''}
-                    />
-                </Field>
-                <Field
-                    label="Track number"
-                    htmlFor="track_number"
-                    error={errors.track_number}
-                >
-                    <Input
-                        id="track_number"
-                        name="track_number"
-                        type="number"
-                        min="1"
-                        defaultValue={track.track_number ?? ''}
-                    />
-                </Field>
-                <Field
-                    label="Preview starts at (s)"
-                    htmlFor="preview_start"
-                    error={errors.preview_start}
-                >
-                    <Input
-                        id="preview_start"
-                        name="preview_start"
-                        type="number"
-                        min="0"
-                        defaultValue={track.preview_start ?? ''}
-                    />
-                </Field>
-                <Field label="BPM" htmlFor="bpm" error={errors.bpm}>
-                    <Input
-                        id="bpm"
-                        name="bpm"
-                        type="number"
-                        step="0.01"
-                        defaultValue={track.bpm ?? ''}
-                    />
-                </Field>
-                <Field
-                    label="Key"
-                    htmlFor="musical_key"
-                    error={errors.musical_key}
-                >
-                    <Input
-                        id="musical_key"
-                        name="musical_key"
-                        defaultValue={track.musical_key ?? ''}
-                        placeholder="F minor"
-                    />
-                </Field>
-                <Field
-                    label="Explicit"
-                    htmlFor="explicit"
-                    error={errors.explicit}
-                >
-                    <SelectInput
-                        id="explicit"
-                        name="explicit"
-                        defaultValue={track.explicit ?? ''}
-                        placeholder="Same as release"
-                    >
-                        <option value="explicit">Explicit</option>
-                        <option value="clean">Clean version</option>
-                    </SelectInput>
-                </Field>
-                <AiField
-                    label="AI in the recording"
-                    name="ai_recording"
-                    error={errors.ai_recording}
-                    defaultValue={track.ai_recording ?? ''}
-                />
-                <AiField
-                    label="AI in the composition"
-                    name="ai_composition"
-                    error={errors.ai_composition}
-                    defaultValue={track.ai_composition ?? ''}
-                />
-                <AiField
-                    label="AI in the lyrics"
-                    name="ai_lyrics"
-                    error={errors.ai_lyrics}
-                    defaultValue={track.ai_lyrics ?? ''}
-                />
-                <Field label="Genre" htmlFor="genre" error={errors.genre}>
-                    <Input
-                        id="genre"
-                        name="genre"
-                        defaultValue={track.genre ?? ''}
-                        placeholder="Same as release"
-                    />
-                </Field>
-                <Field
-                    label="Language"
-                    htmlFor="language"
-                    error={errors.language}
-                    hint="e.g. en, de, zxx for instrumental"
-                >
-                    <Input
-                        id="language"
-                        name="language"
-                        defaultValue={track.language ?? ''}
-                        maxLength={8}
-                    />
-                </Field>
-                <Field label="℗ line" htmlFor="p_line" error={errors.p_line}>
-                    <Input
-                        id="p_line"
-                        name="p_line"
-                        defaultValue={track.p_line ?? ''}
-                        placeholder="Same as release"
-                    />
-                </Field>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-                <Field
-                    label="Composers"
-                    htmlFor="credits_composers"
-                    hint="Separate names with commas."
-                >
-                    <Input
-                        id="credits_composers"
-                        name="credits[composers]"
-                        defaultValue={credit('composers')}
-                    />
-                </Field>
-                <Field label="Lyricists" htmlFor="credits_lyricists">
-                    <Input
-                        id="credits_lyricists"
-                        name="credits[lyricists]"
-                        defaultValue={credit('lyricists')}
-                    />
-                </Field>
-                <Field label="Producers" htmlFor="credits_producers">
-                    <Input
-                        id="credits_producers"
-                        name="credits[producers]"
-                        defaultValue={credit('producers')}
-                    />
-                </Field>
-                <Field label="Publishers" htmlFor="credits_publishers">
-                    <Input
-                        id="credits_publishers"
-                        name="credits[publishers]"
-                        defaultValue={credit('publishers')}
-                    />
-                </Field>
-            </div>
-            <Field label="Lyrics" htmlFor="lyrics" error={errors.lyrics}>
-                <Textarea
-                    id="lyrics"
-                    name="lyrics"
-                    defaultValue={track.lyrics ?? ''}
-                />
-            </Field>
-        </>
-    );
-}
-
 function Detail({
     label,
     children,
@@ -472,6 +164,7 @@ export default function ShowRelease({
     fileKinds,
     maxUploadMegabytes,
 }: Props) {
+    const { url } = usePage();
     const { apply } = useFilters(show.url(release.id), filters);
     const itemSorter = serverSorter(filters, apply, 'items');
     const { rows: trackRows, sorter } = useTableSort(
@@ -532,7 +225,11 @@ export default function ShowRelease({
                     <Button variant="outline" asChild>
                         <Link
                             href={createTransaction({
-                                query: { type: 'expense', release: release.id },
+                                query: {
+                                    type: 'expense',
+                                    release: release.id,
+                                    return_to: url,
+                                },
                             })}
                         >
                             <Plus />
@@ -760,34 +457,11 @@ export default function ShowRelease({
                                         <Amount value={track.income} />
                                     </TableCell>
                                     <TableCell>
-                                        <FormDialog
-                                            title={`Details of ${track.name}`}
-                                            form={TrackController.update.form(
-                                                track.id,
-                                            )}
-                                            trigger={
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    aria-label={`Edit details of ${track.name}`}
-                                                >
-                                                    <Pencil className="text-muted-foreground" />
-                                                </Button>
-                                            }
-                                        >
-                                            {(errors) => (
-                                                <TrackFields
-                                                    track={track}
-                                                    artistOptions={
-                                                        artistOptions
-                                                    }
-                                                    contractOptions={
-                                                        contractOptions
-                                                    }
-                                                    errors={errors}
-                                                />
-                                            )}
-                                        </FormDialog>
+                                        <TrackDialog
+                                            track={track}
+                                            artistOptions={artistOptions}
+                                            contractOptions={contractOptions}
+                                        />
                                     </TableCell>
                                 </TableRow>
                             ))}

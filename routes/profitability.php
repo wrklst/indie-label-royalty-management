@@ -11,6 +11,7 @@ Route::middleware(['auth', 'verified', 'label', 'label.admin'])->group(function 
 
     Route::get('label-costs', [LabelCostController::class, 'index'])->name('label-costs.index');
     Route::post('label-costs', [LabelCostController::class, 'store'])->name('label-costs.store');
+    Route::put('label-costs/{transaction}', [LabelCostController::class, 'update'])->whereNumber('transaction')->name('label-costs.update');
     Route::post('label-costs/recurring', [LabelCostController::class, 'storeRecurring'])->name('label-costs.recurring.store');
     Route::put('label-costs/recurring/{recurring_expense}', [LabelCostController::class, 'updateRecurring'])->name('label-costs.recurring.update');
     Route::delete('label-costs/recurring/{recurring_expense}', [LabelCostController::class, 'destroyRecurring'])->name('label-costs.recurring.destroy');

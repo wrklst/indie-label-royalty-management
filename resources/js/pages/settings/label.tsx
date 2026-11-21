@@ -33,36 +33,13 @@ type Props = {
         mechanicals_include_physical: boolean;
         ignore_negative_quantities: boolean;
     };
-    territories: { id: number; name: string; countries: string[] }[];
+    territories: {
+        id: number;
+        name: string;
+        countries: string[];
+        delete_block: string | null;
+    }[];
 };
-
-function Toggle({
-    name,
-    label,
-    hint,
-    defaultChecked,
-    onChange,
-}: {
-    name: string;
-    label: string;
-    hint?: string;
-    defaultChecked: boolean;
-    onChange?: (checked: boolean) => void;
-}) {
-    return (
-        <>
-            <input type="hidden" name={name} value="0" />
-            <CheckField
-                name={name}
-                value="1"
-                label={label}
-                hint={hint}
-                defaultChecked={defaultChecked}
-                onChange={(event) => onChange?.(event.target.checked)}
-            />
-        </>
-    );
-}
 
 export default function LabelSettings({
     settings,
@@ -176,7 +153,8 @@ export default function LabelSettings({
                                     </Link>
                                     .
                                 </p>
-                                <Toggle
+                                <CheckField
+                                    withZero
                                     name="bandcamp_disable_fee"
                                     label="Do not deduct 1% from Bandcamp net amounts"
                                     hint="By default 1% is taken off each Bandcamp line to cover payout fees."
@@ -184,7 +162,8 @@ export default function LabelSettings({
                                         settings.bandcamp_disable_fee
                                     }
                                 />
-                                <Toggle
+                                <CheckField
+                                    withZero
                                     name="bandcamp_exclude_physical"
                                     label="Skip physical and merch sales"
                                     hint="Import downloads only, for labels that account physical sales elsewhere."
@@ -204,15 +183,17 @@ export default function LabelSettings({
                                     are only shown when switched on.
                                 </p>
                                 {distributors.map((distributor) => (
-                                    <Toggle
+                                    <CheckField
+                                        withZero
                                         key={distributor.key}
                                         name={`distributors[${distributor.key}]`}
                                         label={distributor.name}
                                         defaultChecked={distributor.enabled}
-                                        onChange={(checked) =>
+                                        onChange={(event) =>
                                             setUsed((current) => ({
                                                 ...current,
-                                                [distributor.key]: checked,
+                                                [distributor.key]:
+                                                    event.target.checked,
                                             }))
                                         }
                                     />
@@ -355,23 +336,25 @@ export default function LabelSettings({
                                     the tool for a range of paid dates and it
                                     creates ordinary transactions.
                                 </p>
-                                <Toggle
+                                <CheckField
+                                    withZero
                                     name="accounts_mechanicals"
                                     label="Mechanicals"
                                     hint="Calculate mechanical royalties owed to songwriters for digital downloads and physical manufacturing or sales."
                                     defaultChecked={
                                         settings.accounts_mechanicals
                                     }
-                                    onChange={(checked) =>
+                                    onChange={(event) =>
                                         setTools({
                                             ...tools,
-                                            mechanicals: checked,
+                                            mechanicals: event.target.checked,
                                         })
                                     }
                                 />
                                 {tools.mechanicals && (
                                     <div className="ml-6 grid gap-3 border-l pl-4">
-                                        <Toggle
+                                        <CheckField
+                                            withZero
                                             name="mechanicals_include_physical"
                                             label="Include physical sales"
                                             hint="Count sold physical copies as units, next to downloads. Leave off when you enter manufacturing runs instead."
@@ -400,18 +383,23 @@ export default function LabelSettings({
                                         </Field>
                                     </div>
                                 )}
-                                <Toggle
+                                <CheckField
+                                    withZero
                                     name="accounts_ppd"
                                     label="PPD"
                                     hint="Calculate royalties based on PPD (Published Price to Dealer) rates and transaction quantities."
                                     defaultChecked={settings.accounts_ppd}
-                                    onChange={(checked) =>
-                                        setTools({ ...tools, ppd: checked })
+                                    onChange={(event) =>
+                                        setTools({
+                                            ...tools,
+                                            ppd: event.target.checked,
+                                        })
                                     }
                                 />
                                 {(tools.mechanicals || tools.ppd) && (
                                     <div className="ml-6 grid gap-3 border-l pl-4">
-                                        <Toggle
+                                        <CheckField
+                                            withZero
                                             name="ignore_negative_quantities"
                                             label="Ignore negative quantities"
                                             hint="By default returns reduce the units mechanicals and PPD are calculated on."
@@ -421,7 +409,8 @@ export default function LabelSettings({
                                         />
                                     </div>
                                 )}
-                                <Toggle
+                                <CheckField
+                                    withZero
                                     name="accounts_reserves"
                                     label="Reserves"
                                     hint="Hold a percentage of income for custom periods of time to account for returns etc."
@@ -464,7 +453,8 @@ export default function LabelSettings({
                                         territory.id,
                                     )}
                                     title={`Delete ${territory.name}?`}
-                                    description="A territory that contract splits still use is kept; change those splits first."
+                                    blocked={territory.delete_block}
+                                    description="The territory is removed. No contract split uses it."
                                 />
                             </li>
                         ))}

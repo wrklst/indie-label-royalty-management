@@ -30,7 +30,7 @@ function bookedDates(RecurringExpense $expense): array
 }
 
 test('a one-time cost is booked as an expense the label bears alone', function () {
-    $this->post(route('label-costs.store'), ['name' => 'Example Hosting', 'amount' => '120', 'currency' => 'eur', 'category' => 'Hosting', 'paid_on' => '2026-03-01'])
+    $this->post(route('label-costs.store'), ['name' => 'Example Hosting', 'amount' => '120', 'currency' => 'eur', 'category' => 'Hosting', 'paid_timestamp' => '2026-03-01'])
         ->assertSessionHasNoErrors();
 
     $this->assertDatabaseHas('transactions', [
@@ -42,8 +42,8 @@ test('a one-time cost is booked as an expense the label bears alone', function (
 });
 
 test('a cost in another currency is not counted when no rate is typed and none can be had', function () {
-    $this->post(route('label-costs.store'), ['name' => 'Example Tool', 'amount' => '10', 'currency' => 'USD', 'paid_on' => '2026-03-01']);
-    $this->post(route('label-costs.store'), ['name' => 'Example Tool', 'amount' => '10', 'currency' => 'USD', 'conversion_rate' => '0.9', 'paid_on' => '2026-03-02']);
+    $this->post(route('label-costs.store'), ['name' => 'Example Tool', 'amount' => '10', 'currency' => 'USD', 'paid_timestamp' => '2026-03-01']);
+    $this->post(route('label-costs.store'), ['name' => 'Example Tool', 'amount' => '10', 'currency' => 'USD', 'conversion_rate' => '0.9', 'paid_timestamp' => '2026-03-02']);
 
     $costs = Transaction::query()->withoutGlobalScopes()->orderBy('paid_timestamp')->get();
 
@@ -52,7 +52,7 @@ test('a cost in another currency is not counted when no rate is typed and none c
 });
 
 test('a label cost is refused when it is not a positive amount with a currency', function (array $input, string $field) {
-    $this->post(route('label-costs.store'), ['name' => 'Example', 'amount' => '10', 'currency' => 'EUR', 'paid_on' => '2026-03-01', ...$input])
+    $this->post(route('label-costs.store'), ['name' => 'Example', 'amount' => '10', 'currency' => 'EUR', 'paid_timestamp' => '2026-03-01', ...$input])
         ->assertSessionHasErrors($field);
 
     $this->assertDatabaseCount('transactions', 0);
@@ -61,7 +61,7 @@ test('a label cost is refused when it is not a positive amount with a currency',
     'zero' => [['amount' => '0'], 'amount'],
     'no name' => [['name' => ''], 'name'],
     'a currency that is not a code' => [['currency' => 'EURO'], 'currency'],
-    'no date' => [['paid_on' => ''], 'paid_on'],
+    'no date' => [['paid_timestamp' => ''], 'paid_timestamp'],
 ]);
 
 test('a recurring cost books every due date up to today and none in the future', function () {
@@ -202,7 +202,7 @@ test('payees cannot see or book label costs', function () {
     $this->label->users()->attach($user, ['role' => LabelRole::Payee->value, 'payee_id' => Payee::factory()->create(['label_id' => $this->label->id])->id]);
 
     $this->actingAs($user)->get(route('label-costs.index'))->assertRedirect(route('portal.index'));
-    $this->actingAs($user)->post(route('label-costs.store'), ['name' => 'x', 'amount' => '1', 'currency' => 'EUR', 'paid_on' => '2026-01-01'])->assertForbidden();
+    $this->actingAs($user)->post(route('label-costs.store'), ['name' => 'x', 'amount' => '1', 'currency' => 'EUR', 'paid_timestamp' => '2026-01-01'])->assertForbidden();
 });
 
 test('label costs lower the label result as overheads and leave royalties untouched', function () {
@@ -213,7 +213,7 @@ test('label costs lower the label result as overheads and leave royalties untouc
     Transaction::factory()->create(['label_id' => $this->label->id, 'release_id' => $release->id, 'total' => '100']);
     $period = Period::factory()->create(['label_id' => $this->label->id]);
 
-    $this->post(route('label-costs.store'), ['name' => 'Example Hosting', 'amount' => '30', 'currency' => 'EUR', 'paid_on' => '2026-02-01']);
+    $this->post(route('label-costs.store'), ['name' => 'Example Hosting', 'amount' => '30', 'currency' => 'EUR', 'paid_timestamp' => '2026-02-01']);
 
     $report = app(ProfitabilityReport::class)->forLabel($this->label);
     $royalties = app(RoyaltyCalculator::class)->forPeriod($period);
@@ -229,8 +229,8 @@ test('label costs lower the label result as overheads and leave royalties untouc
 test('a cost in another currency without a typed rate takes the reference rate of the day it was paid', function () {
     Http::fake(['api.frankfurter.dev/v1/2026-03-01*' => Http::response(['base' => 'USD', 'date' => '2026-02-27', 'rates' => ['EUR' => 0.8]])]);
 
-    $this->post(route('label-costs.store'), ['name' => 'Example Tool', 'amount' => '10', 'currency' => 'USD', 'paid_on' => '2026-03-01'])->assertSessionHasNoErrors();
-    $this->post(route('label-costs.store'), ['name' => 'Example Tool', 'amount' => '10', 'currency' => 'USD', 'conversion_rate' => '0.9', 'paid_on' => '2026-03-01']);
+    $this->post(route('label-costs.store'), ['name' => 'Example Tool', 'amount' => '10', 'currency' => 'USD', 'paid_timestamp' => '2026-03-01'])->assertSessionHasNoErrors();
+    $this->post(route('label-costs.store'), ['name' => 'Example Tool', 'amount' => '10', 'currency' => 'USD', 'conversion_rate' => '0.9', 'paid_timestamp' => '2026-03-01']);
 
     expect(Transaction::query()->withoutGlobalScopes()->orderBy('id')->pluck('converted_total')->all())->toBe(['-8.000000000000000', '-9.000000000000000']);
 
@@ -254,4 +254,54 @@ test('a recurring cost in another currency converts each payment at the rate of 
 
     expect($converted($daily))->toBe(['-9.000000000000000', '-8.000000000000000', null])
         ->and($converted($fixed))->toBe(['-5.000000000000000', '-5.000000000000000', '-5.000000000000000']);
+});
+
+test('a booked cost is edited in the dialog it was booked in: typed positive, stored negative', function () {
+    $this->post(route('label-costs.store'), ['name' => 'Example Hosting', 'amount' => '49.90', 'currency' => 'EUR', 'category' => 'Hosting', 'paid_timestamp' => '2026-03-01']);
+    $cost = Transaction::query()->sole();
+
+    $this->get(route('label-costs.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('costs.data.0.amount', '49.900000000000000')
+            ->where('costs.data.0.paid_timestamp', '2026-03-01'));
+
+    $this->put(route('label-costs.update', $cost->id), ['name' => 'Example Hosting Pro', 'amount' => '59.90', 'currency' => 'EUR', 'category' => 'Hosting', 'memo' => 'Upgraded', 'paid_timestamp' => '2026-03-05'])
+        ->assertSessionHasNoErrors()
+        ->assertInertiaFlash('toast.message', 'Cost saved.');
+
+    $cost->refresh();
+
+    expect($cost->total)->toBe('-59.900000000000000')
+        ->and($cost->converted_total)->toBe('-59.900000000000000')
+        ->and($cost->source)->toBe('Example Hosting Pro')
+        ->and($cost->memo)->toBe('Upgraded')
+        ->and($cost->paid_timestamp->toDateString())->toBe('2026-03-05')
+        ->and($cost->recoupable)->toBeFalse();
+});
+
+test('a booked cost refuses a minus sign, and a credit booked positive stays one', function () {
+    $this->post(route('label-costs.store'), ['name' => 'Example Hosting', 'amount' => '10', 'currency' => 'EUR', 'paid_timestamp' => '2026-03-01']);
+    $cost = Transaction::query()->sole();
+
+    $this->put(route('label-costs.update', $cost->id), ['name' => 'Example Hosting', 'amount' => '-10', 'currency' => 'EUR', 'paid_timestamp' => '2026-03-01'])
+        ->assertSessionHasErrors('amount');
+
+    $credit = Transaction::factory()->labelCost()->create(['label_id' => $this->label->id, 'total' => '15', 'converted_total' => '15']);
+
+    $this->put(route('label-costs.update', $credit->id), ['name' => 'Example Refund', 'amount' => '20', 'currency' => 'EUR', 'paid_timestamp' => '2026-03-01'])->assertSessionHasNoErrors();
+
+    expect($cost->refresh()->total)->toBe('-10.000000000000000')
+        ->and($credit->refresh()->total)->toBe('20.000000000000000');
+});
+
+test('only a cost of the label itself can be changed there', function () {
+    $release = Release::factory()->create(['label_id' => $this->label->id]);
+    $onRelease = Transaction::factory()->create(['label_id' => $this->label->id, 'type' => 'expense', 'recoupable' => false, 'release_id' => $release->id, 'total' => '-5']);
+    $income = Transaction::factory()->create(['label_id' => $this->label->id, 'type' => 'income', 'total' => '5']);
+    $foreign = Transaction::factory()->labelCost()->create(['label_id' => Label::factory(), 'total' => '-5']);
+    $payload = ['name' => 'Example', 'amount' => '9', 'currency' => 'EUR', 'paid_timestamp' => '2026-03-01'];
+
+    foreach ([$onRelease, $income, $foreign] as $transaction) {
+        $this->put(route('label-costs.update', $transaction->id), $payload)->assertNotFound();
+    }
 });

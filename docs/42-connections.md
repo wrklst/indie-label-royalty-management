@@ -5,7 +5,7 @@ The outside services a label works with are set up under **Settings → Connecti
 ## How every connection works
 
 - **Not connected**: a form. **Test and connect** tests what you entered against the service and stores it only when the test passes.
-- **Connected**: a card that names the service and shows a hint of what is stored, such as the last four characters of a key. The cross on the card disconnects: the stored secrets are deleted, and the form comes back for a new connection.
+- **Connected**: a card that names the service and shows a hint of what is stored, such as the last four characters of a key. The cross on the card disconnects: a dialog **Disconnect {service}?** says what is deleted, and **Disconnect** confirms. The stored secrets are deleted, and the form comes back for a new connection.
 
 Secrets are stored encrypted and never shown again. To change a connection, disconnect it and connect anew.
 

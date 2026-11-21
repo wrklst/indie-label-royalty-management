@@ -53,4 +53,14 @@ class Period extends Model
     {
         return $this->hasMany(Payout::class);
     }
+
+    /**
+     * Why the period cannot be deleted, or null when it can.
+     */
+    public function deleteBlock(): ?string
+    {
+        return $this->payouts()->exists() || $this->statements()->whereNotNull('published_at')->exists()
+            ? 'This period has payouts or published statements and cannot be deleted.'
+            : null;
+    }
 }

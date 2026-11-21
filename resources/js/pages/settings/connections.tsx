@@ -92,7 +92,7 @@ function WebSearch({ search }: { search: Props['search'] }) {
                     ]}
                     disconnect={ConnectionsController.destroySearch.url()}
                     disconnectLabel="Disconnect DataForSEO"
-                    confirm="Disconnect DataForSEO? The stored login is deleted. To connect again you enter it anew."
+                    confirm="The stored login is deleted. To connect again you enter it anew."
                 />
             ) : (
                 <>
@@ -401,7 +401,7 @@ function ReceiptReading({ ai }: { ai: Props['ai'] }) {
                     }
                     disconnect={ConnectionsController.destroyAi.url()}
                     disconnectLabel={`Disconnect ${ai.service ?? 'the AI service'}`}
-                    confirm="Disconnect the AI service? The stored key is deleted and receipts are no longer read. To connect again you enter the key anew."
+                    confirm="The stored key is deleted and receipts are no longer read. To connect again you enter the key anew."
                 >
                     <ChangeModel ai={ai} />
                 </ConnectionCard>
@@ -565,7 +565,7 @@ function Storage({ storage }: { storage: NonNullable<Props['storage']> }) {
                     note="Applies to new files. Files stored before stay where they are; move them with php artisan royalties:move-files."
                     disconnect={ConnectionsController.destroyStorage.url()}
                     disconnectLabel="Disconnect this file storage"
-                    confirm="Disconnect this file storage? The server's environment file decides again where new files go. Files already stored are not touched, but files in this bucket are unreachable while another storage is in use."
+                    confirm="The server's environment file decides again where new files go. Files already stored are not touched, but files in this bucket are unreachable while another storage is in use."
                 />
             )}
             {storage.direct_uploads !== null && (

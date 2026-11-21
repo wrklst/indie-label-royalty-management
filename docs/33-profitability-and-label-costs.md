@@ -95,7 +95,7 @@ The page shows the costs paid in the current and the previous year, what the rec
 4. Optionally pick a **Category** (Subscriptions, Software, Hosting, Accounting, Legal, Bank Fees, Insurance, Office, Travel, Marketing, Fee, Other) and add a **Memo**.
 5. Choose **Book cost**.
 
-The cost is stored as an expense transaction with a negative amount, borne by the label, without a release. Its sale date and paid date are both the **Paid date**.
+You type the amount positive, as everywhere in the product. The cost is stored as an expense transaction with a negative amount, borne by the label, without a release. Its sale date and paid date are both the **Paid date**.
 
 ### A recurring cost
 
@@ -112,7 +112,7 @@ Due dates in the past are booked right away. A monthly cost whose first payment 
 The list **Recurring costs** shows **Since**, the **Next payment** and how many payments are **Booked**; every heading sorts it.
 
 - **Change** edits the name, amount, currency, rate, category, memo and **Last payment**. It applies to payments from now on; payments already booked keep their amounts. The rhythm and the first payment cannot be changed. Stop the cost and add a new one instead.
-- **Stop** ends the cost. No further payments are booked; the ones already booked stay in the accounts.
+- **Stop** ends the cost. No further payments are booked; the ones already booked stay in the accounts. The bin opens **Delete {cost name}?**: with payments booked it offers to stop the cost and keep them, or to delete the cost together with its payments.
 
 ### How recurring costs are booked
 
@@ -132,7 +132,9 @@ It goes through every label of the installation and prints a line for each label
 
 ### Changing booked costs
 
-Every entry under **Booked costs** is an ordinary expense. The edit button opens it in the transaction form, the delete button removes it. A deleted payment of a recurring cost is not booked again for that date.
+Every entry under **Booked costs** is an ordinary expense. The edit button opens it in the dialog you booked it in, with the amount positive as you typed it: **What is it for**, **Amount**, **Currency**, **Rate**, **Category**, **Memo** and **Paid date**; save with **Save cost**. The delete button opens **Delete {cost name}?** and removes the cost from the label result; a receipt attached to it goes back to the list of receipts. A deleted payment of a recurring cost is not booked again for that date.
+
+A cost with a release, or one that payees carry a share of, is not an overhead: it is edited as an expense on the transaction page, see [Transactions](31-transactions.md).
 
 ## Receipts
 

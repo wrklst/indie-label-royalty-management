@@ -8,11 +8,9 @@ import { Page, Panel } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { index } from '@/routes/contracts';
-import { show as showRelease } from '@/routes/releases';
+import { index, show } from '@/routes/contracts';
 import type { Option } from '@/types';
 import { percent } from '@/lib/format';
-import { recordLinkClass } from '@/components/record-link';
 
 type Split = {
     payee_id: number | '';
@@ -28,18 +26,12 @@ type Contract = {
     memo: string | null;
     splits: Split[];
     children: Child[];
-    parents: Option[];
-    releases: Option[];
-    tracks: {
-        id: number;
-        name: string;
-        release: string | null;
-        release_id: number;
-    }[];
 };
 
 type Props = {
     contract: Contract | null;
+    /** The page the form was opened from, where saving returns to. */
+    returnTo: string | null;
     payeeOptions: Option[];
     ledgerOptions: Option[];
     territoryOptions: Option[];
@@ -51,12 +43,14 @@ const numberOrBlank = (value: string): number | '' =>
 
 export default function ContractForm({
     contract,
+    returnTo,
     payeeOptions,
     ledgerOptions,
     territoryOptions,
     contractOptions,
 }: Props) {
     const form = useForm({
+        return_to: returnTo ?? '',
         name: contract?.name ?? '',
         memo: contract?.memo ?? '',
         splits: (contract?.splits ?? []).map((split) => ({
@@ -108,13 +102,18 @@ export default function ContractForm({
     setLayoutProps({
         breadcrumbs: [
             { title: 'Contracts', href: index() },
-            { title: contract ? contract.name : 'New contract', href: '#' },
+            ...(contract
+                ? [
+                      { title: contract.name, href: show(contract.id) },
+                      { title: 'Edit', href: '#' },
+                  ]
+                : [{ title: 'New contract', href: '#' }]),
         ],
     });
 
     return (
         <Page
-            title={contract ? contract.name : 'New contract'}
+            title={contract ? `Edit ${contract.name}` : 'New contract'}
             description="Splits are percentages of net income: income minus the expenses booked on the same release or track."
             actions={
                 contract && (
@@ -430,76 +429,17 @@ export default function ContractForm({
                         {contract ? 'Save contract' : 'Create contract'}
                     </Button>
                     <Button variant="ghost" asChild>
-                        <Link href={index()}>Cancel</Link>
+                        <Link
+                            href={
+                                returnTo ??
+                                (contract ? show(contract.id) : index())
+                            }
+                        >
+                            Cancel
+                        </Link>
                     </Button>
                 </div>
             </form>
-
-            {contract && (
-                <Panel
-                    title="Where this contract applies"
-                    className="max-w-4xl"
-                >
-                    {contract.releases.length +
-                        contract.tracks.length +
-                        contract.parents.length ===
-                    0 ? (
-                        <p className="text-sm text-muted-foreground">
-                            Not assigned yet. Pick this contract on a release or
-                            track, or use the catalog manager to assign many at
-                            once.
-                        </p>
-                    ) : (
-                        <ul className="grid gap-1 text-sm">
-                            {contract.releases.map((release) => (
-                                <li key={`release-${release.id}`}>
-                                    <span className="text-muted-foreground">
-                                        Release ·{' '}
-                                    </span>
-                                    <Link
-                                        href={showRelease(release.id)}
-                                        className={recordLinkClass}
-                                    >
-                                        {release.name}
-                                    </Link>
-                                </li>
-                            ))}
-                            {contract.tracks.map((track) => (
-                                <li key={`track-${track.id}`}>
-                                    <span className="text-muted-foreground">
-                                        Track ·{' '}
-                                    </span>
-                                    <Link
-                                        href={showRelease(track.release_id)}
-                                        className={recordLinkClass}
-                                    >
-                                        {track.name}
-                                    </Link>
-                                    <span className="text-muted-foreground">
-                                        {' '}
-                                        on {track.release}
-                                    </span>
-                                </li>
-                            ))}
-                            {contract.parents.map((parent) => (
-                                <li key={`parent-${parent.id}`}>
-                                    <span className="text-muted-foreground">
-                                        Part of prorated contract ·{' '}
-                                    </span>
-                                    <Link
-                                        href={ContractController.edit.url(
-                                            parent.id,
-                                        )}
-                                        className={recordLinkClass}
-                                    >
-                                        {parent.name}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </Panel>
-            )}
         </Page>
     );
 }

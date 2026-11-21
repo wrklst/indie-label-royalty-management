@@ -72,7 +72,7 @@ class PayeeController extends Controller
         $summary = $latestPeriod ? ($calculator->forPeriod($latestPeriod, $payee->id)['payees'][0] ?? null) : null;
 
         return Inertia::render('payees/show', [
-            'payee' => $payee->only(['id', 'name', 'email', 'tags', 'notes']),
+            'payee' => [...$payee->only(['id', 'name', 'email', 'tags', 'notes']), 'delete_block' => $payee->deleteBlock()],
             'period' => $latestPeriod?->only(['id', 'name']),
             'summary' => $summary ? ['totals' => $summary['totals'], 'ledgers' => collect($summary['ledgers'])->map(fn (array $ledger): array => collect($ledger)->except('releases')->all())->all()] : null,
             'splits' => ContractSplit::query()
@@ -136,10 +136,8 @@ class PayeeController extends Controller
 
     public function destroy(Payee $payee): RedirectResponse
     {
-        $hasTransfers = Transaction::query()->where('payee_id', $payee->id)->exists();
-
-        if ($hasTransfers || $payee->payouts()->exists() || $payee->statements()->exists()) {
-            Inertia::flash('toast', ['type' => 'error', 'message' => __('This payee has transfers, payouts or statements and cannot be deleted.')]);
+        if ($reason = $payee->deleteBlock()) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => $reason]);
 
             return back();
         }

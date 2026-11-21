@@ -16,7 +16,7 @@ test('a one-time payment entered in the form lowers the label result of its rele
         ->assertSee('New expense')
         ->assertNotChecked('#recoupable')
         ->assertSee('the label bears the cost alone')
-        ->fill('total', '-30')
+        ->fill('total', '30')
         ->fill('timestamp', '2026-02-01')
         ->fill('paid_timestamp', '2026-02-01')
         ->select('category', 'Remix')
@@ -77,4 +77,24 @@ test('a recurring label cost is added in a dialog and shows up as overheads', fu
         ->assertNoJavaScriptErrors();
 
     visit('/profitability')->assertSee('Overheads')->assertNoJavaScriptErrors();
+});
+
+test('a booked overhead is edited in the dialog it was booked in, with its amount typed positive', function () {
+    $scenario = royaltyScenario();
+    $this->actingAs($scenario['admin']);
+    $cost = Transaction::factory()->labelCost()->create([
+        'label_id' => $scenario['label']->id, 'source' => 'Example Hosting', 'memo' => 'Example Hosting', 'total' => '-49.9', 'converted_total' => '-49.9',
+        'currency' => 'EUR', 'timestamp' => '2026-03-01', 'paid_timestamp' => '2026-03-01',
+    ]);
+
+    visit('/label-costs')
+        ->click('[aria-label="Edit cost"]')
+        ->assertValue('[role="dialog"] input[name="amount"]', '49.9')
+        ->fill('[role="dialog"] input[name="amount"]', '59.9')
+        ->press('Save cost')
+        ->assertSee('Cost saved.')
+        ->assertPathIs('/label-costs')
+        ->assertNoJavaScriptErrors();
+
+    expect($cost->refresh()->total)->toBe('-59.900000000000000');
 });

@@ -81,20 +81,28 @@ export function SelectInput({
     );
 }
 
+/**
+ * The one checkbox. `withZero` also sends "0" when it is unchecked, for
+ * plain forms whose server reads the field as a boolean.
+ */
 export function CheckField({
     label,
     hint,
     className,
+    withZero,
     ...props
 }: Omit<ComponentProps<'input'>, 'type'> & {
     label: string;
     hint?: ReactNode;
+    withZero?: boolean;
 }) {
     return (
         <label className={cn('flex items-start gap-2.5 text-sm', className)}>
+            {withZero && <input type="hidden" name={props.name} value="0" />}
             <input
                 type="checkbox"
                 className="mt-0.5 size-4 rounded border-input accent-primary"
+                {...(withZero ? { value: '1' } : {})}
                 {...props}
             />
             <span>

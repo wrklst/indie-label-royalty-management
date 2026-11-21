@@ -50,9 +50,11 @@ test('a contract is built from split rows and shows what the label keeps', funct
         ->assertSee('Payees get 40% worldwide, the label keeps 60%.')
         ->press('Create contract')
         ->assertSee('Contract created.')
-        ->assertPathContains('/edit');
+        ->assertSee('Splits')
+        ->assertSee('Example Payee')
+        ->assertSee('40%');
 
-    $page->assertValue('input[aria-label="Split percent"]', '40')->assertNoJavaScriptErrors();
+    $page->assertNoJavaScriptErrors();
 
     expect(ContractSplit::query()->sole()->split_amount)->toBe('0.400000000');
 });

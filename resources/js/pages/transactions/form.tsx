@@ -40,6 +40,8 @@ type Transaction = {
     recoupable: boolean;
     raw_data: Record<string, string> | null;
     data_import_id: number | null;
+    /** An expense stored positive: a refund or credit that reduces a cost. */
+    refund: boolean;
 };
 
 type Props = {
@@ -50,6 +52,8 @@ type Props = {
         payee_id: number | null;
         recoupable: boolean;
     } | null;
+    /** The page the form was opened from, where saving returns to. */
+    returnTo: string | null;
     releaseOptions: Option[];
     trackOptions: TrackOption[];
     contractOptions: Option[];
@@ -61,13 +65,16 @@ type Props = {
 
 const numberOrBlank = (value: string): number | '' =>
     value === '' ? '' : Number(value);
-const trim = (value: string | null | undefined): string =>
-    value ? value.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1') : '';
+const trim = (value: string | number | null | undefined): string =>
+    value || value === 0
+        ? String(value).replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1')
+        : '';
 // The local date: toISOString() is UTC and gives yesterday shortly after midnight.
 
 export default function TransactionForm({
     transaction,
     defaults,
+    returnTo,
     releaseOptions,
     trackOptions,
     contractOptions,
@@ -84,10 +91,12 @@ export default function TransactionForm({
             : 'income')) as TransactionType;
 
     const form = useForm({
+        return_to: returnTo ?? '',
         type: initialType,
         timestamp: transaction?.timestamp ?? today(),
         paid_timestamp: transaction?.paid_timestamp ?? today(),
         total: trim(transaction?.total),
+        refund: transaction?.refund ?? false,
         currency: transaction?.currency ?? labelCurrency,
         conversion_rate: trim(transaction?.conversion_rate),
         quantity: trim(transaction?.quantity),
@@ -117,7 +126,6 @@ export default function TransactionForm({
     const errors = form.errors;
     const type = form.data.type;
     const foreign = form.data.currency.toUpperCase() !== labelCurrency;
-    const amount = Number(form.data.total);
     const tracks = trackOptions.filter(
         (track) => track.release_id === form.data.release_id,
     );
@@ -172,6 +180,7 @@ export default function TransactionForm({
                                         type: event.target
                                             .value as TransactionType,
                                         category: '',
+                                        refund: false,
                                     }))
                                 }
                                 className="capitalize"
@@ -185,7 +194,7 @@ export default function TransactionForm({
                             required
                             hint={
                                 type === 'expense'
-                                    ? 'Enter costs as a negative amount, e.g. -250.'
+                                    ? 'Enter the cost as a positive amount, e.g. 250. It is booked as a cost.'
                                     : type === 'transfer'
                                       ? 'Negative: given to the payee (advance). Positive: owed to or returned by the payee.'
                                       : undefined
@@ -195,6 +204,7 @@ export default function TransactionForm({
                                 id="total"
                                 type="number"
                                 step="any"
+                                min={type === 'expense' ? '0' : undefined}
                                 value={form.data.total}
                                 onChange={(event) =>
                                     form.setData('total', event.target.value)
@@ -222,11 +232,17 @@ export default function TransactionForm({
                                 required
                             />
                         </Field>
-                        {type === 'expense' && amount > 0 && (
-                            <p className="text-sm text-amber-700 md:col-span-3 dark:text-amber-400">
-                                A positive expense increases net income. Use a
-                                negative amount for a cost.
-                            </p>
+                        {type === 'expense' && (
+                            <CheckField
+                                id="refund"
+                                label="Refund or credit"
+                                hint="Tick it when the amount comes back to the label: it reduces the cost instead of adding to it."
+                                checked={form.data.refund}
+                                onChange={(event) =>
+                                    form.setData('refund', event.target.checked)
+                                }
+                                className="md:col-span-3"
+                            />
                         )}
                         {foreign && (
                             <Field
@@ -691,7 +707,7 @@ export default function TransactionForm({
                         {transaction ? 'Save transaction' : `Create ${type}`}
                     </Button>
                     <Button variant="ghost" asChild>
-                        <Link href={index()}>Cancel</Link>
+                        <Link href={returnTo ?? index()}>Cancel</Link>
                     </Button>
                 </div>
             </form>

@@ -1,18 +1,15 @@
 import { Link } from '@inertiajs/react';
-import { Pencil } from 'lucide-react';
 import TrackController from '@/actions/App/Http/Controllers/TrackController';
 import { FilterBar } from '@/components/filter-bar';
 import { DeleteButton } from '@/components/delete-button';
-import { Field, SelectInput } from '@/components/field';
-import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
 import { TrackActions } from '@/components/player/track-actions';
 import { RecordLink, recordLinkClass } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
+import { TrackDialog } from '@/components/track-dialog';
+import type { EditableTrack } from '@/components/track-fields';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
@@ -28,16 +25,7 @@ import { show as showRelease } from '@/routes/releases';
 import { index } from '@/routes/tracks';
 import type { Option, Paginated } from '@/types';
 
-type Track = {
-    id: number;
-    name: string;
-    artist_id: number | null;
-    contract_id: number | null;
-    isrc: string | null;
-    iswc: string | null;
-    track_number: number | null;
-    duration: number | null;
-    version: string | null;
+type Track = EditableTrack & {
     artist: string | null;
     credited_artist: string | null;
     audio_file_id: number | null;
@@ -217,158 +205,16 @@ export default function Tracks({
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex justify-end">
-                                            <FormDialog
-                                                title={`Edit ${track.name}`}
-                                                form={TrackController.update.form(
-                                                    track.id,
-                                                )}
-                                                trigger={
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        aria-label={`Edit ${track.name}`}
-                                                    >
-                                                        <Pencil className="text-muted-foreground" />
-                                                    </Button>
+                                            <TrackDialog
+                                                track={track}
+                                                artistOptions={artistOptions}
+                                                contractOptions={
+                                                    contractOptions
                                                 }
-                                            >
-                                                {(errors) => (
-                                                    <>
-                                                        <Field
-                                                            label="Title"
-                                                            htmlFor="name"
-                                                            error={errors.name}
-                                                            required
-                                                        >
-                                                            <Input
-                                                                id="name"
-                                                                name="name"
-                                                                defaultValue={
-                                                                    track.name
-                                                                }
-                                                                required
-                                                            />
-                                                        </Field>
-                                                        <Field
-                                                            label="Artist"
-                                                            htmlFor="artist_id"
-                                                            error={
-                                                                errors.artist_id
-                                                            }
-                                                        >
-                                                            <SelectInput
-                                                                id="artist_id"
-                                                                name="artist_id"
-                                                                defaultValue={
-                                                                    track.artist_id ??
-                                                                    ''
-                                                                }
-                                                                options={
-                                                                    artistOptions
-                                                                }
-                                                                placeholder="No artist"
-                                                            />
-                                                        </Field>
-                                                        <Field
-                                                            label="Contract"
-                                                            htmlFor="contract_id"
-                                                            error={
-                                                                errors.contract_id
-                                                            }
-                                                            hint="Leave empty to use the contract of the release."
-                                                        >
-                                                            <SelectInput
-                                                                id="contract_id"
-                                                                name="contract_id"
-                                                                defaultValue={
-                                                                    track.contract_id ??
-                                                                    ''
-                                                                }
-                                                                options={
-                                                                    contractOptions
-                                                                }
-                                                                placeholder={
-                                                                    track.inherited_contract
-                                                                        ? `Same as release (${track.inherited_contract.name})`
-                                                                        : 'Same as release'
-                                                                }
-                                                            />
-                                                        </Field>
-                                                        <div className="grid gap-4 sm:grid-cols-2">
-                                                            <Field
-                                                                label="ISRC"
-                                                                htmlFor="isrc"
-                                                                error={
-                                                                    errors.isrc
-                                                                }
-                                                            >
-                                                                <Input
-                                                                    id="isrc"
-                                                                    name="isrc"
-                                                                    defaultValue={
-                                                                        track.isrc ??
-                                                                        ''
-                                                                    }
-                                                                    className="font-mono"
-                                                                />
-                                                            </Field>
-                                                            <Field
-                                                                label="ISWC"
-                                                                htmlFor="iswc"
-                                                                error={
-                                                                    errors.iswc
-                                                                }
-                                                            >
-                                                                <Input
-                                                                    id="iswc"
-                                                                    name="iswc"
-                                                                    defaultValue={
-                                                                        track.iswc ??
-                                                                        ''
-                                                                    }
-                                                                    className="font-mono"
-                                                                />
-                                                            </Field>
-                                                            <Field
-                                                                label="Track number"
-                                                                htmlFor="track_number"
-                                                                error={
-                                                                    errors.track_number
-                                                                }
-                                                            >
-                                                                <Input
-                                                                    id="track_number"
-                                                                    name="track_number"
-                                                                    type="number"
-                                                                    min="1"
-                                                                    defaultValue={
-                                                                        track.track_number ??
-                                                                        ''
-                                                                    }
-                                                                />
-                                                            </Field>
-                                                            <Field
-                                                                label="Length (seconds)"
-                                                                htmlFor="duration"
-                                                                error={
-                                                                    errors.duration
-                                                                }
-                                                            >
-                                                                <Input
-                                                                    id="duration"
-                                                                    name="duration"
-                                                                    type="number"
-                                                                    min="0"
-                                                                    defaultValue={
-                                                                        track.duration ??
-                                                                        ''
-                                                                    }
-                                                                />
-                                                            </Field>
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </FormDialog>
+                                                inheritedContract={
+                                                    track.inherited_contract
+                                                }
+                                            />
                                             <DeleteButton
                                                 url={TrackController.destroy.url(
                                                     track.id,

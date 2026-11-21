@@ -62,21 +62,38 @@ test('several files added at once are all stored', function () {
     expect($stored())->toBe(4);
 });
 
-test('track details are edited in a dialog on the release page', function () {
+test('track details are edited in the one track dialog, from the release page and from the track page', function () {
     $scenario = royaltyScenario();
     $this->actingAs($scenario['admin']);
 
     visit("/releases/{$scenario['release']->id}")
-        ->click('[aria-label="Edit details of Example Track"]')
+        ->click('[aria-label="Edit Example Track"]')
         ->fill('version', 'Club Mix')
         ->fill('bpm', '124')
         ->fill('credits_composers', 'First Writer, Second Writer')
-        ->press('Save')
+        ->press('Save track')
         ->assertSee('Track saved.')
         ->assertSee('(Club Mix)')
         ->assertNoJavaScriptErrors();
 
     expect($scenario['track']->refresh()->credits)->toBe(['composers' => ['First Writer', 'Second Writer']]);
+
+    visit("/tracks/{$scenario['track']->id}")
+        ->press('Edit')
+        ->assertValue('[role="dialog"] input[name="version"]', 'Club Mix')
+        ->assertValue('[role="dialog"] input[name="credits[composers]"]', 'First Writer, Second Writer')
+        ->fill('musical_key', 'F minor')
+        ->press('Save track')
+        ->assertSee('Track saved.')
+        ->assertPathIs("/tracks/{$scenario['track']->id}")
+        ->assertNoJavaScriptErrors();
+
+    expect($scenario['track']->refresh()->musical_key)->toBe('F minor');
+
+    visit('/tracks')
+        ->click('[aria-label="Edit Example Track"]')
+        ->assertValue('[role="dialog"] input[name="musical_key"]', 'F minor')
+        ->assertNoJavaScriptErrors();
 });
 
 test('delivery details are entered on the release form and shown on the release', function () {

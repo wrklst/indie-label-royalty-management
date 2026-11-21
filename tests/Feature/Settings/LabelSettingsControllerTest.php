@@ -34,8 +34,8 @@ test('the label settings page shows the stored settings and territories', functi
                 'zebralution_work_rights' => 'administered by collecting society',
             ])
             ->where('territories', [
-                ['id' => $first->id, 'name' => 'GSA', 'countries' => ['DE', 'AT', 'CH']],
-                ['id' => $second->id, 'name' => 'Nordics', 'countries' => ['SE', 'NO']],
+                ['id' => $first->id, 'name' => 'GSA', 'countries' => ['DE', 'AT', 'CH'], 'delete_block' => null],
+                ['id' => $second->id, 'name' => 'Nordics', 'countries' => ['SE', 'NO'], 'delete_block' => null],
             ]));
 });
 

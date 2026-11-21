@@ -1,4 +1,4 @@
-import { Link, setLayoutProps } from '@inertiajs/react';
+import { Link, setLayoutProps, usePage } from '@inertiajs/react';
 import { Pencil, Plus } from 'lucide-react';
 import PayeeController from '@/actions/App/Http/Controllers/PayeeController';
 import { Amount } from '@/components/amount';
@@ -20,7 +20,7 @@ import {
 import { useFilters } from '@/hooks/use-filters';
 import { serverSorter, useTableSort } from '@/hooks/use-table-sort';
 import { date, percent } from '@/lib/format';
-import { edit as editContract } from '@/routes/contracts';
+import { show as showContract } from '@/routes/contracts';
 import { index, show as showPayee } from '@/routes/payees';
 import { payee as periodPayee } from '@/routes/periods';
 import { show as showStatement } from '@/routes/statements';
@@ -30,7 +30,7 @@ import { PayeeFields } from './index';
 import type { Payee } from './index';
 
 type Props = {
-    payee: Payee;
+    payee: Payee & { delete_block: string | null };
     period: { id: number; name: string } | null;
     summary: {
         totals: PayeeTotals;
@@ -106,6 +106,7 @@ export default function ShowPayee({
     transfers,
     filters,
 }: Props) {
+    const { url } = usePage();
     const { apply } = useFilters(showPayee.url(payee.id), filters);
     const statementSorter = serverSorter(filters, apply, 'statements');
     const payoutSorter = serverSorter(filters, apply, 'payouts');
@@ -135,7 +136,11 @@ export default function ShowPayee({
                     <Button variant="outline" asChild>
                         <Link
                             href={createTransaction({
-                                query: { type: 'transfer', payee: payee.id },
+                                query: {
+                                    type: 'transfer',
+                                    payee: payee.id,
+                                    return_to: url,
+                                },
                             })}
                         >
                             <Plus />
@@ -160,7 +165,8 @@ export default function ShowPayee({
                         url={PayeeController.destroy.url(payee.id)}
                         label="Delete"
                         title={`Delete ${payee.name}?`}
-                        description="The payee is removed from every contract. Payees with transfers, payouts or statements cannot be deleted."
+                        blocked={payee.delete_block}
+                        description="The payee's splits are removed from every contract, and a team member linked to the payee becomes unlinked."
                     />
                 </>
             }
@@ -353,7 +359,7 @@ export default function ShowPayee({
                                 <TableRow key={split.id}>
                                     <TableCell>
                                         <Link
-                                            href={editContract(
+                                            href={showContract(
                                                 split.contract_id,
                                             )}
                                             className="font-medium underline decoration-muted-foreground/40 underline-offset-4"

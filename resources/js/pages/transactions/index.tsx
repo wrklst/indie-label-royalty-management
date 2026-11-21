@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { Pencil, Plus } from 'lucide-react';
 import TransactionController from '@/actions/App/Http/Controllers/TransactionController';
 import { Amount } from '@/components/amount';
@@ -82,6 +82,7 @@ export default function Transactions({
     importOptions,
     trackOptions,
 }: Props) {
+    const { url } = usePage();
     const { apply } = useFilters(index.url(), filters);
     const sorter = serverSorter(filters, apply);
     const filtered = Object.entries(filters).some(
@@ -96,13 +97,17 @@ export default function Transactions({
     return (
         <Page
             title="Transactions"
-            description="Every line of income, every expense and every transfer. Expenses are negative; a negative transfer was given to the payee. A label cost is an expense the label bears alone."
+            description="Every line of income, every expense and every transfer. Expenses are listed as negative amounts, though you type them as positive; a negative transfer was given to the payee. A label cost is an expense the label bears alone."
             actions={
                 <>
                     <Button variant="outline" asChild>
                         <Link
                             href={create({
-                                query: { type: 'expense', recoupable: 0 },
+                                query: {
+                                    type: 'expense',
+                                    recoupable: 0,
+                                    return_to: url,
+                                },
                             })}
                         >
                             <Plus />
@@ -110,19 +115,31 @@ export default function Transactions({
                         </Link>
                     </Button>
                     <Button variant="outline" asChild>
-                        <Link href={create({ query: { type: 'expense' } })}>
+                        <Link
+                            href={create({
+                                query: { type: 'expense', return_to: url },
+                            })}
+                        >
                             <Plus />
                             New expense
                         </Link>
                     </Button>
                     <Button variant="outline" asChild>
-                        <Link href={create({ query: { type: 'transfer' } })}>
+                        <Link
+                            href={create({
+                                query: { type: 'transfer', return_to: url },
+                            })}
+                        >
                             <Plus />
                             New transfer
                         </Link>
                     </Button>
                     <Button asChild>
-                        <Link href={create({ query: { type: 'income' } })}>
+                        <Link
+                            href={create({
+                                query: { type: 'income', return_to: url },
+                            })}
+                        >
                             <Plus />
                             New income
                         </Link>
@@ -430,7 +447,11 @@ export default function Transactions({
                                                 asChild
                                             >
                                                 <Link
-                                                    href={edit(transaction.id)}
+                                                    href={edit(transaction.id, {
+                                                        query: {
+                                                            return_to: url,
+                                                        },
+                                                    })}
                                                     aria-label="Edit transaction"
                                                 >
                                                     <Pencil className="text-muted-foreground" />
@@ -440,7 +461,7 @@ export default function Transactions({
                                                 url={TransactionController.destroy.url(
                                                     transaction.id,
                                                 )}
-                                                title="Delete this transaction?"
+                                                title={`Delete ${transaction.type} of ${date(transaction.paid_timestamp)}?`}
                                                 description="It is removed from every period and balance it counted in. Statements already generated keep their figures."
                                             />
                                         </div>

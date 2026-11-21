@@ -4,8 +4,10 @@ namespace App\Http\Requests;
 
 use App\Enums\ArtistRole;
 use App\Rules\Isrc;
+use App\Support\CurrentLabel;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 class TrackRequest extends LabelFormRequest
 {
@@ -40,6 +42,29 @@ class TrackRequest extends LabelFormRequest
     }
 
     /**
+     * The rules for the fields every place that edits a track has: this
+     * request, and the track rows of the release form under their prefix.
+     *
+     * @return array<string, list<mixed>>
+     */
+    public static function sharedRules(string $prefix = ''): array
+    {
+        $labelId = app(CurrentLabel::class)->get()->id;
+        $inLabel = fn (string $table): Exists => Rule::exists($table, 'id')->where('label_id', $labelId);
+
+        return [
+            "{$prefix}name" => ['required', 'string', 'max:255'],
+            "{$prefix}artist_id" => ['nullable', 'integer', $inLabel('artists')],
+            "{$prefix}contract_id" => ['nullable', 'integer', $inLabel('contracts')],
+            "{$prefix}isrc" => ['nullable', 'string', 'max:16', new Isrc],
+            "{$prefix}iswc" => ['nullable', 'string', 'max:16'],
+            "{$prefix}track_number" => ['nullable', 'integer', 'min:1', 'max:999'],
+            "{$prefix}duration" => ['nullable', 'integer', 'min:0'],
+            "{$prefix}version" => ['nullable', 'string', 'max:255'],
+        ];
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -47,19 +72,12 @@ class TrackRequest extends LabelFormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'artist_id' => ['nullable', 'integer', $this->inLabel('artists')],
-            'contract_id' => ['nullable', 'integer', $this->inLabel('contracts')],
-            'isrc' => ['nullable', 'string', 'max:16', new Isrc],
-            'iswc' => ['nullable', 'string', 'max:16'],
-            'track_number' => ['nullable', 'integer', 'min:1', 'max:999'],
-            'duration' => ['nullable', 'integer', 'min:0'],
+            ...self::sharedRules(),
             // Null follows the release.
             'accounts_mechanicals' => ['nullable', 'boolean'],
             'mechanicals_rate' => ['nullable', 'numeric', 'min:0'],
             'ppd_rate' => ['nullable', 'numeric', 'min:0'],
             'disc_number' => ['nullable', 'integer', 'min:1', 'max:99'],
-            'version' => ['nullable', 'string', 'max:255'],
             'genre' => ['nullable', 'string', 'max:255'],
             'language' => ['nullable', 'string', 'max:8'],
             'explicit' => ['nullable', Rule::in(['explicit', 'clean'])],

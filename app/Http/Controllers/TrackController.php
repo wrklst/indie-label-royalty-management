@@ -29,6 +29,23 @@ use Inertia\Response;
 
 class TrackController extends Controller
 {
+    /**
+     * What the track dialog edits, for every page that opens it. The track needs its `artists` loaded.
+     *
+     * @return array<string, mixed>
+     */
+    public static function editable(Track $track): array
+    {
+        return [
+            ...$track->only([
+                'id', 'name', 'isrc', 'iswc', 'track_number', 'disc_number', 'duration', 'artist_id', 'contract_id', 'version', 'genre',
+                'language', 'explicit', 'musical_key', 'preview_start', 'p_line', 'lyrics', 'credits', 'ai_recording', 'ai_composition', 'ai_lyrics',
+            ]),
+            'bpm' => $track->bpm === null ? null : rtrim(rtrim((string) $track->bpm, '0'), '.'),
+            'artists' => $track->artists->map(fn (Artist $artist): array => ['artist_id' => $artist->id, 'role' => $artist->pivot->role])->values(),
+        ];
+    }
+
     public function index(Request $request): Response
     {
         $sorting = Sorting::for($request, [
@@ -60,7 +77,8 @@ class TrackController extends Controller
             ->with(['release:id,name,contract_id'])->orderBy('id')->get()->groupBy('isrc');
 
         $tracks = $tracks->through(fn (Track $track): array => [
-            ...$track->only(['id', 'name', 'artist_id', 'contract_id', 'isrc', 'iswc', 'track_number', 'duration', 'mechanicals_rate', 'ppd_rate', 'release_id', 'version']),
+            ...self::editable($track),
+            ...$track->only(['mechanicals_rate', 'ppd_rate', 'release_id']),
             'artist' => $track->artist?->name,
             'release' => $track->release?->only(['id', 'name', 'catalog_number']),
             'releases' => ($recordings->get($track->isrc) ?? collect([$track]))->map(fn (Track $entry): ?array => $entry->release?->only(['id', 'name']))->filter()->unique('id')->values(),
@@ -111,10 +129,10 @@ class TrackController extends Controller
 
         return Inertia::render('tracks/show', [
             'track' => [
-                ...$track->only(['id', 'name', 'version', 'isrc', 'iswc', 'track_number', 'duration', 'genre', 'bpm', 'musical_key']),
+                ...self::editable($track),
                 'credited_artist' => ArtistCredits::display($track),
                 // The main artist is not among the further credits, so it is put in front of them.
-                'artists' => collect([$track->artist])->concat($track->artists)->filter()->unique('id')
+                'credited_artists' => collect([$track->artist])->concat($track->artists)->filter()->unique('id')
                     ->map(fn (Artist $artist): array => $artist->only(['id', 'name']))->values(),
                 'release' => $track->release?->only(['id', 'name', 'catalog_number']),
                 'cover_file_id' => $track->release?->cover?->id,
@@ -159,6 +177,8 @@ class TrackController extends Controller
                 ]),
             'searchAvailable' => $search->isConfigured(),
             'platformLinks' => PlatformLinkController::props($track),
+            'artistOptions' => Options::artists(),
+            'contractOptions' => Options::contracts(),
         ]);
     }
 

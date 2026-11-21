@@ -107,7 +107,7 @@ On the upload form, choosing the spreadsheet template as the source shows the li
 | `timestamp`                            | `2026-03-31`                 | Sale date                                            |
 | `paid timestamp`                       | `2026-04-15`                 | Paid date                                            |
 | `transaction type`                     | `income`                     | `income`, `expense` or `transfer`                    |
-| `total`                                | `125.50`                     | Costs are negative amounts                           |
+| `total`                                | `125.50`                     | In a file costs are negative (`-125.50`)             |
 | `currency`                             | `EUR`                        | Defaults to the label's currency                     |
 | `payee`                                | `Example Artist`             | For transfers such as advances                       |
 | `artist`, `release name`, `track name` |                              | Matched to the catalog, created when missing         |

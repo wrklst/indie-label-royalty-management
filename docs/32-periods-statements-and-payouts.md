@@ -166,11 +166,11 @@ Rules:
 
 ## Deleting
 
-| What                                      | Effect                                                                                              | Limits                                                                  |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| A payout (**Royalties → Payouts**)        | The amount becomes payable again.                                                                   | Statements already generated keep showing it until you regenerate them. |
-| A statement (**Delete** on the statement) | The payee loses access to it. Transactions and payouts are not affected; you can generate it again. | None. Published statements can be deleted too.                          |
-| A period (**Delete** on the period page)  | Its statements are deleted with it. Transactions are not touched.                                   | Not possible while the period has payouts or published statements.      |
+| What                                      | Effect                                                                                              | Limits                                                                                                              |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| A payout (**Royalties → Payouts**)        | The amount becomes payable again.                                                                   | Statements already generated keep showing it until you regenerate them.                                             |
+| A statement (**Delete** on the statement) | The payee loses access to it. Transactions and payouts are not affected; you can generate it again. | None. Published statements can be deleted too.                                                                      |
+| A period (**Delete** on the period page)  | Its statements are deleted with it. Transactions are not touched.                                   | Not possible while the period has payouts or published statements: the button is disabled and its tooltip says why. |
 
 ## Worked example: an advance recouped over two periods
 

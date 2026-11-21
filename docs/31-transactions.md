@@ -7,10 +7,14 @@ Every amount in Label Office is a transaction: a line of income, an expense or a
 | Type     | What it is                                                                                                   | Sign                                                                      |
 | -------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
 | Income   | Money a release or track earned: streams, downloads, physical sales, licences.                               | Positive. Returns and corrections are negative.                           |
-| Expense  | A cost. Either recouped from payees or borne by the label alone, see below.                                  | Negative. Enter a cost as `-250`.                                         |
+| Expense  | A cost. Either recouped from payees or borne by the label alone, see below.                                  | Entered positive (`250`), stored and listed as negative (`-250`).         |
 | Transfer | Money moved between the label and one payee outside of royalties: an advance, a payback, an opening balance. | Negative: given to the payee. Positive: owed to or returned by the payee. |
 
 Most income arrives through imports, see [Importing statements](10-importing-statements.md) and [Bandcamp](11-bandcamp.md). Expenses and transfers are usually entered by hand.
+
+An expense is typed as a positive amount everywhere in the product: here, on a release, under **Overheads**. Label Office stores it as a negative amount and every list and report shows it negative, so a cost always lowers a result. Only a transfer is typed with its sign, because it goes both ways. Statement files you import keep the signs their importer defines; this only concerns what you type.
+
+A **refund or credit** is an expense that comes back to the label, for example a supplier's credit note. Tick **Refund or credit** on the expense: the amount is stored positive and reduces the cost of its release or of the label instead of adding to it.
 
 ### Recoupable expenses and expenses borne by the label
 
@@ -105,7 +109,7 @@ Categories and formats do not change who is paid; contracts do that. Formats mat
 The buttons at the top of **Royalties → Transactions** open the same form with a different starting point: **New income**, **New expense**, **New transfer** and **New label cost** (an expense with **Recoup from payees** switched off).
 
 1. Choose the button for what you want to book.
-2. In **Amount**, enter the **Total** with the right sign and the **Currency**. Enter the **Rate** if the currency is not your label currency.
+2. In **Amount**, enter the **Total** and the **Currency**. Income and expenses are typed positive; for an expense tick **Refund or credit** if the money comes back. A transfer is typed with its sign. Enter the **Rate** if the currency is not your label currency.
 3. Enter the **Sale date** (or **Date**) and the **Paid date**.
 4. Pick a **Category**.
 5. Fill in the second panel:
@@ -123,7 +127,9 @@ Notes on single fields:
 - **Memo** is shown to the payee on their statement.
 - **Source** is set to "Manual" when left empty.
 
-To change a transaction, use the edit button in its row. An imported transaction additionally shows **Original statement line**: the line exactly as it was in the file. To delete, use the delete button; the transaction is removed from every period and balance it counted in.
+After you save, you return to the page you opened the form from: the filtered list, the release (**New expense** on a release page) or the payee (**New transfer** on a payee page). When there is no such page, you land on the list.
+
+To change a transaction, use the edit button in its row. An expense shows the positive amount it was entered as; an expense that is stored positive (a credit, or one that came from an import) shows **Refund or credit** ticked. An imported transaction additionally shows **Original statement line**: the line exactly as it was in the file. To delete, use the delete button; its title names the transaction, and it is removed from every period and balance it counted in.
 
 ## The transaction list
 
@@ -161,7 +167,7 @@ Ten thousand lines of 0.0033 are therefore worth 33.00, not 0.00.
 ## Good to know
 
 - Without a paid date inside a period, a transaction is in no period. Check the paid date first when income seems to be missing.
-- A positive expense increases net income. The form warns you; use a negative amount for a cost.
+- An expense is typed positive and stored negative. A transaction that is stored as a positive expense lowers no cost: it is a credit, and the form shows **Refund or credit** ticked for it.
 - Choosing a **Track** sets the release to that track's release.
 - A transaction entered by hand is booked on the release's "[Additionals]" item. An imported transaction keeps the item it was imported on unless you move it to another release or track. Items are explained in [Tracks, artists and items](21-tracks-artists-and-items.md).
 - Editing or deleting a transaction changes the live figures of its period immediately. Statements already generated keep their figures until you regenerate them.

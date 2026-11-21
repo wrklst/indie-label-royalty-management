@@ -153,8 +153,8 @@ export default function Team({
                                 <DeleteButton
                                     url={TeamController.destroy.url(member.id)}
                                     confirmLabel="Remove access"
-                                    title={`Remove ${member.name}?`}
-                                    description={`They can no longer sign in to ${label?.name ?? 'this label'}. Their account and access to other labels stay.`}
+                                    title={`Delete ${member.name}?`}
+                                    description={`They are removed from this label and can no longer sign in to ${label?.name ?? 'this label'}. Their account and access to other labels stay.`}
                                 />
                             </span>
                         </li>

@@ -17,6 +17,7 @@ use App\Support\Decimal;
 use App\Support\Formats;
 use App\Support\Options;
 use App\Support\Platforms;
+use App\Support\ReturnTo;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -99,6 +100,7 @@ class TransactionController extends Controller
                 'payee_id' => $request->integer('payee') ?: null,
                 'recoupable' => $request->boolean('recoupable', true),
             ],
+            'returnTo' => ReturnTo::path($request->query('return_to')),
             ...$this->options(),
         ]);
     }
@@ -113,19 +115,25 @@ class TransactionController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Transaction created.')]);
 
-        return to_route('transactions.index');
+        return redirect(ReturnTo::from($request, route('transactions.index')));
     }
 
-    public function edit(Transaction $transaction): Response
+    public function edit(Request $request, Transaction $transaction): Response
     {
         return Inertia::render('transactions/form', [
             'transaction' => [
                 ...$transaction->only(['id', 'total', 'currency', 'conversion_rate', 'converted_total', 'quantity', 'price', 'release_id', 'track_id', 'contract_id', 'payee_id', 'ledger_id', 'category', 'format', 'usage_type', 'region', 'retailer', 'provider', 'external_id', 'source', 'memo', 'published', 'billable', 'recoupable', 'raw_data', 'data_import_id']),
                 'type' => $transaction->type->value,
+                // An expense is shown as the positive amount it was typed as; a stored positive one is a refund or credit.
+                ...($transaction->type === TransactionType::Expense ? [
+                    'total' => Decimal::abs($transaction->total),
+                    'refund' => Decimal::isPositive($transaction->total),
+                ] : ['refund' => false]),
                 'timestamp' => $transaction->timestamp->toDateString(),
                 'paid_timestamp' => $transaction->paid_timestamp->toDateString(),
             ],
             'defaults' => null,
+            'returnTo' => ReturnTo::path($request->query('return_to')),
             ...$this->options(),
         ]);
     }
@@ -136,7 +144,7 @@ class TransactionController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Transaction saved.')]);
 
-        return to_route('transactions.index');
+        return redirect(ReturnTo::from($request, route('transactions.index')));
     }
 
     public function destroy(Transaction $transaction): RedirectResponse
@@ -217,6 +225,13 @@ class TransactionController extends Controller
 
         $rate = app(ExchangeRates::class)->for($attributes['currency'], $label->currency, $attributes['conversion_rate'] ?? null, $attributes['paid_timestamp'] ?? $attributes['timestamp'] ?? null);
         $total = Decimal::parse($attributes['total']);
+
+        // An expense is typed positive and stored negative; a refund or credit reduces the cost and is stored positive.
+        if ($attributes['type'] === TransactionType::Expense->value) {
+            $total = ! empty($attributes['refund']) ? Decimal::abs($total) : Decimal::sub('0', Decimal::abs($total));
+        }
+
+        unset($attributes['refund']);
 
         if (array_key_exists('format', $attributes)) {
             $attributes['format'] = Formats::canonical($attributes['format']);

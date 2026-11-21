@@ -1,4 +1,4 @@
-import { Form, Link } from '@inertiajs/react';
+import { Form, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import PpdController from '@/actions/App/Http/Controllers/RoyaltyTools/PpdController';
 import RatesController from '@/actions/App/Http/Controllers/RoyaltyTools/RatesController';
@@ -109,6 +109,7 @@ export default function Ppd({
     releaseOptions,
     formatOptions,
 }: Props) {
+    const { url } = usePage();
     const [ratesRelease, setRatesRelease] = useState('');
     const { rows, sorter } = useTableSort(report?.rows ?? NO_ROWS, ROW_COLUMNS);
 
@@ -306,6 +307,7 @@ export default function Ppd({
                                         <Link
                                             href={TransactionController.edit.url(
                                                 transaction.id,
+                                                { query: { return_to: url } },
                                             )}
                                             className="underline"
                                         >

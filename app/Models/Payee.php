@@ -59,4 +59,16 @@ class Payee extends Model
     {
         return $this->hasMany(Statement::class);
     }
+
+    /**
+     * Why the payee cannot be deleted, or null when it can.
+     */
+    public function deleteBlock(): ?string
+    {
+        $hasTransfers = Transaction::query()->where('payee_id', $this->id)->exists();
+
+        return $hasTransfers || $this->payouts()->exists() || $this->statements()->exists()
+            ? 'This payee has transfers, payouts or statements and cannot be deleted.'
+            : null;
+    }
 }

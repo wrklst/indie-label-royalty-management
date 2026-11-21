@@ -29,7 +29,7 @@ Click a payee to open their page. It shows:
 - **Statements** and **Payouts**, 25 to a page each and sortable,
 - **Transfers**: advances, paybacks and opening balances, 50 to a page and sortable. **New transfer** opens a new transfer for this payee, see [Transactions](31-transactions.md).
 
-A payee with transfers, payouts or statements cannot be deleted. Deleting any other payee removes them from every contract.
+**Edit** in the header changes the payee. **Delete** is disabled for a payee with transfers, payouts or statements, and its tooltip says why; for any other payee it opens **Delete {payee name}?**, which removes the payee's splits from every contract and unlinks a team member linked to the payee.
 
 ## Contracts and splits
 
@@ -42,11 +42,13 @@ A split is a percentage of **net income**: income minus the recoupable expenses 
     - **Split %**, a number above 0 and up to 100, with up to seven decimals,
     - **Ledger**, left on **Primary ledger** unless the balance must be kept apart,
     - **Territory**, left on **World** unless the split only applies in some countries.
-4. Choose **Create contract**.
+4. Choose **Create contract**. You land on the page of the new contract.
 
 The form shows the sum as you type, for example "Payees get 60% worldwide, the label keeps 40%." A contract whose splits add up to more than 100% is refused. A contract without splits is allowed: the label keeps everything booked on it.
 
 The contract list shows **Splits**, **Label keeps** and **Used by** for every contract. Tick **Not used anywhere** to find contracts that no release, track, item or prorated contract relies on.
+
+Click a contract name, here or anywhere a contract is named, to open its page. It shows the terms (name and memo), the splits with payee, share, ledger and territory, the contracts a prorated contract is made of or is part of, and the **Releases** and **Tracks** the contract applies to, 25 to a page each and sortable. **Edit** in the header opens the form; after you save you return to the page you came from, the contract's own page when there is none. **Delete** opens **Delete {contract name}?**, which says that the contract's splits go with it and that releases, tracks and items fall back to the next contract up the chain.
 
 A payee can appear in several splits of one contract, for example 40% worldwide plus 10% in one territory. On their statement the income then appears once, at the combined percentage.
 
@@ -70,7 +72,7 @@ Typical uses:
 
 **Catalog → Catalog manager** lists every release with its tracks and lets you assign release and track contracts in one place. Changes there save immediately.
 
-The contract form has a panel **Where this contract applies** that lists the releases, tracks and prorated contracts using it.
+The contract page lists the releases and tracks that use the contract.
 
 ## Income without a contract
 
@@ -115,7 +117,7 @@ A split with a territory only earns from transactions whose **Country** is one o
 
 The 100% rule looks at each country: the worldwide splits plus all territory splits that cover one country may not exceed 100%.
 
-A territory that contract splits still use cannot be deleted. Change those splits first.
+A territory that contract splits still use cannot be deleted: its bin is disabled and the tooltip says why. Change those splits first.
 
 ## Prorated contracts for compilations
 

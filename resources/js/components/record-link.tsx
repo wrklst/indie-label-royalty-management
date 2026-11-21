@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { show as showArtist } from '@/routes/artists';
-import { edit as editContract } from '@/routes/contracts';
+import { show as showContract } from '@/routes/contracts';
 import { show as showImport } from '@/routes/data-imports';
 import { show as showPayee } from '@/routes/payees';
 import { show as showRelease } from '@/routes/releases';
@@ -14,7 +14,7 @@ export const recordLinkClass =
 
 const PAGES = {
     artist: showArtist,
-    contract: editContract,
+    contract: showContract,
     import: showImport,
     payee: showPayee,
     release: showRelease,

@@ -71,7 +71,7 @@ class PeriodController extends Controller
         $statements = Statement::query()->where('period_id', $period->id)->where('archived', false)->get()->keyBy('payee_id');
 
         return Inertia::render('periods/show', [
-            'period' => [...$report['period'], 'closed' => $period->closed_at !== null],
+            'period' => [...$report['period'], 'closed' => $period->closed_at !== null, 'delete_block' => $period->deleteBlock()],
             'currency' => $report['currency'],
             'totals' => $report['totals'],
             'flow' => MoneyFlow::of(Transaction::query()->whereBetween('paid_timestamp', [$period->starts_on->toDateString(), $period->ends_on->toDateString()])),
@@ -104,8 +104,8 @@ class PeriodController extends Controller
 
     public function destroy(Period $period): RedirectResponse
     {
-        if ($period->payouts()->exists() || $period->statements()->whereNotNull('published_at')->exists()) {
-            Inertia::flash('toast', ['type' => 'error', 'message' => __('This period has payouts or published statements and cannot be deleted.')]);
+        if ($reason = $period->deleteBlock()) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => $reason]);
 
             return back();
         }

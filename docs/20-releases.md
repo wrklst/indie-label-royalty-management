@@ -55,7 +55,9 @@ Example: for the label Example Records you create a release named `Example Relea
 1. Open the release and click **Edit**.
 2. Change the fields and click **Save release**.
 
-To delete, click **Delete** on the edit page and confirm. See [Good to know](#good-to-know) for what is removed and what is kept.
+After you save you return to the page you opened the form from (the release, or the release list with its filters), and to the release itself when you created it.
+
+To delete, click **Delete** on the edit page and confirm. The dialog is titled **Delete {release name}?** and lists what is removed with the release: its tracks, its items without transactions, its platform links and all its files, which are also removed from storage for good. Its transactions are kept, but they become unassigned. See [Good to know](#good-to-know).
 
 ## Fields: Release
 
@@ -115,7 +117,7 @@ Each row is one track with these columns: `#` (track number), **Title**, **Artis
 - Leave **Contract** at **Same as release** unless the track has its own deal.
 - The **X** at the end of a row removes the track. When you remove a track that was already saved, a warning appears: saving deletes the track, and its transactions stay on the release but lose the track and any track-level contract.
 
-Further track details (version, disc number, ISWC, length, credits, lyrics and more) are edited on the release page, not on this form. See [Tracks, artists and items](21-tracks-artists-and-items.md).
+These rows are the quick way to add tracks while you create a release. Further track details (version, disc number, ISWC, length, credits, lyrics and more) are edited in the track dialog, which opens from the release page, the track list and the track page. The rows use the same labels and are checked by the same rules as the dialog. See [Tracks, artists and items](21-tracks-artists-and-items.md).
 
 ## Fields: Mechanicals, PPD and reserves
 
@@ -154,7 +156,7 @@ Click a release name anywhere to open its page. The heading shows the name (with
 **Buttons.**
 
 - **Delivery** downloads the release as a package or as a spreadsheet; see [Files, audio and delivery](22-files-audio-and-delivery.md).
-- **New expense** opens a new expense transaction with this release filled in; see [Transactions](31-transactions.md).
+- **New expense** opens a new expense transaction with this release filled in; type the amount positive. After you save, you are back on this release. See [Transactions](31-transactions.md).
 - **Edit** opens the release form.
 
 **Cover and figures.** Next to the cover there are four tiles:
@@ -173,7 +175,7 @@ Example: with 1,250.00 of income and −400.00 of expenses, **Net** shows 850.00
 - **Units** and **Income** are the quantity and amount of the income transactions booked on that track.
 - **Contract** shows the track's own contract, **Release contract** when it uses the one of the release, or `none`.
 - **Listen** holds the play buttons, or **No audio** when no audio file is attached to the track.
-- The pencil at the end of a row opens the dialog **Details of …** for all track details.
+- The pencil at the end of a row opens the track dialog **Edit {track title}** with all track details, the same one as in the track list and on the track page.
 - If income was booked on the release without a track, a last line reads **Booked on the release as a whole (album sales, additionals)** with that amount.
 - The button **… transactions** above the table opens the transaction list filtered to this release.
 
@@ -250,7 +252,7 @@ Example: `Example Release` has no contract and two tracks. The counter shows `2 
 - The **All artists** filter only looks at the main artist. A release where an artist is only a further credit is not found by it, but it is counted in the artist list and listed on the artist's own page.
 - **Income to date** in the list counts income only. Use the **Net** tile on the release page to see income minus expenses.
 - Amounts are shown in your label currency, using the converted value of each transaction.
-- The track order in the form and on the release page is by track number. The disc number is not shown on the release form; set it in **Details of …** on the release page.
+- The track order in the form and on the release page is by track number. The disc number is not shown on the release form; set it in the track dialog.
 - Saving the release form replaces the track list: tracks whose row you removed are deleted. Their transactions stay on the release.
 - Deleting a release deletes its tracks, its files (from storage, for good) and its items without transactions. Its transactions are kept but become unassigned, so they no longer earn for any payee. Items that carry transactions stay behind as unassigned items, and the `[Additionals]` item is renamed to `[Additionals] Example Release`, so you can assign that income to another release on the **Items** page.
 - A release can be saved without tracks. Income can still be booked on the release itself.

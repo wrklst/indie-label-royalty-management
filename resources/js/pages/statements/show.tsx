@@ -121,7 +121,7 @@ export default function ShowStatement({ statement, portal: isPortal }: Props) {
                                     statement.id,
                                 )}
                                 label="Delete"
-                                title="Delete this statement?"
+                                title={`Delete ${statement.name}?`}
                                 description="The payee loses access to it. Transactions and payouts are not affected, and you can generate it again from the period."
                             />
                         </>

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LabelSettingsRequest;
 use App\Http\Requests\TerritoryRequest;
-use App\Models\ContractSplit;
 use App\Models\Territory;
 use App\Models\Transaction;
 use App\Services\Releases\ZebralutionSheet;
@@ -43,7 +42,7 @@ class LabelSettingsController extends Controller
                 'mechanicals_include_physical' => $tools->includePhysical,
                 'ignore_negative_quantities' => $tools->ignoreNegativeQuantities,
             ],
-            'territories' => Territory::query()->orderBy('name')->get()->map->only(['id', 'name', 'countries']),
+            'territories' => Territory::query()->orderBy('name')->get()->map(fn (Territory $territory): array => [...$territory->only(['id', 'name', 'countries']), 'delete_block' => $territory->deleteBlock()]),
         ]);
     }
 
@@ -104,8 +103,8 @@ class LabelSettingsController extends Controller
      */
     public function destroyTerritory(Territory $territory): RedirectResponse
     {
-        if (ContractSplit::query()->where('territory_id', $territory->id)->exists()) {
-            Inertia::flash('toast', ['type' => 'error', 'message' => __('This territory is used by contract splits. Change those splits first.')]);
+        if ($reason = $territory->deleteBlock()) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => $reason]);
 
             return back();
         }

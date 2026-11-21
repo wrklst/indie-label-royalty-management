@@ -91,7 +91,7 @@ test('a contract is created with its splits stored as fractions and its child co
     ]);
 
     $contract = Contract::query()->where('name', 'Example Deal')->sole();
-    $response->assertSessionHasNoErrors()->assertRedirect(route('contracts.edit', $contract));
+    $response->assertSessionHasNoErrors()->assertRedirect(route('contracts.show', $contract));
 
     expect($contract->label_id)->toBe($label->id)
         ->and($contract->memo)->toBe('Signed in spring.');
@@ -209,7 +209,7 @@ test('a child contract needs a weight above zero', function (mixed $weight, stri
     'missing' => ['', 'The weight field is required.'],
 ]);
 
-test('the contract form shows splits as percentages and lists children, parents and usage', function () {
+test('the contract form shows splits as percentages and its child contracts', function () {
     $label = Label::factory()->create();
     $payee = Payee::factory()->create(['label_id' => $label->id]);
     $contract = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Deal']);
@@ -229,9 +229,6 @@ test('the contract form shows splits as percentages and lists children, parents 
             ->where('contract.name', 'Example Deal')
             ->where('contract.splits', [['payee_id' => $payee->id, 'ledger_id' => null, 'territory_id' => null, 'percentage' => '12.5']])
             ->where('contract.children', [['contract_id' => $child->id, 'weight' => '2.5']])
-            ->where('contract.parents', [['id' => $parent->id, 'name' => 'Example Umbrella Deal']])
-            ->where('contract.releases', [['id' => $release->id, 'name' => 'Example Release']])
-            ->where('contract.tracks', [['id' => $track->id, 'name' => 'Example Track', 'release' => 'Example Release', 'release_id' => $release->id]])
             ->has('contractOptions', 2)
             ->where('contractOptions', fn ($options) => collect($options)->pluck('id')->doesntContain($contract->id)));
 });
@@ -261,7 +258,7 @@ test('updating a contract replaces its splits and syncs its child contracts', fu
             ],
         ])
         ->assertSessionHasNoErrors()
-        ->assertRedirect(route('contracts.edit', $contract->id));
+        ->assertRedirect(route('contracts.show', $contract->id));
 
     $this->assertDatabaseHas('contracts', ['id' => $contract->id, 'name' => 'Example Deal (Renewed)', 'memo' => 'Renewed for two years.']);
     $split = ContractSplit::query()->where('contract_id', $contract->id)->sole();
@@ -315,4 +312,81 @@ test('deleting a contract removes its splits and links and leaves its releases w
     $this->assertDatabaseCount('contract_splits', 0);
     $this->assertDatabaseCount('contract_links', 0);
     $this->assertDatabaseHas('releases', ['id' => $release->id, 'contract_id' => null]);
+});
+
+test('the contract page shows its terms, its splits and where it applies', function () {
+    $label = Label::factory()->create();
+    $payee = Payee::factory()->create(['label_id' => $label->id, 'name' => 'Example Payee']);
+    $contract = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Deal', 'memo' => 'Signed in spring.']);
+    ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $payee->id, 'split_amount' => '0.125']);
+    $child = Contract::factory()->create(['label_id' => $label->id]);
+    $parent = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Umbrella Deal']);
+    $contract->children()->attach($child, ['weight' => '2.5']);
+    $parent->children()->attach($contract, ['weight' => 1]);
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'contract_id' => $contract->id]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track', 'contract_id' => $contract->id]);
+    Release::factory()->create(['label_id' => $label->id, 'name' => 'Other Release']);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('contracts.show', $contract->id))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('contracts/show')
+            ->where('contract.name', 'Example Deal')
+            ->where('contract.memo', 'Signed in spring.')
+            ->where('contract.splits.0.payee', ['id' => $payee->id, 'name' => 'Example Payee'])
+            ->where('contract.splits.0.percentage', '12.5')
+            ->where('contract.children', [['id' => $child->id, 'name' => $child->name, 'weight' => '2.5']])
+            ->where('contract.parents', [['id' => $parent->id, 'name' => 'Example Umbrella Deal']])
+            ->where('releases.total', 1)
+            ->where('releases.data.0.name', 'Example Release')
+            ->where('tracks.total', 1)
+            ->where('tracks.data.0', ['id' => $track->id, 'name' => 'Example Track', 'release' => ['id' => $release->id, 'name' => 'Example Release']]));
+});
+
+test('the releases and tracks of a contract are paged on their own', function () {
+    $label = Label::factory()->create();
+    $contract = Contract::factory()->create(['label_id' => $label->id]);
+    Release::factory()->count(27)->create(['label_id' => $label->id, 'contract_id' => $contract->id]);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('contracts.show', ['contract' => $contract->id, 'releases_page' => 2]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('releases.total', 27)
+            ->has('releases.data', 2)
+            ->where('releases.current_page', 2));
+});
+
+test('the page of a contract of another label is not found', function () {
+    $contract = Contract::factory()->create(['label_id' => Label::factory()]);
+
+    $this->actingAs(labelAdmin(Label::factory()->create()))->get(route('contracts.show', $contract->id))->assertNotFound();
+});
+
+test('saving a contract returns to the page the form was opened from, and only to a local one', function (string $returnTo, bool $accepted) {
+    $label = Label::factory()->create();
+    $contract = Contract::factory()->create(['label_id' => $label->id]);
+
+    $response = $this->actingAs(labelAdmin($label))
+        ->put(route('contracts.update', $contract->id), ['name' => 'Example Deal', 'return_to' => $returnTo]);
+
+    $response->assertRedirect($accepted ? $returnTo : route('contracts.show', $contract->id));
+})->with([
+    'the contracts list with a filter' => ['/contracts?search=deal', true],
+    'a payee page' => ['/payees/3', true],
+    'another host' => ['https://evil.example/contracts', false],
+    'a scheme-less address' => ['//evil.example', false],
+]);
+
+test('the contract form hands the page it was opened from to the form', function () {
+    $label = Label::factory()->create();
+    $contract = Contract::factory()->create(['label_id' => $label->id]);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('contracts.edit', ['contract' => $contract->id, 'return_to' => '/contracts?unused=1']))
+        ->assertInertia(fn (Assert $page) => $page->where('returnTo', '/contracts?unused=1'));
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('contracts.edit', ['contract' => $contract->id, 'return_to' => '//evil.example']))
+        ->assertInertia(fn (Assert $page) => $page->where('returnTo', null));
 });

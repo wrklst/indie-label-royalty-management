@@ -45,7 +45,13 @@ type PayeeRow = {
 };
 
 type Props = {
-    period: { id: number; name: string; starts_on: string; ends_on: string };
+    period: {
+        id: number;
+        name: string;
+        starts_on: string;
+        ends_on: string;
+        delete_block: string | null;
+    };
     currency: string;
     totals: Record<
         | 'income'
@@ -139,7 +145,8 @@ export default function ShowPeriod({
                         url={PeriodController.destroy.url(period.id)}
                         label="Delete"
                         title={`Delete ${period.name}?`}
-                        description="Its statements are deleted with it. Transactions are not touched. A period with payouts cannot be deleted."
+                        blocked={period.delete_block}
+                        description="Its statements, none of them published, are deleted with it. Transactions are not touched."
                     />
                 </>
             }

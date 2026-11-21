@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ContractRequest;
 use App\Models\Contract;
+use App\Models\ContractSplit;
+use App\Models\Release;
+use App\Models\Track;
 use App\Support\Decimal;
 use App\Support\Options;
+use App\Support\ReturnTo;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -51,10 +55,11 @@ class ContractController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
         return Inertia::render('contracts/form', [
             'contract' => null,
+            'returnTo' => ReturnTo::path($request->query('return_to')),
             ...$this->options(),
         ]);
     }
@@ -70,14 +75,49 @@ class ContractController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Contract created.')]);
 
-        return to_route('contracts.edit', $contract);
+        return redirect(ReturnTo::from($request, route('contracts.show', $contract)));
     }
 
-    public function edit(Contract $contract): Response
+    /**
+     * One contract: its terms, who is paid what, and where it applies.
+     */
+    public function show(Request $request, Contract $contract): Response
     {
-        $contract->load(['splits', 'children:id,name', 'parents:id,name', 'releases:id,name,contract_id', 'tracks:id,name,contract_id,release_id', 'tracks.release:id,name']);
+        $contract->load(['splits.payee:id,name', 'splits.ledger:id,name', 'splits.territory:id,name', 'children', 'parents:id,name']);
+
+        $releaseSorting = Sorting::for($request, ['name' => 'name', 'catalog_number' => Sorting::nullsLast('catalog_number')], fn (Builder $query) => $query->orderBy('name'), 'releases');
+        $trackSorting = Sorting::for($request, ['name' => 'name', 'release' => Sorting::related(Release::class, 'release_id')], fn (Builder $query) => $query->orderBy('name'), 'tracks');
+
+        return Inertia::render('contracts/show', [
+            'contract' => [
+                ...$contract->only(['id', 'name', 'memo']),
+                'splits' => $contract->splits->map(fn (ContractSplit $split): array => [
+                    'payee' => $split->payee?->only(['id', 'name']),
+                    'ledger' => $split->ledger?->name,
+                    'territory' => $split->territory?->name,
+                    'percentage' => rtrim(rtrim(Decimal::mul((string) $split->split_amount, '100'), '0'), '.'),
+                ]),
+                'children' => $contract->children->map(fn (Contract $child): array => [
+                    'id' => $child->id,
+                    'name' => $child->name,
+                    'weight' => rtrim(rtrim((string) $child->pivot->weight, '0'), '.'),
+                ]),
+                'parents' => $contract->parents->map->only(['id', 'name']),
+                'items_count' => $contract->items()->count(),
+            ],
+            'releases' => $contract->releases()->tap($releaseSorting)->paginate(25, ['id', 'name', 'catalog_number'], 'releases_page')->withQueryString(),
+            'tracks' => $contract->tracks()->with('release:id,name')->tap($trackSorting)->paginate(25, ['id', 'name', 'release_id'], 'tracks_page')->withQueryString()
+                ->through(fn (Track $track): array => ['id' => $track->id, 'name' => $track->name, 'release' => $track->release?->only(['id', 'name'])]),
+            'filters' => [...$releaseSorting->toArray(), ...$trackSorting->toArray()],
+        ]);
+    }
+
+    public function edit(Request $request, Contract $contract): Response
+    {
+        $contract->load(['splits', 'children:id,name']);
 
         return Inertia::render('contracts/form', [
+            'returnTo' => ReturnTo::path($request->query('return_to')),
             'contract' => [
                 ...$contract->only(['id', 'name', 'memo']),
                 'splits' => $contract->splits->map(fn ($split): array => [
@@ -90,9 +130,6 @@ class ContractController extends Controller
                     'contract_id' => $child->id,
                     'weight' => rtrim(rtrim((string) $child->pivot->weight, '0'), '.'),
                 ]),
-                'parents' => $contract->parents->map->only(['id', 'name']),
-                'releases' => $contract->releases->map->only(['id', 'name']),
-                'tracks' => $contract->tracks->map(fn ($track): array => ['id' => $track->id, 'name' => $track->name, 'release' => $track->release?->name, 'release_id' => $track->release_id]),
             ],
             ...$this->options($contract),
         ]);
@@ -107,7 +144,7 @@ class ContractController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Contract saved.')]);
 
-        return back();
+        return redirect(ReturnTo::from($request, route('contracts.show', $contract)));
     }
 
     public function destroy(Contract $contract): RedirectResponse

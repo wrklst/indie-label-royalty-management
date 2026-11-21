@@ -18,7 +18,7 @@ function expensePayload(array $overrides = []): array
         'type' => 'expense',
         'timestamp' => '2026-02-01',
         'paid_timestamp' => '2026-02-15',
-        'total' => '-250',
+        'total' => '250',
         'currency' => 'EUR',
         'category' => 'Remix',
         ...$overrides,

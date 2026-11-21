@@ -40,4 +40,14 @@ class Territory extends Model
     {
         return $country !== null && in_array(strtoupper($country), $this->countries ?? [], true);
     }
+
+    /**
+     * Why the territory cannot be deleted, or null when it can.
+     */
+    public function deleteBlock(): ?string
+    {
+        return ContractSplit::query()->where('territory_id', $this->id)->exists()
+            ? 'This territory is used by contract splits. Change those splits first.'
+            : null;
+    }
 }

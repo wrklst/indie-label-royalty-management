@@ -152,7 +152,7 @@ test('a receipt is booked as a new cost and attached to it', function () {
     $receipt = Receipt::factory()->create(['label_id' => $label->id]);
 
     $this->actingAs(labelAdmin($label))
-        ->post(route('label-costs.store'), ['name' => 'Example Hosting GmbH', 'amount' => '49.90', 'currency' => 'EUR', 'category' => 'Hosting', 'paid_on' => '2026-03-14', 'receipt_id' => $receipt->id])
+        ->post(route('label-costs.store'), ['name' => 'Example Hosting GmbH', 'amount' => '49.90', 'currency' => 'EUR', 'category' => 'Hosting', 'paid_timestamp' => '2026-03-14', 'receipt_id' => $receipt->id])
         ->assertSessionHasNoErrors();
 
     $cost = Transaction::query()->sole();

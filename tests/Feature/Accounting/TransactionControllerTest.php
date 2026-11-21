@@ -173,7 +173,7 @@ test('the platform filter treats the spellings of one platform as one choice', f
             ->where('transactions.data', fn ($rows) => collect($rows)->pluck('memo')->all() === ['Fourth']));
 });
 
-test('a transaction of each type can be entered by hand', function (string $type, string $total) {
+test('a transaction of each type can be entered by hand', function (string $type, string $typed, string $total) {
     $label = Label::factory()->create();
     $payee = Payee::factory()->create(['label_id' => $label->id]);
     $ledger = Ledger::factory()->create(['label_id' => $label->id]);
@@ -181,7 +181,7 @@ test('a transaction of each type can be entered by hand', function (string $type
 
     $this->actingAs(labelAdmin($label))
         ->post(route('transactions.store'), transactionPayload([
-            'type' => $type, 'total' => $total, 'payee_id' => $payee->id, 'ledger_id' => $ledger->id, 'contract_id' => $contract->id,
+            'type' => $type, 'total' => $typed, 'payee_id' => $payee->id, 'ledger_id' => $ledger->id, 'contract_id' => $contract->id,
             'quantity' => '3', 'price' => '5', 'category' => 'Rights', 'retailer' => 'Example Store', 'provider' => 'Example Distribution',
             'external_id' => 'EXT-9', 'memo' => 'Entered by hand', 'published' => false, 'billable' => false,
         ]))
@@ -195,9 +195,9 @@ test('a transaction of each type can be entered by hand', function (string $type
         'memo' => 'Entered by hand', 'published' => false, 'billable' => false, 'source' => 'Manual', 'importer_source' => 'manual',
     ]);
 })->with([
-    'income' => ['income', '100'],
-    'expense' => ['expense', '-40'],
-    'transfer' => ['transfer', '-25'],
+    'income' => ['income', '100', '100'],
+    'expense, typed positive and stored negative' => ['expense', '40', '-40'],
+    'transfer, typed with its sign' => ['transfer', '-25', '-25'],
 ]);
 
 test('a transaction in the label currency is stored at rate 1 even when another rate is sent', function () {
@@ -400,7 +400,8 @@ test('the edit form shows the stored transaction', function () {
             ->where('defaults', null)
             ->where('transaction.id', $transaction->id)
             ->where('transaction.type', 'expense')
-            ->where('transaction.total', '-40.000000000000000')
+            ->where('transaction.total', '40.000000000000000')
+            ->where('transaction.refund', false)
             ->where('transaction.converted_total', '-40.000000000000000')
             ->where('transaction.timestamp', '2026-02-01')
             ->where('transaction.paid_timestamp', '2026-02-15')
@@ -417,7 +418,7 @@ test('updating a transaction saves the new values and converts the total again',
 
     $this->actingAs(labelAdmin($label))
         ->put(route('transactions.update', $transaction->id), transactionPayload([
-            'type' => 'expense', 'total' => '-60', 'currency' => 'gbp', 'conversion_rate' => '1.5', 'release_id' => $release->id,
+            'type' => 'expense', 'total' => '60', 'currency' => 'gbp', 'conversion_rate' => '1.5', 'release_id' => $release->id,
             'category' => 'Mastering', 'format' => 'cd', 'region' => 'gb', 'memo' => 'Corrected',
         ]))
         ->assertRedirect(route('transactions.index'))

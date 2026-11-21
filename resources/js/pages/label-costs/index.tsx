@@ -1,4 +1,4 @@
-import { Form, Link, router } from '@inertiajs/react';
+import { Form, router } from '@inertiajs/react';
 import { Paperclip, Pencil, Plus, Repeat, ScanText } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import LabelCostController from '@/actions/App/Http/Controllers/LabelCostController';
@@ -53,7 +53,10 @@ type Cost = {
     total: string;
     converted_total: string | null;
     currency: string;
-    paid_on: string;
+    /** The positive amount a cost is typed and shown as. */
+    amount: string;
+    conversion_rate: string | null;
+    paid_timestamp: string;
     recurring: boolean;
     receipt_id: number | null;
 };
@@ -75,7 +78,7 @@ type Receipt = {
 
 type AttachableCost = Pick<
     Cost,
-    'id' | 'source' | 'memo' | 'total' | 'currency' | 'paid_on'
+    'id' | 'source' | 'memo' | 'total' | 'currency' | 'paid_timestamp'
 >;
 
 type Props = {
@@ -323,13 +326,13 @@ function ReceiptRow({
                             />
                             <Field
                                 label="Paid date"
-                                htmlFor="paid_on"
-                                error={errors.paid_on}
+                                htmlFor="paid_timestamp"
+                                error={errors.paid_timestamp}
                                 required
                             >
                                 <Input
-                                    id="paid_on"
-                                    name="paid_on"
+                                    id="paid_timestamp"
+                                    name="paid_timestamp"
                                     type="date"
                                     defaultValue={receipt.paid_on ?? today()}
                                     required
@@ -358,7 +361,7 @@ function ReceiptRow({
                                     <option value="">Attach to a cost…</option>
                                     {costs.map((cost) => (
                                         <option key={cost.id} value={cost.id}>
-                                            {date(cost.paid_on)} ·{' '}
+                                            {date(cost.paid_timestamp)} ·{' '}
                                             {cost.source ?? cost.memo ?? 'Cost'}{' '}
                                             ·{' '}
                                             {money(
@@ -470,13 +473,13 @@ export default function LabelCosts({
                     />
                     <Field
                         label="Paid date"
-                        htmlFor="paid_on"
-                        error={errors.paid_on}
+                        htmlFor="paid_timestamp"
+                        error={errors.paid_timestamp}
                         required
                     >
                         <Input
-                            id="paid_on"
-                            name="paid_on"
+                            id="paid_timestamp"
+                            name="paid_timestamp"
                             type="date"
                             defaultValue={today()}
                             required
@@ -767,7 +770,7 @@ export default function LabelCosts({
                                                               }
                                                             : undefined
                                                     }
-                                                    title={`Stop or delete ${cost.name}?`}
+                                                    title={`Delete ${cost.name}?`}
                                                     description={
                                                         cost.occurrences_booked >
                                                         0
@@ -839,7 +842,7 @@ export default function LabelCosts({
                                 <TableHeader>
                                     <TableRow>
                                         <SortableHead
-                                            column="paid_on"
+                                            column="paid_timestamp"
                                             sorter={costSorter}
                                             first="desc"
                                         >
@@ -872,7 +875,7 @@ export default function LabelCosts({
                                     {costs.data.map((cost) => (
                                         <TableRow key={cost.id}>
                                             <TableCell className="whitespace-nowrap">
-                                                {date(cost.paid_on)}
+                                                {date(cost.paid_timestamp)}
                                             </TableCell>
                                             <TableCell>
                                                 {cost.source ??
@@ -930,26 +933,78 @@ export default function LabelCosts({
                                                             </a>
                                                         </Button>
                                                     )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        asChild
+                                                    <FormDialog
+                                                        title={`Edit ${cost.source ?? cost.memo ?? 'cost'}`}
+                                                        description="An overhead is a cost of running the label that belongs to no release."
+                                                        form={LabelCostController.update.form(
+                                                            cost.id,
+                                                        )}
+                                                        submitLabel="Save cost"
+                                                        trigger={
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                aria-label="Edit cost"
+                                                            >
+                                                                <Pencil className="text-muted-foreground" />
+                                                            </Button>
+                                                        }
                                                     >
-                                                        <Link
-                                                            href={TransactionController.edit.url(
-                                                                cost.id,
-                                                            )}
-                                                            aria-label="Edit cost"
-                                                        >
-                                                            <Pencil className="text-muted-foreground" />
-                                                        </Link>
-                                                    </Button>
+                                                        {(errors) => (
+                                                            <>
+                                                                <AmountFields
+                                                                    labelCurrency={
+                                                                        currency
+                                                                    }
+                                                                    categories={
+                                                                        categories
+                                                                    }
+                                                                    errors={
+                                                                        errors
+                                                                    }
+                                                                    amountLabel="Amount"
+                                                                    cost={{
+                                                                        name:
+                                                                            cost.source ??
+                                                                            cost.memo ??
+                                                                            '',
+                                                                        amount: cost.amount,
+                                                                        currency:
+                                                                            cost.currency,
+                                                                        category:
+                                                                            cost.category,
+                                                                        memo: cost.memo,
+                                                                        conversion_rate:
+                                                                            cost.conversion_rate,
+                                                                    }}
+                                                                />
+                                                                <Field
+                                                                    label="Paid date"
+                                                                    htmlFor="paid_timestamp"
+                                                                    error={
+                                                                        errors.paid_timestamp
+                                                                    }
+                                                                    required
+                                                                >
+                                                                    <Input
+                                                                        id="paid_timestamp"
+                                                                        name="paid_timestamp"
+                                                                        type="date"
+                                                                        defaultValue={
+                                                                            cost.paid_timestamp
+                                                                        }
+                                                                        required
+                                                                    />
+                                                                </Field>
+                                                            </>
+                                                        )}
+                                                    </FormDialog>
                                                     <DeleteButton
                                                         url={TransactionController.destroy.url(
                                                             cost.id,
                                                         )}
-                                                        title="Delete this cost?"
-                                                        description="It is removed from the label result. A recurring cost will not book this date again."
+                                                        title={`Delete ${cost.source ?? cost.memo ?? 'this cost'}?`}
+                                                        description="It is removed from the label result and from the period it counted in. A recurring cost will not book this date again. A receipt attached to it goes back to the list of receipts."
                                                     />
                                                 </div>
                                             </TableCell>

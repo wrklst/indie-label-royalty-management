@@ -37,7 +37,7 @@ test('a track page shows where the track belongs, what it earned and where it wa
         ->assertInertia(fn (Assert $page) => $page
             ->component('tracks/show')
             ->where('track.name', 'Example Track')
-            ->where('track.artists', [['id' => $artist->id, 'name' => 'Example Artist']])
+            ->where('track.credited_artists', [['id' => $artist->id, 'name' => 'Example Artist']])
             ->where('track.release.id', $release->id)
             ->where('income.transactions', 2)
             ->where('income.total', fn (string $total): bool => (float) $total === 5.0)
@@ -253,7 +253,7 @@ test('the track page names the main artist first and then the further credits', 
 
     $this->actingAs(labelAdmin($label))
         ->get(route('tracks.show', $track->id))
-        ->assertInertia(fn (Assert $page) => $page->where('track.artists', [
+        ->assertInertia(fn (Assert $page) => $page->where('track.credited_artists', [
             ['id' => $main->id, 'name' => 'Example Artist'],
             ['id' => $guest->id, 'name' => 'Guest Artist'],
         ]));

@@ -119,9 +119,9 @@ test('an expense entered in the form lowers what the payee is owed', function ()
     $this->actingAs($scenario['admin']);
 
     visit('/transactions/create?type=expense')
+        ->assertSee('Enter the cost as a positive amount')
+        ->assertVisible('#refund')
         ->fill('total', '40')
-        ->assertSee('A positive expense increases net income')
-        ->fill('total', '-40')
         ->fill('timestamp', '2026-02-01')
         ->fill('paid_timestamp', '2026-02-01')
         ->select('category', 'Mastering')
@@ -149,4 +149,28 @@ test('the transaction filters narrow the list and the totals', function () {
         ->assertDontSee('Example Store')
         ->click('Clear filters')
         ->assertSee('Matching 2');
+});
+
+test('saving an expense started from a release returns to that release', function () {
+    $scenario = royaltyScenario();
+    $this->actingAs($scenario['admin']);
+
+    visit("/releases/{$scenario['release']->id}")
+        ->click('New expense')
+        ->assertSee('Enter the cost as a positive amount')
+        ->fill('total', '250')
+        ->select('category', 'Mastering')
+        ->press('Create expense')
+        ->assertSee('Transaction created.')
+        ->assertPathIs("/releases/{$scenario['release']->id}")
+        ->assertNoJavaScriptErrors();
+
+    $expense = Transaction::query()->withoutGlobalScopes()->where('type', 'expense')->sole();
+
+    expect($expense->total)->toBe('-250.000000000000000')
+        ->and($expense->release_id)->toBe($scenario['release']->id);
+
+    visit("/transactions/{$expense->id}/edit")
+        ->assertValue('#total', '250')
+        ->assertNoJavaScriptErrors();
 });
