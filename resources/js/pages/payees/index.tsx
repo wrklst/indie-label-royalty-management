@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { Pencil, Plus } from 'lucide-react';
 import PayeeController from '@/actions/App/Http/Controllers/PayeeController';
+import { FilterBar } from '@/components/filter-bar';
 import { Field } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel } from '@/components/page';
@@ -125,14 +126,10 @@ export default function Payees({
                 </FormDialog>
             }
         >
-            <Input
-                type="search"
-                placeholder="Search payees…"
-                defaultValue={filters.search}
-                onChange={(event) =>
-                    apply({ search: event.target.value }, true)
-                }
-                className="max-w-sm"
+            <FilterBar
+                url={index.url()}
+                filters={filters}
+                search="Search payees…"
             />
 
             {payees.total === 0 ? (

@@ -42,10 +42,10 @@ test('a track page shows where the track belongs, what it earned and where it wa
             ->where('income.transactions', 2)
             ->where('income.total', fn (string $total): bool => (float) $total === 5.0)
             ->where('report.platforms.0.name', 'Example Shop')
-            ->has('airplays', 1)
-            ->where('airplays.0.id', $airplay->id)
-            ->where('airplays.0.origin', 'statement')
-            ->where('airplays.0.period_end', '2025-12-31')
+            ->has('airplays.data', 1)
+            ->where('airplays.data.0.id', $airplay->id)
+            ->where('airplays.data.0.origin', 'statement')
+            ->where('airplays.data.0.period_end', '2025-12-31')
             ->where('openFindings', 1));
 });
 
@@ -70,12 +70,12 @@ test('an artist page lists the releases and tracks credited to the artist', func
         ->assertInertia(fn (Assert $page) => $page
             ->component('artists/show')
             ->where('artist', ['id' => $artist->id, 'name' => 'Example Artist', 'alias_of' => null, 'aliases' => []])
-            ->has('releases', 1)
-            ->where('releases.0.id', $release->id)
-            ->has('tracks', 1)
-            ->where('tracks.0.id', $track->id)
-            ->where('tracks.0.releases', [['id' => $release->id, 'name' => 'Example Release']])
-            ->where('tracks.0.airplays_count', 1));
+            ->has('releases.data', 1)
+            ->where('releases.data.0.id', $release->id)
+            ->has('tracks.data', 1)
+            ->where('tracks.data.0.id', $track->id)
+            ->where('tracks.data.0.releases', [['id' => $release->id, 'name' => 'Example Release']])
+            ->where('tracks.data.0.airplays_count', 1));
 });
 
 test('a recording on several releases is listed once, with all its releases and what it earned on them', function () {
@@ -94,10 +94,10 @@ test('a recording on several releases is listed once, with all its releases and 
     $this->actingAs(labelAdmin($label));
 
     $this->get(route('artists.show', $artist->id))->assertInertia(fn (Assert $page) => $page
-        ->has('tracks', 3)
-        ->where('tracks.0.id', $onAlbum->id)
-        ->where('tracks.0.releases', [['id' => $album->id, 'name' => 'Example Release'], ['id' => $single->id, 'name' => 'Example Single']])
-        ->where('tracks.0.income', fn ($income) => (float) $income === 12.5));
+        ->has('tracks.data', 3)
+        ->where('tracks.data.0.id', $onAlbum->id)
+        ->where('tracks.data.0.releases', [['id' => $album->id, 'name' => 'Example Release'], ['id' => $single->id, 'name' => 'Example Single']])
+        ->where('tracks.data.0.income', fn ($income) => (float) $income === 12.5));
 
     $this->get(route('tracks.index'))->assertInertia(fn (Assert $page) => $page
         ->has('tracks.data', 3)
@@ -125,9 +125,9 @@ test('a release of another artist that carries a track of the artist is listed w
     $this->actingAs(labelAdmin($label));
 
     $this->get(route('artists.show', $remixer->id))->assertInertia(fn (Assert $page) => $page
-        ->has('releases', 1)
-        ->where('releases.0.id', $album->id)
-        ->where('releases.0.income', fn ($income) => (float) $income === 4.0)
+        ->has('releases.data', 1)
+        ->where('releases.data.0.id', $album->id)
+        ->where('releases.data.0.income', fn ($income) => (float) $income === 4.0)
         ->where('totals.income', fn ($income) => (float) $income === 4.0));
 
     $this->get(route('artists.index', ['search' => 'Sample']))->assertInertia(fn (Assert $page) => $page
@@ -186,9 +186,9 @@ test('an artist page totals what the artist\'s releases and tracks earned and co
             ->where('totals.units', fn (string $units): bool => (float) $units === 30.0)
             ->where('totals.transactions', 4)
             ->where('totals.airplays', 1)
-            ->where('releases', fn ($releases) => (float) collect($releases)->firstWhere('id', $release->id)['income'] === 55.0
+            ->where('releases.data', fn ($releases) => (float) collect($releases)->firstWhere('id', $release->id)['income'] === 55.0
                 && (float) collect($releases)->firstWhere('id', $compilation->id)['income'] === 5.0)
-            ->where('tracks', fn ($tracks) => (float) collect($tracks)->firstWhere('id', $track->id)['income'] === 40.0
+            ->where('tracks.data', fn ($tracks) => (float) collect($tracks)->firstWhere('id', $track->id)['income'] === 40.0
                 && (float) collect($tracks)->firstWhere('id', $onCompilation->id)['income'] === 5.0));
 });
 
@@ -211,7 +211,7 @@ test('the airplay page and the transaction list can be limited to one track', fu
         ->assertInertia(fn (Assert $page) => $page
             ->has('airplays.data', 1)
             ->where('airplays.data.0.id', $airplay->id)
-            ->where('onlyTrack', ['id' => $track->id, 'name' => 'Example Track']));
+            ->where('filters.track', $track->id));
 
     $this->actingAs($admin)->get(route('transactions.index', ['track' => $track->id]))
         ->assertInertia(fn (Assert $page) => $page
@@ -238,7 +238,7 @@ test('a track on several releases shows every release and combines airplay and i
             ->where('releases.1.track_id', $second->id)
             ->where('income.transactions', 2)
             ->where('income.total', fn (string $total): bool => (float) $total === 5.0)
-            ->where('airplays.0.id', $airplay->id));
+            ->where('airplays.data.0.id', $airplay->id));
 
     $this->actingAs($admin)->get(route('airplays.index', ['track' => $first->id]))
         ->assertInertia(fn (Assert $page) => $page->has('airplays.data', 1)->where('airplays.data.0.id', $airplay->id));

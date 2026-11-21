@@ -268,7 +268,7 @@ test('the page shows the report for the chosen range', function () {
             ->where('report.total', '12.700000000000000')
             ->where('report.rows.0.track_name', 'Example Track')
             ->where('overlaps', [])
-            ->where('runs', []));
+            ->where('runs.data', []));
 });
 
 test('the page shows no report before a range is chosen', function () {
@@ -392,10 +392,10 @@ test('an overlapping range is flagged on the page and needs a confirmation to be
     $first = DataImport::query()->sole();
 
     $this->get(route('royalty-tools.mechanicals.index', ['from' => '2026-03-31', 'to' => '2026-04-30']))
-        ->assertInertia(fn (Assert $page) => $page->has('overlaps', 1)->where('overlaps.0.id', $first->id)->where('runs.0.total', '10.000000000000000'));
+        ->assertInertia(fn (Assert $page) => $page->has('overlaps', 1)->where('overlaps.0.id', $first->id)->where('runs.data.0.total', '10.000000000000000'));
 
     $this->get(route('royalty-tools.mechanicals.index', ['from' => '2026-04-01', 'to' => '2026-04-30']))
-        ->assertInertia(fn (Assert $page) => $page->where('overlaps', [])->has('runs', 1));
+        ->assertInertia(fn (Assert $page) => $page->where('overlaps', [])->has('runs.data', 1));
 
     bookMechanicals(['from' => '2026-02-01', 'to' => '2026-02-28'])
         ->assertSessionHasErrors(['confirm_overlap' => 'An earlier run covers part of this range. Confirm that you want to book it again.']);
@@ -420,7 +420,7 @@ test('deleting the import of a run removes its transactions and frees the range'
         ->and(Transaction::query()->count())->toBe(1);
 
     $this->get(route('royalty-tools.mechanicals.index', ['from' => '2026-01-01', 'to' => '2026-03-31']))
-        ->assertInertia(fn (Assert $page) => $page->where('runs', [])->where('overlaps', []));
+        ->assertInertia(fn (Assert $page) => $page->where('runs.data', [])->where('overlaps', []));
 
     bookMechanicals()->assertSessionHasNoErrors();
 });
@@ -491,7 +491,7 @@ test('an admin of another label sees neither the runs nor the sales of this one'
     $this->actingAs(labelAdmin($other))
         ->get(route('royalty-tools.mechanicals.index', ['from' => '2026-01-01', 'to' => '2026-03-31']))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->where('runs', [])->where('overlaps', [])->where('report.rows', []));
+        ->assertInertia(fn (Assert $page) => $page->where('runs.data', [])->where('overlaps', [])->where('report.rows', []));
 });
 
 test('the import of a run opens and is listed like any other import', function () {

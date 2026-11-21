@@ -34,7 +34,7 @@ class MechanicalsController extends ToolController
         $table = (string) ($input['rates'] ?? MechanicalsTool::defaultRateTable());
 
         return Inertia::render('royalty-tools/mechanicals', [
-            ...$this->common($label, $input['from'] ?? null, $input['to'] ?? null),
+            ...$this->common($request, $label, $input['from'] ?? null, $input['to'] ?? null),
             'filters' => [
                 'from' => $input['from'] ?? null,
                 'to' => $input['to'] ?? null,

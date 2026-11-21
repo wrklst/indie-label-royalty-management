@@ -12,6 +12,7 @@ test('on a phone nothing runs off the screen: wide tables scroll inside their pa
     $pages = [
         '/dashboard?from=2026-01-01&to=2026-12-31', '/play-counts', "/periods/{$scenario['period']->id}", "/statements/{$statement->id}",
         "/releases/{$scenario['release']->id}", '/transactions', '/airplay', '/label-costs',
+        '/profitability', '/statements', '/payouts', '/data-imports', '/catalog',
     ];
 
     foreach ($pages as $url) {

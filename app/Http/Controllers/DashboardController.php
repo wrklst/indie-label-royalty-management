@@ -9,7 +9,9 @@ use App\Models\Release;
 use App\Models\Transaction;
 use App\Services\Reports\IncomeReport;
 use App\Services\Royalties\MoneyFlow;
+use App\Support\DateRange;
 use App\Support\Decimal;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,18 +20,20 @@ class DashboardController extends Controller
 {
     public function __invoke(Request $request): Response
     {
-        $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
+        // The dashboard shows the last twelve months unless other dates are chosen; the control says so.
+        $chosen = DateRange::fromRequest($request);
+        $last = $chosen->to === null ? now()->endOfMonth() : CarbonImmutable::parse($chosen->to);
+        $range = new DateRange($chosen->from ?? $last->subMonths(11)->startOfMonth()->toDateString(), $last->toDateString(), $chosen->paid);
+        $dateColumn = $range->column();
+        $from = $range->from;
+        $to = $range->to;
 
-        $dateColumn = $request->input('date') === 'paid' ? 'paid_timestamp' : 'timestamp';
-        $to = $request->date('to') ?? now()->endOfMonth();
-        $from = $request->date('from') ?? $to->subMonths(11)->startOfMonth();
-
-        $selection = fn () => Transaction::query()->whereBetween($dateColumn, [$from->toDateString(), $to->toDateString()]);
+        $selection = fn () => $range->apply(Transaction::query());
 
         $byType = $selection()->toBase()->selectRaw('type, SUM(converted_total) as total, COUNT(*) as transactions')->groupBy('type')->get()->keyBy('type');
 
         return Inertia::render('dashboard', [
-            'filters' => ['from' => $from->toDateString(), 'to' => $to->toDateString(), 'date' => $dateColumn === 'paid_timestamp' ? 'paid' : 'sold'],
+            'filters' => $range->toArray(),
             'totals' => [
                 'income' => Decimal::parse($byType['income']->total ?? 0) ?? '0',
                 'expense' => Decimal::parse($byType['expense']->total ?? 0) ?? '0',
@@ -38,7 +42,7 @@ class DashboardController extends Controller
             'flow' => MoneyFlow::of($selection()),
             'report' => IncomeReport::of(
                 $selection(),
-                PlayCount::query()->where('period_end', '>=', $from->toDateString())->where('period_start', '<=', $to->toDateString()),
+                PlayCount::query()->where('period_end', '>=', $from)->where('period_start', '<=', $to),
                 $dateColumn,
             ),
             'movers' => IncomeReport::movers($selection(), 'release_id', dateColumn: $dateColumn),

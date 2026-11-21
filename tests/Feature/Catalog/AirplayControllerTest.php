@@ -239,5 +239,5 @@ test('plays, findings and the research log each have pages of their own, and pla
         ->has('findings.data', 1)
         ->where('airplays.current_page', 1)
         ->where('airplays.data.0.id', $linked->id)
-        ->where('filters', ['track' => null, 'sort' => 'links', 'direction' => 'desc']));
+        ->where('filters', ['search' => '', 'track' => null, 'origin' => null, 'sort' => 'links', 'direction' => 'desc']));
 });

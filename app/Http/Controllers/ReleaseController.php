@@ -9,6 +9,7 @@ use App\Enums\ReleaseType;
 use App\Http\Requests\ReleaseRequest;
 use App\Models\Artist;
 use App\Models\Contract;
+use App\Models\Item;
 use App\Models\Release;
 use App\Models\ReleaseFile;
 use App\Models\Track;
@@ -105,11 +106,24 @@ class ReleaseController extends Controller
         return to_route('releases.show', $release);
     }
 
-    public function show(Release $release): Response
+    public function show(Request $request, Release $release): Response
     {
+        $itemSorting = Sorting::for($request, [
+            'name' => 'name',
+            'track' => Sorting::related(Track::class, 'track_id'),
+            'transactions_count' => 'transactions_count',
+            'total' => Sorting::sum('total'),
+        ], fn (Builder $query) => $query->orderBy('name'), 'items');
+        $items = $release->items()
+            ->with(['contract:id,name', 'track:id,name'])
+            ->withCount('transactions')
+            ->withSum('transactions as total', 'converted_total')
+            ->tap($itemSorting)
+            ->paginate(25, pageName: 'items_page')->withQueryString();
+
         $release->load([
             'artist:id,name', 'artists:id,name', 'contract:id,name', 'tracks.artist:id,name', 'tracks.artists:id,name', 'tracks.contract:id,name',
-            'items.contract:id,name', 'items.track:id,name', 'files.track:id,name',
+            'files.track:id,name',
         ]);
         $audioByTrack = $release->files->where('kind', ReleaseFileKind::Audio)->whereNotNull('track_id')->groupBy('track_id');
 
@@ -118,7 +132,7 @@ class ReleaseController extends Controller
         $byType = Transaction::query()->where('release_id', $release->id)
             ->selectRaw('type, SUM(converted_total) as total, COUNT(*) as transactions')->groupBy('type')->get()->keyBy(fn ($row) => $row->type->value);
 
-        $bookedByItem = Transaction::query()->whereIn('item_id', $release->items->modelKeys())
+        $bookedByItem = Transaction::query()->whereIn('item_id', $items->getCollection()->modelKeys())
             ->selectRaw('item_id, importer_source, COUNT(*) as transactions, SUM(converted_total) as total')
             ->groupBy('item_id', 'importer_source')->orderBy('importer_source')->toBase()->get()->groupBy('item_id');
 
@@ -157,15 +171,16 @@ class ReleaseController extends Controller
                     'income' => (string) ($incomeByTrack[$track->id]->total ?? '0'),
                     'quantity' => (string) ($incomeByTrack[$track->id]->quantity ?? '0'),
                 ]),
-                'items' => $release->items->map(fn ($item): array => [
-                    ...$item->only(['id', 'name', 'format_group', 'is_additionals']),
-                    'track' => $item->track?->name,
-                    'contract' => $item->contract?->only(['id', 'name']),
-                    'sources' => ($booked = $bookedByItem->get($item->id) ?? collect())->pluck('importer_source')->filter()->values(),
-                    'transactions' => (int) $booked->sum('transactions'),
-                    'total' => (string) $booked->sum('total'),
-                ]),
             ],
+            'items' => $items->through(fn (Item $item): array => [
+                ...$item->only(['id', 'name', 'format_group', 'is_additionals']),
+                'track' => $item->track?->name,
+                'contract' => $item->contract?->only(['id', 'name']),
+                'sources' => ($booked = $bookedByItem->get($item->id) ?? collect())->pluck('importer_source')->filter()->values(),
+                'transactions' => $item->transactions_count,
+                'total' => (string) ($item->total ?? '0'),
+            ]),
+            'filters' => $itemSorting->toArray(),
             'totals' => [
                 'income' => (string) ($byType['income']->total ?? '0'),
                 'expense' => (string) ($byType['expense']->total ?? '0'),

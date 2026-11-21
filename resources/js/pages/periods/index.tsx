@@ -5,6 +5,7 @@ import { Amount } from '@/components/amount';
 import { Field } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel } from '@/components/page';
+import { Pagination } from '@/components/pagination';
 import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,9 +16,12 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { useTableSort } from '@/hooks/use-table-sort';
+import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { count, date } from '@/lib/format';
 import { index, show } from '@/routes/periods';
+import type { Paginated } from '@/types';
 
 type Period = {
     id: number;
@@ -84,23 +88,17 @@ export function PeriodFields({
     );
 }
 
-const SORT_COLUMNS = {
-    name: (row: Period) => row.name,
-    starts_on: (row: Period) => row.starts_on,
-    ends_on: (row: Period) => row.ends_on,
-    statements_count: (row: Period) => row.statements_count,
-    payouts_count: (row: Period) => row.payouts_count,
-    paid: (row: Period) => row.paid,
-};
-
 export default function Periods({
     periods,
+    filters,
     suggestion,
 }: {
-    periods: Period[];
+    periods: Paginated<Period>;
+    filters: { sort: string | null; direction: SortDirection | null };
     suggestion: { name: string; starts_on: string; ends_on: string };
 }) {
-    const { rows, sorter } = useTableSort(periods, SORT_COLUMNS);
+    const { apply } = useFilters(index.url(), filters);
+    const sorter = serverSorter(filters, apply);
     const newPeriod = (
         <FormDialog
             title="New period"
@@ -123,7 +121,7 @@ export default function Periods({
             description="An accounting period is the time span you settle with your payees, usually a quarter or half year. Open a period to check the figures, generate statements and record payouts."
             actions={newPeriod}
         >
-            {periods.length === 0 ? (
+            {periods.total === 0 ? (
                 <EmptyState
                     title="No periods yet"
                     description={`Start with ${suggestion.name}. You can create earlier periods afterwards; balances always carry forward by date.`}
@@ -178,7 +176,7 @@ export default function Periods({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {rows.map((period) => (
+                            {periods.data.map((period) => (
                                 <TableRow key={period.id}>
                                     <TableCell>
                                         <Link
@@ -207,6 +205,7 @@ export default function Periods({
                             ))}
                         </TableBody>
                     </Table>
+                    <Pagination page={periods} noun="periods" />
                 </Panel>
             )}
         </Page>

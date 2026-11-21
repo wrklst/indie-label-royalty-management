@@ -1,16 +1,15 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { FilterBar } from '@/components/filter-bar';
 import { SegmentedBar, partColours } from '@/components/segmented-bar';
 import { Link } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
-import { CheckField } from '@/components/field';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
 import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
@@ -75,24 +74,12 @@ export default function Contracts({
                 </Button>
             }
         >
-            <div className="flex flex-wrap items-center gap-4">
-                <Input
-                    type="search"
-                    placeholder="Search contracts…"
-                    defaultValue={filters.search}
-                    onChange={(event) =>
-                        apply({ search: event.target.value }, true)
-                    }
-                    className="max-w-sm"
-                />
-                <CheckField
-                    label="Not used anywhere"
-                    checked={filters.unused}
-                    onChange={(event) =>
-                        apply({ unused: event.target.checked })
-                    }
-                />
-            </div>
+            <FilterBar
+                url={index.url()}
+                filters={filters}
+                search="Search contracts…"
+                checks={[{ name: 'unused', label: 'Unused' }]}
+            />
 
             {contracts.total === 0 ? (
                 <EmptyState

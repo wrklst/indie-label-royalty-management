@@ -2,6 +2,10 @@
 
 Every page that has income shows it in the same report: the dashboard for the whole label, and the pages of a release, a track, an artist, an import and a period for their part of it. Play counts are what the platforms themselves say was played; the report holds them against your statements.
 
+## The dashboard's dates
+
+The dashboard shows the last twelve months until you choose other dates; the note next to the dates says so. **By sale date** or **By paid date** decides which date of a transaction counts, and **From** and **To** the range. An empty **From** or **To** goes back to the default. **To** may not be before **From**. The dates are the browser's own date fields, so they are written the way your browser is set to; the rest of the page always writes dates as `19 Nov 2026`. The transaction list and the profitability report have the same control, but without dates they cover all time.
+
 ## The report
 
 **How the income developed.** One column per month, stacked by platform. Three views:
@@ -92,7 +96,9 @@ A line is matched to a track by its ISRC, otherwise by its name. Punctuation doe
 
 Lines whose track is not in the catalog are kept and listed under the file as **Not in the catalog under that name**. They count for the label as a whole, not for a track.
 
-A newer file replaces earlier counts of the same track and platform for the days it covers, so nothing is counted twice. **Delete** removes everything one file brought; statements and income are not touched.
+Under **Not in the catalog under that name** the first 30 names are listed; when a file has more, the line says how many, for example "30 of 112". Fix the names in the catalog, or the file, and import it again.
+
+A newer file replaces earlier counts of the same track and platform for the days it covers, so nothing is counted twice. The table **Files** lists every upload, 50 to a page, with **File**, **Platform**, **Covers**, **Rows**, **Plays** and **Uploaded**; click a heading to sort. The bin at the end of a row, **Delete {file name}?**, removes everything one file brought; statements and income are not touched.
 
 ### The report on the page
 

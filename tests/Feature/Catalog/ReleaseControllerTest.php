@@ -225,8 +225,8 @@ test('the release page totals income and expenses and breaks income down by trac
             ->where('release.tracks.0.quantity', $equals('5'))
             ->where('release.tracks.1.id', $second->id)
             ->where('release.tracks.1.income', '0')
-            ->has('release.items', 1)
-            ->where('release.items.0.is_additionals', true)
+            ->has('items.data', 1)
+            ->where('items.data.0.is_additionals', true)
             ->where('totals.income', $equals('30'))
             ->where('totals.expense', $equals('-15'))
             ->where('totals.transactions', 4)
@@ -254,7 +254,7 @@ test('the release page says for each item where it is booked, how often, how muc
 
     $this->actingAs(labelAdmin($label))
         ->get(route('releases.show', $release->id))
-        ->assertInertia(fn (Assert $page) => $page->where('release.items', fn ($items) => collect($items)->contains(fn (array $row): bool => $row['name'] === 'example track'
+        ->assertInertia(fn (Assert $page) => $page->where('items.data', fn ($items) => collect($items)->contains(fn (array $row): bool => $row['name'] === 'example track'
             && $row['track'] === 'Example Track' && $row['transactions'] === 3 && (float) $row['total'] === 6.5 && $row['sources'] === ['another-store', 'example-store'])
             && collect($items)->where('name', '!=', 'example track')->every(fn (array $row): bool => $row['transactions'] === 0 && $row['sources'] === [])));
 });

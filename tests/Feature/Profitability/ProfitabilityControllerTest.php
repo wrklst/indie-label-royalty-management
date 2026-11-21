@@ -75,7 +75,7 @@ test('the profitability page shows every release of the label over all time', fu
             ])
             ->where('totals.label_result', '50.000000000000000')
             ->where('unconverted', 1)
-            ->where('filters', ['from' => null, 'to' => null, 'date' => 'sold', 'artist' => null])
+            ->where('filters', ['from' => null, 'to' => null, 'date' => null, 'artist' => null])
             ->has('artistOptions', 1)
             ->where('artistOptions.0.name', 'Example Artist'));
 });
@@ -94,12 +94,12 @@ test('the profitability page follows the filters', function (array $query, array
             ->has('rows', $rows)
             ->where('filters', $resolve($filters)));
 })->with([
-    'sold in the range' => [['from' => '2026-01-01', 'to' => '2026-01-31'], ['from' => '2026-01-01', 'to' => '2026-01-31', 'date' => 'sold', 'artist' => null], 1],
-    'sold outside the range' => [['from' => '2026-02-01', 'to' => '2026-02-28'], ['from' => '2026-02-01', 'to' => '2026-02-28', 'date' => 'sold', 'artist' => null], 0],
+    'sold in the range' => [['from' => '2026-01-01', 'to' => '2026-01-31'], ['from' => '2026-01-01', 'to' => '2026-01-31', 'date' => null, 'artist' => null], 1],
+    'sold outside the range' => [['from' => '2026-02-01', 'to' => '2026-02-28'], ['from' => '2026-02-01', 'to' => '2026-02-28', 'date' => null, 'artist' => null], 0],
     'paid in the range' => [['from' => '2026-02-01', 'to' => '2026-02-28', 'date' => 'paid'], ['from' => '2026-02-01', 'to' => '2026-02-28', 'date' => 'paid', 'artist' => null], 1],
     'paid outside the range' => [['to' => '2026-01-31', 'date' => 'paid'], ['from' => null, 'to' => '2026-01-31', 'date' => 'paid', 'artist' => null], 0],
-    'the artist of the release' => [['artist' => ':artist'], ['from' => null, 'to' => null, 'date' => 'sold', 'artist' => ':artist'], 1],
-    'another artist' => [['artist' => ':other'], ['from' => null, 'to' => null, 'date' => 'sold', 'artist' => ':other'], 0],
+    'the artist of the release' => [['artist' => ':artist'], ['from' => null, 'to' => null, 'date' => null, 'artist' => ':artist'], 1],
+    'another artist' => [['artist' => ':other'], ['from' => null, 'to' => null, 'date' => null, 'artist' => ':other'], 0],
 ]);
 
 test('invalid profitability filters are rejected', function (string $route, array $query, string $field, string $message) {

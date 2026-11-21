@@ -25,6 +25,10 @@ Amounts of several lines for the same track, station and period add up in one en
 
 **New airplay** asks for the track (or a free track name and artist for something not in the catalog), the station, the country, the date or period and notes.
 
+### Finding a play
+
+Above the table, search a track, artist, station or ISRC, choose a **Track** or the origin under **Known from** (the three values above), and use **Clear filters** to start over. The **Track** filter also narrows the findings and the research log. The page **Manage airplay and findings** on a track page opens already narrowed to that track, and the filter shows it. The plays, the findings and the research log are separate lists with a pager each.
+
 ## Links
 
 Each play can hold links: the station's playlist page, the show, an article. Open the link icon of an entry to

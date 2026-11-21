@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react';
+import { FilterBar } from '@/components/filter-bar';
 import { Amount } from '@/components/amount';
-import { CheckField } from '@/components/field';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
 import { SortableHead } from '@/components/sortable-head';
@@ -21,7 +21,7 @@ import { date } from '@/lib/format';
 import { index as portal } from '@/routes/portal';
 import { index as periods } from '@/routes/periods';
 import { index, show } from '@/routes/statements';
-import type { Paginated } from '@/types';
+import type { Option, Paginated } from '@/types';
 
 type Statement = {
     id: number;
@@ -39,15 +39,22 @@ type Statement = {
 export default function Statements({
     statements,
     filters,
+    periodOptions,
+    payeeOptions,
 }: {
     statements: Paginated<Statement>;
     filters: {
         archived: boolean;
         period: number | null;
+        payee: number | null;
         sort: string | null;
         direction: SortDirection | null;
     };
+    periodOptions: Option[];
+    payeeOptions: Option[];
 }) {
+    const filtered =
+        filters.archived || filters.period !== null || filters.payee !== null;
     const { apply } = useFilters(index.url(), filters);
     const sorter = serverSorter(filters, apply);
 
@@ -61,20 +68,44 @@ export default function Statements({
                 </Button>
             }
         >
-            <CheckField
-                label="Include archived revisions"
-                checked={filters.archived}
-                onChange={(event) => apply({ archived: event.target.checked })}
+            <FilterBar
+                url={index.url()}
+                filters={filters}
+                selects={[
+                    {
+                        name: 'period',
+                        label: 'Period',
+                        placeholder: 'All periods',
+                        options: periodOptions,
+                    },
+                    {
+                        name: 'payee',
+                        label: 'Payee',
+                        placeholder: 'All payees',
+                        options: payeeOptions,
+                    },
+                ]}
+                checks={[{ name: 'archived', label: 'Archived' }]}
             />
 
             {statements.total === 0 ? (
                 <EmptyState
-                    title="No statements yet"
-                    description="Statements are generated from a period."
+                    title={
+                        filtered
+                            ? 'No statement matches these filters'
+                            : 'No statements yet'
+                    }
+                    description={
+                        filtered
+                            ? undefined
+                            : 'Statements are generated from a period.'
+                    }
                     action={
-                        <Button asChild>
-                            <Link href={periods()}>Go to periods</Link>
-                        </Button>
+                        filtered ? undefined : (
+                            <Button asChild>
+                                <Link href={periods()}>Go to periods</Link>
+                            </Button>
+                        )
                     }
                 />
             ) : (

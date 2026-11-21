@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import DataImportController from '@/actions/App/Http/Controllers/DataImportController';
 import { Amount } from '@/components/amount';
@@ -6,6 +6,8 @@ import { DeleteButton } from '@/components/delete-button';
 import { CheckField } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Notice, Panel } from '@/components/page';
+import { Pagination } from '@/components/pagination';
+import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -15,7 +17,10 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { date } from '@/lib/format';
+import { serverSorter } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
+import { count, date } from '@/lib/format';
+import type { Paginated } from '@/types';
 
 export type ToolRun = {
     id: number;
@@ -131,79 +136,140 @@ export function CreateTransactions({
     );
 }
 
+/**
+ * The earlier runs of a tool, as a page of uploaded files like the Data
+ * imports list. Sorting keeps the report's own parameters in the address.
+ */
 export function RunsPanel({
     runs,
+    filters,
     currency,
     totalLabel,
 }: {
-    runs: ToolRun[];
+    runs: Paginated<ToolRun>;
+    filters: { runs_sort: string | null; runs_direction: SortDirection | null };
     currency: string;
     totalLabel: string;
 }) {
+    const sorter = serverSorter(
+        filters,
+        ((changes: Record<string, string | null>) => {
+            const url = new URL(window.location.href);
+
+            url.searchParams.delete('runs_page');
+            Object.entries(changes).forEach(([key, value]) =>
+                value === null
+                    ? url.searchParams.delete(key)
+                    : url.searchParams.set(key, value),
+            );
+            router.get(
+                url.pathname + url.search,
+                {},
+                { preserveState: true, preserveScroll: true, replace: true },
+            );
+        }) as never,
+        'runs',
+    );
+
     return (
         <Panel
             title="Earlier runs"
             description="Each run is a data import holding the transactions it created. Deleting the import removes them again."
             flush
         >
-            {runs.length === 0 ? (
+            {runs.total === 0 ? (
                 <EmptyState
                     compact
                     title="Nothing has been booked with this tool yet."
                 />
             ) : (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Paid dates covered</TableHead>
-                            <TableHead>Booked on</TableHead>
-                            <TableHead className="text-right">
-                                Transactions
-                            </TableHead>
-                            <TableHead className="text-right">
-                                {totalLabel}
-                            </TableHead>
-                            <TableHead className="w-12" />
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {runs.map((run) => (
-                            <TableRow key={run.id}>
-                                <TableCell className="whitespace-nowrap">
-                                    <Link
-                                        href={DataImportController.show.url(
-                                            run.id,
-                                        )}
-                                        className="font-medium hover:underline"
-                                    >
-                                        {date(run.from)} – {date(run.to)}
-                                    </Link>
-                                </TableCell>
-                                <TableCell className="whitespace-nowrap">
-                                    {date(run.paid_on)}
-                                </TableCell>
-                                <TableCell className="text-right tabular-nums">
-                                    {run.transactions_count}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <Amount
-                                        value={run.total}
-                                        currency={currency}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <DeleteButton
-                                        url={DataImportController.destroy.url(
-                                            run.id,
-                                        )}
-                                        title={`Delete the run ${date(run.from)} – ${date(run.to)}?`}
-                                        description={`Its ${run.transactions_count} transactions are deleted. Periods that included them change accordingly.`}
-                                    />
-                                </TableCell>
+                <>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <SortableHead
+                                    column="covers"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Covers
+                                </SortableHead>
+                                <SortableHead
+                                    column="paid_on"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Paid date
+                                </SortableHead>
+                                <SortableHead
+                                    column="transactions_count"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
+                                    Rows
+                                </SortableHead>
+                                <SortableHead
+                                    column="total"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
+                                    {totalLabel}
+                                </SortableHead>
+                                <SortableHead
+                                    column="created_at"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Uploaded
+                                </SortableHead>
+                                <TableHead className="w-12" />
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {runs.data.map((run) => (
+                                <TableRow key={run.id}>
+                                    <TableCell className="whitespace-nowrap">
+                                        <Link
+                                            href={DataImportController.show.url(
+                                                run.id,
+                                            )}
+                                            className="font-medium hover:underline"
+                                        >
+                                            {date(run.from)} – {date(run.to)}
+                                        </Link>
+                                    </TableCell>
+                                    <TableCell className="whitespace-nowrap">
+                                        {date(run.paid_on)}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums">
+                                        {count(run.transactions_count)}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Amount
+                                            value={run.total}
+                                            currency={currency}
+                                        />
+                                    </TableCell>
+                                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                                        {date(run.created_at)}
+                                    </TableCell>
+                                    <TableCell>
+                                        <DeleteButton
+                                            url={DataImportController.destroy.url(
+                                                run.id,
+                                            )}
+                                            title={`Delete the run ${date(run.from)} – ${date(run.to)}?`}
+                                            description={`The transactions it created (${count(run.transactions_count)}) are removed. Periods that included them change accordingly.`}
+                                        />
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                    <Pagination page={runs} noun="runs" />
+                </>
             )}
         </Panel>
     );

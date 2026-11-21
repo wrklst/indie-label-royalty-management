@@ -9,15 +9,16 @@ import { DeleteButton } from '@/components/delete-button';
 import { SelectInput } from '@/components/field';
 import InputError from '@/components/input-error';
 import { Notice, Page, Panel, Stat } from '@/components/page';
+import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
 import {
     Table,
     TableBody,
     TableCell,
-    TableHead,
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTableSort } from '@/hooks/use-table-sort';
 import { count, date, plural } from '@/lib/format';
 import { index as catalog } from '@/routes/catalog';
 import { create, index } from '@/routes/data-imports';
@@ -180,12 +181,24 @@ function DuplicateReview({
     );
 }
 
+const ERROR_COLUMNS = {
+    line: (row: { line: number | null; message: string }) => row.line,
+    message: (row: { line: number | null; message: string }) => row.message,
+};
+
+const NO_ERRORS: { line: number | null; message: string }[] = [];
+
 export default function ShowDataImport({
     import: dataImport,
     unassignedItems,
     flow,
     report,
 }: Props) {
+    // At most 200 lines are kept, so all of them are here and sort in the browser.
+    const { rows: errorRows, sorter: errorSorter } = useTableSort(
+        dataImport.errors ?? NO_ERRORS,
+        ERROR_COLUMNS,
+    );
     const failed = dataImport.status === 'failed';
     const review = dataImport.status === 'review';
     const resolved = dataImport.metadata?.resolved_duplicates ?? [];
@@ -416,25 +429,32 @@ export default function ShowDataImport({
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-24">
+                                        <SortableHead
+                                            column="line"
+                                            sorter={errorSorter}
+                                            className="w-24"
+                                        >
                                             Line
-                                        </TableHead>
-                                        <TableHead>Problem</TableHead>
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="message"
+                                            sorter={errorSorter}
+                                        >
+                                            Problem
+                                        </SortableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {dataImport.errors?.map(
-                                        (error, position) => (
-                                            <TableRow key={position}>
-                                                <TableCell className="tabular-nums">
-                                                    {error.line ?? '–'}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {error.message}
-                                                </TableCell>
-                                            </TableRow>
-                                        ),
-                                    )}
+                                    {errorRows.map((error, position) => (
+                                        <TableRow key={position}>
+                                            <TableCell className="tabular-nums">
+                                                {error.line ?? '–'}
+                                            </TableCell>
+                                            <TableCell>
+                                                {error.message}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
                                 </TableBody>
                             </Table>
                         </Panel>

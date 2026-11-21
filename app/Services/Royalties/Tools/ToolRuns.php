@@ -11,7 +11,9 @@ use App\Models\Label;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Support\Decimal;
+use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -66,27 +68,54 @@ class ToolRuns
     /**
      * Earlier runs of the tool that are still booked, newest first.
      *
+     * @return Builder<DataImport>
+     */
+    private function runs(Label $label, RoyaltyTool $tool): Builder
+    {
+        return DataImport::query()
+            ->withoutGlobalScope('label')
+            ->where('label_id', $label->id)
+            ->where('importer', $tool->importer())
+            ->where('status', ImportStatus::Imported);
+    }
+
+    /**
+     * @return Run
+     */
+    private function present(DataImport $import): array
+    {
+        return [
+            'id' => $import->id,
+            'name' => $import->name,
+            'from' => (string) ($import->options['from'] ?? ''),
+            'to' => (string) ($import->options['to'] ?? ''),
+            'total' => (string) ($import->options['total'] ?? '0'),
+            'paid_on' => $import->default_paid_timestamp?->toDateString(),
+            'transactions_count' => $import->transactions_count,
+            'created_at' => $import->created_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * One page of the earlier runs, in the order the user chose.
+     *
+     * @return LengthAwarePaginator<int, Run>
+     */
+    public function page(Label $label, RoyaltyTool $tool, Sorting $sorting): LengthAwarePaginator
+    {
+        return $this->runs($label, $tool)->tap($sorting)->paginate(25, pageName: 'runs_page')->withQueryString()
+            ->through(fn (DataImport $import): array => $this->present($import));
+    }
+
+    /**
+     * Every earlier run of the tool, newest first.
+     *
      * @return list<Run>
      */
     public function history(Label $label, RoyaltyTool $tool): array
     {
-        return array_values(DataImport::query()
-            ->withoutGlobalScope('label')
-            ->where('label_id', $label->id)
-            ->where('importer', $tool->importer())
-            ->where('status', ImportStatus::Imported)
-            ->latest('id')
-            ->get()
-            ->map(fn (DataImport $import): array => [
-                'id' => $import->id,
-                'name' => $import->name,
-                'from' => (string) ($import->options['from'] ?? ''),
-                'to' => (string) ($import->options['to'] ?? ''),
-                'total' => (string) ($import->options['total'] ?? '0'),
-                'paid_on' => $import->default_paid_timestamp?->toDateString(),
-                'transactions_count' => $import->transactions_count,
-                'created_at' => $import->created_at?->toIso8601String(),
-            ])
+        return array_values($this->runs($label, $tool)->latest('id')->get()
+            ->map(fn (DataImport $import): array => $this->present($import))
             ->all());
     }
 

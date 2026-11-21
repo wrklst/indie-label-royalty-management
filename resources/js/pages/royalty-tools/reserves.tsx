@@ -1,9 +1,11 @@
 import { Form, Link } from '@inertiajs/react';
 import ReservesController from '@/actions/App/Http/Controllers/RoyaltyTools/ReservesController';
 import { Amount } from '@/components/amount';
+import { DateRange } from '@/components/date-range';
 import { Field } from '@/components/field';
 import { EmptyState, Notice, Page, Panel, Stat } from '@/components/page';
 import { RecordLink } from '@/components/record-link';
+import { SortableHead } from '@/components/sortable-head';
 import {
     CreateTransactions,
     OverlapNotice,
@@ -18,11 +20,13 @@ import {
     TableBody,
     TableCell,
     TableFooter,
-    TableHead,
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTableSort } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { today } from '@/lib/format';
+import type { Paginated } from '@/types';
 import { index as items } from '@/routes/items';
 import { edit as editRelease } from '@/routes/releases';
 import { index } from '@/routes/royalty-tools/reserves';
@@ -36,9 +40,29 @@ type Row = {
     held: boolean;
 };
 
+const NO_ROWS: Row[] = [];
+
+const ROW_COLUMNS = {
+    release_name: (row: Row) => row.release_name,
+    base: (row: Row) => row.base,
+    rate: (row: Row) => row.rate,
+    amount: (row: Row) => (row.held ? row.amount : null),
+};
+
+const BALANCE_COLUMNS = {
+    release_name: (row: { release_name: string }) => row.release_name,
+    held: (row: { held: string }) => row.held,
+    liquidated: (row: { liquidated: string }) => row.liquidated,
+    balance: (row: { balance: string }) => row.balance,
+};
+
 type Props = {
     currency: string;
-    runs: ToolRun[];
+    runs: Paginated<ToolRun>;
+    runFilters: {
+        runs_sort: string | null;
+        runs_direction: SortDirection | null;
+    };
     overlaps: ToolRun[];
     filters: { from: string | null; to: string | null };
     report: {
@@ -59,12 +83,21 @@ type Props = {
 export default function Reserves({
     currency,
     runs,
+    runFilters,
     overlaps,
     filters,
     report,
     balances,
 }: Props) {
     const held = report?.rows.filter((row) => row.held).length ?? 0;
+    const { rows: rowRows, sorter: rowSorter } = useTableSort(
+        report?.rows ?? NO_ROWS,
+        ROW_COLUMNS,
+    );
+    const { rows: balanceRows, sorter: balanceSorter } = useTableSort(
+        balances,
+        BALANCE_COLUMNS,
+    );
 
     return (
         <Page
@@ -114,34 +147,7 @@ export default function Reserves({
                     {({ errors, processing }) => (
                         <>
                             <div className="grid gap-4 sm:grid-cols-3">
-                                <Field
-                                    label="Paid from"
-                                    htmlFor="from"
-                                    error={errors.from}
-                                    required
-                                >
-                                    <Input
-                                        id="from"
-                                        name="from"
-                                        type="date"
-                                        defaultValue={filters.from ?? ''}
-                                        required
-                                    />
-                                </Field>
-                                <Field
-                                    label="Paid until"
-                                    htmlFor="to"
-                                    error={errors.to}
-                                    required
-                                >
-                                    <Input
-                                        id="to"
-                                        name="to"
-                                        type="date"
-                                        defaultValue={filters.to ?? ''}
-                                        required
-                                    />
-                                </Field>
+                                <DateRange defaults={filters} errors={errors} />
                             </div>
                             <div>
                                 <Button disabled={processing}>
@@ -250,20 +256,40 @@ export default function Reserves({
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Release</TableHead>
-                                        <TableHead className="text-right">
+                                        <SortableHead
+                                            column="release_name"
+                                            sorter={rowSorter}
+                                        >
+                                            Release
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="base"
+                                            sorter={rowSorter}
+                                            first="desc"
+                                            className="text-right"
+                                        >
                                             Physical income
-                                        </TableHead>
-                                        <TableHead className="text-right">
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="rate"
+                                            sorter={rowSorter}
+                                            first="desc"
+                                            className="text-right"
+                                        >
                                             Rate
-                                        </TableHead>
-                                        <TableHead className="text-right">
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="amount"
+                                            sorter={rowSorter}
+                                            first="desc"
+                                            className="text-right"
+                                        >
                                             Reserve
-                                        </TableHead>
+                                        </SortableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {report.rows.map((row) => (
+                                    {rowRows.map((row) => (
                                         <TableRow key={row.release_id}>
                                             <TableCell className="font-medium">
                                                 <Link
@@ -337,20 +363,40 @@ export default function Reserves({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Release</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead
+                                    column="release_name"
+                                    sorter={balanceSorter}
+                                >
+                                    Release
+                                </SortableHead>
+                                <SortableHead
+                                    column="held"
+                                    sorter={balanceSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Held
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="liquidated"
+                                    sorter={balanceSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Liquidated so far
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="balance"
+                                    sorter={balanceSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Still held
-                                </TableHead>
+                                </SortableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {balances.map((balance) => (
+                            {balanceRows.map((balance) => (
                                 <TableRow key={balance.release_id}>
                                     <TableCell className="font-medium">
                                         <RecordLink
@@ -387,6 +433,7 @@ export default function Reserves({
 
             <RunsPanel
                 runs={runs}
+                filters={runFilters}
                 currency={currency}
                 totalLabel="Reserves held"
             />

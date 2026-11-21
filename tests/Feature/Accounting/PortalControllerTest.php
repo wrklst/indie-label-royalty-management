@@ -36,9 +36,9 @@ test('an admin sees the published statements of every payee in the portal', func
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('portal/index')
-            ->has('statements', 2)
-            ->where('statements.0.id', $second->id)
-            ->where('statements.1', [
+            ->has('statements.data', 2)
+            ->where('statements.data.0.id', $second->id)
+            ->where('statements.data.1', [
                 'id' => $first->id, 'name' => 'Example Artist – 2026 Q1', 'balance' => '70.000000000000000', 'payable' => '50.000000000000000',
                 'period' => '2026 Q1', 'published_at' => '2026-04-05',
             ]));
@@ -51,7 +51,7 @@ test('an archived statement is hidden from the payee even though it was publishe
     $user = portalUser($label, $payee);
 
     $this->actingAs($user)->get(route('portal.index'))
-        ->assertInertia(fn (Assert $page) => $page->has('statements', 0));
+        ->assertInertia(fn (Assert $page) => $page->has('statements.data', 0));
     $this->actingAs($user)->get(route('portal.show', $archived->id))->assertNotFound();
     $this->actingAs($user)->get(route('portal.download', $archived->id))->assertNotFound();
 });
@@ -110,7 +110,7 @@ test('a portal user without a linked payee sees no statements', function () {
     $user = portalUser($label, null);
 
     $this->actingAs($user)->get(route('portal.index'))
-        ->assertInertia(fn (Assert $page) => $page->has('statements', 0));
+        ->assertInertia(fn (Assert $page) => $page->has('statements.data', 0));
     $this->actingAs($user)->get(route('portal.show', $statement->id))->assertNotFound();
 });
 

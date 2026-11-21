@@ -183,7 +183,7 @@ test('the page shows what is held, liquidated so far and still held for each rel
             ->where('balances.0.held', '150.000000000000000')
             ->where('balances.0.liquidated', '100.000000000000000')
             ->where('balances.0.balance', '50.000000000000000')
-            ->has('runs', 2));
+            ->has('runs.data', 2));
 
     expect(app(ReservesTool::class)->balances($this->label, CarbonImmutable::parse('2026-12-31'))[0]['balance'])->toBe('0.000000000000000');
 });
@@ -244,5 +244,5 @@ test('reserves of another label stay out of the page', function () {
     $this->actingAs(labelAdmin($other))
         ->get(route('royalty-tools.reserves.index', ['from' => '2026-01-01', 'to' => '2026-03-31']))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->where('report.rows', [])->where('balances', [])->where('runs', [])->where('overlaps', []));
+        ->assertInertia(fn (Assert $page) => $page->where('report.rows', [])->where('balances', [])->where('runs.data', [])->where('overlaps', []));
 });

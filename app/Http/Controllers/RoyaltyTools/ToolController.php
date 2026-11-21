@@ -7,6 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Label;
 use App\Services\Royalties\Tools\ToolRuns;
 use App\Support\CurrentLabel;
+use App\Support\DateRange;
+use App\Support\Sorting;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -39,10 +42,7 @@ abstract class ToolController extends Controller
      */
     protected function rangeRules(): array
     {
-        return [
-            'from' => ['required', 'date_format:Y-m-d', 'after:1999-12-31'],
-            'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from', 'before:2100-01-01'],
-        ];
+        return DateRange::rules(required: true);
     }
 
     /**
@@ -59,13 +59,22 @@ abstract class ToolController extends Controller
     /**
      * The props every tool page shows next to its report.
      *
-     * @return array{currency: string, runs: list<array<string, mixed>>, overlaps: list<array<string, mixed>>}
+     * @return array<string, mixed>
      */
-    protected function common(Label $label, ?string $from, ?string $to): array
+    protected function common(Request $request, Label $label, ?string $from, ?string $to): array
     {
+        $sorting = Sorting::for($request, [
+            'covers' => 'options->from',
+            'paid_on' => Sorting::nullsLast('default_paid_timestamp'),
+            'transactions_count' => 'transactions_count',
+            'total' => 'total',
+            'created_at' => 'created_at',
+        ], fn (Builder $query) => $query->latest('id'), 'runs');
+
         return [
             'currency' => $label->currency,
-            'runs' => $this->runs->history($label, $this->tool()),
+            'runs' => $this->runs->page($label, $this->tool(), $sorting),
+            'runFilters' => $sorting->toArray(),
             'overlaps' => $from === null || $to === null ? [] : $this->runs->overlapping($label, $this->tool(), $from, $to),
         ];
     }

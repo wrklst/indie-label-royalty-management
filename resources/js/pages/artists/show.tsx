@@ -1,6 +1,8 @@
 import { setLayoutProps } from '@inertiajs/react';
 import { Amount } from '@/components/amount';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
+import { Pagination } from '@/components/pagination';
+import { SortableHead } from '@/components/sortable-head';
 import type { PlayerTrack } from '@/components/player/player-store';
 import { ReleaseActions } from '@/components/player/track-actions';
 import { RecordLink } from '@/components/record-link';
@@ -15,8 +17,11 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
 import { count, date, percent, plural } from '@/lib/format';
-import { index } from '@/routes/artists';
+import { index, show } from '@/routes/artists';
+import type { Paginated } from '@/types';
 
 type Props = {
     artist: {
@@ -33,14 +38,16 @@ type Props = {
         transactions: number;
         airplays: number;
     };
-    releases: {
+    incomeByRelease: { name: string; income: string }[];
+    releases: Paginated<{
         id: number;
         name: string;
         catalog_number: string | null;
         released_on: string | null;
         income: string;
         player_tracks: PlayerTrack[];
-    }[];
+    }>;
+    filters: Record<string, string | null>;
     report: Report;
     movers: Movers;
     contracts: {
@@ -51,25 +58,31 @@ type Props = {
             split_amount: string;
         }[];
     }[];
-    tracks: {
+    tracks: Paginated<{
         id: number;
         name: string;
         isrc: string | null;
         releases: { id: number; name: string }[];
         airplays_count: number;
         income: string;
-    }[];
+    }>;
 };
 
 export default function ShowArtist({
     artist,
     totals,
+    incomeByRelease,
     releases,
+    filters,
     contracts,
     report,
     movers,
     tracks,
 }: Props) {
+    const { apply } = useFilters(show.url(artist.id), filters);
+    const releaseSorter = serverSorter(filters, apply, 'releases');
+    const trackSorter = serverSorter(filters, apply, 'tracks');
+
     setLayoutProps({
         breadcrumbs: [
             { title: 'Artists', href: index() },
@@ -80,7 +93,7 @@ export default function ShowArtist({
     return (
         <Page
             title={artist.name}
-            description={`${plural(releases.length, 'release')}, ${plural(tracks.length, 'track')}.`}
+            description={`${plural(releases.total, 'release')}, ${plural(tracks.total, 'track')}.`}
         >
             {(artist.alias_of || artist.aliases.length > 0) && (
                 <p className="text-sm text-muted-foreground">
@@ -135,15 +148,14 @@ export default function ShowArtist({
                 other artists counts in full for each of them.
             </p>
 
-            {releases.filter((release) => Number(release.income) > 0).length >
-                1 && (
+            {incomeByRelease.length > 1 && (
                 <Panel
                     title="Income by release"
                     description="What each release has brought in to date."
                 >
                     <SegmentedBar
                         format={(value) => <Amount value={value} />}
-                        segments={[...releases]
+                        segments={[...incomeByRelease]
                             .sort((a, b) => Number(b.income) - Number(a.income))
                             .map((release) => ({
                                 label: release.name,
@@ -162,59 +174,85 @@ export default function ShowArtist({
             />
 
             <Panel title="Releases" flush>
-                {releases.length === 0 ? (
+                {releases.total === 0 ? (
                     <div className="p-4">
                         <EmptyState title="No releases credited to this artist" />
                     </div>
                 ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Release</TableHead>
-                                <TableHead>Catalog number</TableHead>
-                                <TableHead>Released</TableHead>
-                                <TableHead className="text-right">
-                                    Income
-                                </TableHead>
-                                <TableHead>
-                                    <span className="sr-only">Play</span>
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {releases.map((release) => (
-                                <TableRow key={release.id}>
-                                    <TableCell className="font-medium">
-                                        <RecordLink
-                                            to="release"
-                                            id={release.id}
-                                        >
-                                            {release.name}
-                                        </RecordLink>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {release.catalog_number ?? '–'}
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {release.released_on
-                                            ? date(release.released_on)
-                                            : '–'}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Amount value={release.income} />
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center justify-end gap-1">
-                                            <ReleaseActions
-                                                tracks={release.player_tracks}
-                                                name={release.name}
-                                            />
-                                        </div>
-                                    </TableCell>
+                    <>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <SortableHead
+                                        column="name"
+                                        sorter={releaseSorter}
+                                    >
+                                        Release
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="catalog_number"
+                                        sorter={releaseSorter}
+                                    >
+                                        Catalog number
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="released_on"
+                                        sorter={releaseSorter}
+                                        first="desc"
+                                    >
+                                        Released
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="income"
+                                        sorter={releaseSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
+                                        Income
+                                    </SortableHead>
+                                    <TableHead>
+                                        <span className="sr-only">Play</span>
+                                    </TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {releases.data.map((release) => (
+                                    <TableRow key={release.id}>
+                                        <TableCell className="font-medium">
+                                            <RecordLink
+                                                to="release"
+                                                id={release.id}
+                                            >
+                                                {release.name}
+                                            </RecordLink>
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {release.catalog_number ?? '–'}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {release.released_on
+                                                ? date(release.released_on)
+                                                : '–'}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Amount value={release.income} />
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center justify-end gap-1">
+                                                <ReleaseActions
+                                                    tracks={
+                                                        release.player_tracks
+                                                    }
+                                                    name={release.name}
+                                                />
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        <Pagination page={releases} noun="releases" />
+                    </>
                 )}
             </Panel>
 
@@ -272,62 +310,93 @@ export default function ShowArtist({
             </Panel>
 
             <Panel title="Tracks" flush>
-                {tracks.length === 0 ? (
+                {tracks.total === 0 ? (
                     <div className="p-4">
                         <EmptyState title="No tracks credited to this artist" />
                     </div>
                 ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Track</TableHead>
-                                <TableHead>Release</TableHead>
-                                <TableHead>ISRC</TableHead>
-                                <TableHead className="text-right">
-                                    Airplay
-                                </TableHead>
-                                <TableHead className="text-right">
-                                    Income
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {tracks.map((track) => (
-                                <TableRow key={track.id}>
-                                    <TableCell className="font-medium">
-                                        <RecordLink to="track" id={track.id}>
-                                            {track.name}
-                                        </RecordLink>
-                                    </TableCell>
-                                    <TableCell>
-                                        {track.releases.length === 0 && '–'}
-                                        {track.releases.map(
-                                            (release, position) => (
-                                                <span key={release.id}>
-                                                    {position > 0 && ', '}
-                                                    <RecordLink
-                                                        to="release"
-                                                        id={release.id}
-                                                    >
-                                                        {release.name}
-                                                    </RecordLink>
-                                                </span>
-                                            ),
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="font-mono text-xs">
-                                        {track.isrc ?? '–'}
-                                    </TableCell>
-                                    <TableCell className="text-right tabular-nums">
-                                        {count(track.airplays_count)}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Amount value={track.income} />
-                                    </TableCell>
+                    <>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <SortableHead
+                                        column="name"
+                                        sorter={trackSorter}
+                                    >
+                                        Track
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="release"
+                                        sorter={trackSorter}
+                                    >
+                                        Release
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="isrc"
+                                        sorter={trackSorter}
+                                    >
+                                        ISRC
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="airplays_count"
+                                        sorter={trackSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
+                                        Airplay
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="income"
+                                        sorter={trackSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
+                                        Income
+                                    </SortableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {tracks.data.map((track) => (
+                                    <TableRow key={track.id}>
+                                        <TableCell className="font-medium">
+                                            <RecordLink
+                                                to="track"
+                                                id={track.id}
+                                            >
+                                                {track.name}
+                                            </RecordLink>
+                                        </TableCell>
+                                        <TableCell>
+                                            {track.releases.length === 0 && '–'}
+                                            {track.releases.map(
+                                                (release, position) => (
+                                                    <span key={release.id}>
+                                                        {position > 0 && ', '}
+                                                        <RecordLink
+                                                            to="release"
+                                                            id={release.id}
+                                                        >
+                                                            {release.name}
+                                                        </RecordLink>
+                                                    </span>
+                                                ),
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="font-mono text-xs">
+                                            {track.isrc ?? '–'}
+                                        </TableCell>
+                                        <TableCell className="text-right tabular-nums">
+                                            {count(track.airplays_count)}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Amount value={track.income} />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        <Pagination page={tracks} noun="tracks" />
+                    </>
                 )}
             </Panel>
         </Page>

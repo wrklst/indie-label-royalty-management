@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import PayoutController from '@/actions/App/Http/Controllers/PayoutController';
+import { FilterBar } from '@/components/filter-bar';
 import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
 import { EmptyState, Page, Panel } from '@/components/page';
@@ -21,7 +22,7 @@ import { date, money } from '@/lib/format';
 import { show as showPayee } from '@/routes/payees';
 import { index } from '@/routes/payouts';
 import { index as periods, show as showPeriod } from '@/routes/periods';
-import type { Paginated } from '@/types';
+import type { Option, Paginated } from '@/types';
 import { recordLinkClass } from '@/components/record-link';
 
 type Payout = {
@@ -40,10 +41,20 @@ type Payout = {
 export default function Payouts({
     payouts,
     filters,
+    periodOptions,
+    payeeOptions,
 }: {
     payouts: Paginated<Payout>;
-    filters: { sort: string | null; direction: SortDirection | null };
+    filters: {
+        period: number | null;
+        payee: number | null;
+        sort: string | null;
+        direction: SortDirection | null;
+    };
+    periodOptions: Option[];
+    payeeOptions: Option[];
 }) {
+    const filtered = filters.period !== null || filters.payee !== null;
     const currency = usePage().props.label?.currency ?? 'EUR';
     const { apply } = useFilters(index.url(), filters);
     const sorter = serverSorter(filters, apply);
@@ -53,14 +64,43 @@ export default function Payouts({
             title="Payouts"
             description="Payments you have made to payees. A payout is booked from its period and reduces what the payee is still owed. Nothing is sent to a bank from here."
         >
+            <FilterBar
+                url={index.url()}
+                filters={filters}
+                selects={[
+                    {
+                        name: 'period',
+                        label: 'Period',
+                        placeholder: 'All periods',
+                        options: periodOptions,
+                    },
+                    {
+                        name: 'payee',
+                        label: 'Payee',
+                        placeholder: 'All payees',
+                        options: payeeOptions,
+                    },
+                ]}
+            />
+
             {payouts.total === 0 ? (
                 <EmptyState
-                    title="No payouts booked yet"
-                    description="Open a period and book a payout next to the payee you have paid."
+                    title={
+                        filtered
+                            ? 'No payout matches these filters'
+                            : 'No payouts booked yet'
+                    }
+                    description={
+                        filtered
+                            ? undefined
+                            : 'Open a period and book a payout next to the payee you have paid.'
+                    }
                     action={
-                        <Button asChild>
-                            <Link href={periods()}>Go to periods</Link>
-                        </Button>
+                        filtered ? undefined : (
+                            <Button asChild>
+                                <Link href={periods()}>Go to periods</Link>
+                            </Button>
+                        )
                     }
                 />
             ) : (

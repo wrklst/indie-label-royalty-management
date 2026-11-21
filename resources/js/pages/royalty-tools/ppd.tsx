@@ -4,9 +4,11 @@ import PpdController from '@/actions/App/Http/Controllers/RoyaltyTools/PpdContro
 import RatesController from '@/actions/App/Http/Controllers/RoyaltyTools/RatesController';
 import TransactionController from '@/actions/App/Http/Controllers/TransactionController';
 import { Amount } from '@/components/amount';
+import { DateRange } from '@/components/date-range';
 import { Field, SelectInput } from '@/components/field';
 import { EmptyState, Notice, Page, Panel, Stat } from '@/components/page';
 import { RecordLink } from '@/components/record-link';
+import { SortableHead } from '@/components/sortable-head';
 import {
     CreateTransactions,
     OverlapNotice,
@@ -21,15 +23,16 @@ import {
     TableBody,
     TableCell,
     TableFooter,
-    TableHead,
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTableSort } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { date, quantity, today } from '@/lib/format';
 import { index as items } from '@/routes/items';
 import { edit as labelSettings } from '@/routes/label-settings';
 import { index } from '@/routes/royalty-tools/ppd';
-import type { Option } from '@/types';
+import type { Option, Paginated } from '@/types';
 
 type Row = {
     release_id: number;
@@ -42,6 +45,17 @@ type Row = {
     rate: string;
     rate_source: 'item' | 'track' | 'release';
     amount: string;
+};
+
+const NO_ROWS: Row[] = [];
+
+const ROW_COLUMNS = {
+    release_name: (row: Row) => row.release_name,
+    track_name: (row: Row) => row.track_name,
+    rate_source: (row: Row) => row.rate_source,
+    quantity: (row: Row) => row.quantity,
+    rate: (row: Row) => row.rate,
+    amount: (row: Row) => row.amount,
 };
 
 type Report = {
@@ -63,7 +77,11 @@ type Report = {
 
 type Props = {
     currency: string;
-    runs: ToolRun[];
+    runs: Paginated<ToolRun>;
+    runFilters: {
+        runs_sort: string | null;
+        runs_direction: SortDirection | null;
+    };
     overlaps: ToolRun[];
     filters: {
         from: string | null;
@@ -82,6 +100,7 @@ type Props = {
 export default function Ppd({
     currency,
     runs,
+    runFilters,
     overlaps,
     filters,
     settings,
@@ -91,6 +110,7 @@ export default function Ppd({
     formatOptions,
 }: Props) {
     const [ratesRelease, setRatesRelease] = useState('');
+    const { rows, sorter } = useTableSort(report?.rows ?? NO_ROWS, ROW_COLUMNS);
 
     return (
         <Page
@@ -186,34 +206,7 @@ export default function Ppd({
                     {({ errors, processing }) => (
                         <>
                             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                                <Field
-                                    label="Paid from"
-                                    htmlFor="from"
-                                    error={errors.from}
-                                    required
-                                >
-                                    <Input
-                                        id="from"
-                                        name="from"
-                                        type="date"
-                                        defaultValue={filters.from ?? ''}
-                                        required
-                                    />
-                                </Field>
-                                <Field
-                                    label="Paid until"
-                                    htmlFor="to"
-                                    error={errors.to}
-                                    required
-                                >
-                                    <Input
-                                        id="to"
-                                        name="to"
-                                        type="date"
-                                        defaultValue={filters.to ?? ''}
-                                        required
-                                    />
-                                </Field>
+                                <DateRange defaults={filters} errors={errors} />
                                 <Field
                                     label="Artist"
                                     htmlFor="artist_id"
@@ -404,22 +397,52 @@ export default function Ppd({
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Release</TableHead>
-                                        <TableHead>Track</TableHead>
-                                        <TableHead>Rate from</TableHead>
-                                        <TableHead className="text-right">
+                                        <SortableHead
+                                            column="release_name"
+                                            sorter={sorter}
+                                        >
+                                            Release
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="track_name"
+                                            sorter={sorter}
+                                        >
+                                            Track
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="rate_source"
+                                            sorter={sorter}
+                                        >
+                                            Rate from
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="quantity"
+                                            sorter={sorter}
+                                            first="desc"
+                                            className="text-right"
+                                        >
                                             Units
-                                        </TableHead>
-                                        <TableHead className="text-right">
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="rate"
+                                            sorter={sorter}
+                                            first="desc"
+                                            className="text-right"
+                                        >
                                             Rate
-                                        </TableHead>
-                                        <TableHead className="text-right">
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="amount"
+                                            sorter={sorter}
+                                            first="desc"
+                                            className="text-right"
+                                        >
                                             PPD
-                                        </TableHead>
+                                        </SortableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {report.rows.map((row) => (
+                                    {rows.map((row) => (
                                         <TableRow
                                             key={`${row.release_id}-${row.track_id}-${row.rate_source}-${row.item_id}-${row.rate}`}
                                         >
@@ -487,7 +510,12 @@ export default function Ppd({
                 </>
             )}
 
-            <RunsPanel runs={runs} currency={currency} totalLabel="PPD total" />
+            <RunsPanel
+                runs={runs}
+                filters={runFilters}
+                currency={currency}
+                totalLabel="PPD total"
+            />
         </Page>
     );
 }

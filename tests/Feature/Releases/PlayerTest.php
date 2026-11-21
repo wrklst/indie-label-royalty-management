@@ -67,7 +67,7 @@ test('the release list and the artist page give the player each release as an al
         ]));
 })->with([
     'release list' => [fn ($test) => route('releases.index'), 'releases.data'],
-    'artist page' => [fn ($test) => route('artists.show', $test->artist), 'releases'],
+    'artist page' => [fn ($test) => route('artists.show', $test->artist), 'releases.data'],
 ]);
 
 test('the tracks list gives the player a file, title, artist, release and cover for each track', function () {

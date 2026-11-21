@@ -33,7 +33,7 @@ class PpdController extends ToolController
         $input = $request->hasAny(['from', 'to']) ? $request->validate($this->rules($label->id)) : null;
 
         return Inertia::render('royalty-tools/ppd', [
-            ...$this->common($label, $input['from'] ?? null, $input['to'] ?? null),
+            ...$this->common($request, $label, $input['from'] ?? null, $input['to'] ?? null),
             'filters' => [
                 'from' => $input['from'] ?? null,
                 'to' => $input['to'] ?? null,

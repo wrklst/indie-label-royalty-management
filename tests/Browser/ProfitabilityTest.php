@@ -49,9 +49,10 @@ test('the profitability filters narrow the report without leaving the page', fun
     $this->actingAs($scenario['admin']);
 
     visit('/profitability')
-        ->assertSee('All time')
+        ->assertDontSee('Clear filters')
         ->assertSeeIn('[data-slot="table-body"]', 'Example Release')
         ->fill('[aria-label="From"]', '2026-02-01')
+        ->assertSee('Clear filters')
         ->assertSee('Nothing was booked in this range')
         ->select('[aria-label="Date used"]', 'paid')
         ->assertSeeIn('[data-slot="table-body"]', 'Example Release')

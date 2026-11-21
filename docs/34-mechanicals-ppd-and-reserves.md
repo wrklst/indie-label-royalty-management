@@ -41,9 +41,13 @@ If the range shares at least one day with an earlier run of the same tool, the p
 
 Runs of different tools never overlap with each other.
 
+### Sorting the report
+
+The tables of a report and of the rates page sort by a click on a heading. The order is only for reading; booking always books the whole report.
+
 ### Undoing a run
 
-Every tool page lists its **Earlier runs** with the paid dates covered, the date booked on, the number of transactions and the total. Deleting a run there deletes its transactions; periods that included them change accordingly. The same runs appear under **Royalties → Data imports**, named after the tool, and can be deleted there as well.
+Every tool page lists its **Earlier runs**, 25 to a page and sortable, with the paid dates it **Covers**, the **Paid date** it was booked on, the number of **Rows** (transactions), the total and when it was **Uploaded**. Deleting a run there deletes its transactions; periods that included them change accordingly. The same runs appear under **Royalties → Data imports**, named after the tool, and can be deleted there as well.
 
 ## Mechanicals
 

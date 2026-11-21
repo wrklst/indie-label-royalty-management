@@ -32,6 +32,7 @@ Open **Catalog → Releases**. The list shows 50 releases per page.
 - **All artists** narrows the list to one artist. It matches the main artist of a release only, not further artist credits.
 - **Any status** narrows the list to **To do**, **In progress** or **Done**.
 - **Without contract** shows only releases that have no contract of their own.
+- **Clear filters** appears when any search or filter is set and resets all of them.
 
 **Sorting.** Without a sort the list is ordered by catalog number, with releases that have no catalog number last, then by name. Click a column heading to sort by it, click again to reverse, and a third time to go back to the default order. Every column with a heading text can be sorted.
 
@@ -236,8 +237,8 @@ Every release is a box with its catalog number, name and artist, and a contract 
 
 Tools on the page:
 
-- **Filter releases and tracks…** narrows the page to releases where the release name, catalog number, artist, a track title, a track ISRC or a track artist contains your text.
-- **Only releases with tracks lacking a contract** hides every release that has a release contract. A release without a contract is also hidden when all of its tracks have their own contract.
+- **Search releases and tracks…** narrows the page to releases where the release name, catalog number, artist, a track title, a track ISRC or a track artist contains your text.
+- **Without contract** hides every release that has a release contract. A release without a contract is also hidden when all of its tracks have their own contract.
 - The counter on the right says how many tracks have no contract at all, or **Every track is covered by a contract.**
 - A badge **No contract** marks each track that has neither its own contract nor a release contract.
 - **New contract** opens the contract form.
@@ -253,5 +254,5 @@ Example: `Example Release` has no contract and two tracks. The counter shows `2 
 - Saving the release form replaces the track list: tracks whose row you removed are deleted. Their transactions stay on the release.
 - Deleting a release deletes its tracks, its files (from storage, for good) and its items without transactions. Its transactions are kept but become unassigned, so they no longer earn for any payee. Items that carry transactions stay behind as unassigned items, and the `[Additionals]` item is renamed to `[Additionals] Example Release`, so you can assign that income to another release on the **Items** page.
 - A release can be saved without tracks. Income can still be booked on the release itself.
-- The Catalog manager loads the whole catalog on one page and filters in your browser. It has no pagination.
+- The Catalog manager shows 50 releases per page. Search and **Without contract** work on the whole catalog, not only the page you are on, and **Clear filters** resets them.
 - The status, the release type and the blocked services and territories are information only. They do not affect statements or payouts.

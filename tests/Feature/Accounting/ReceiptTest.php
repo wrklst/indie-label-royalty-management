@@ -138,12 +138,13 @@ test('the label costs page lists receipts that wait and proposes the cost a read
     $this->actingAs(labelAdmin($label))->get(route('label-costs.index'))->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('receiptReading', false)
-            ->has('receipts', 1)
-            ->where('receipts.0.id', $waiting->id)
-            ->where('receipts.0.amount', '49.90')
-            ->where('receipts.0.suggested_cost_id', $matching->id)
-            ->where('costs', fn ($costs) => collect($costs)->firstWhere('id', $attached->id)['receipt_id'] !== null
-                && collect($costs)->firstWhere('id', $matching->id)['receipt_id'] === null));
+            ->has('receipts.data', 1)
+            ->where('receipts.data.0.id', $waiting->id)
+            ->where('receipts.data.0.amount', '49.90')
+            ->where('receipts.data.0.suggested_cost_id', $matching->id)
+            ->where('costs.data', fn ($costs) => collect($costs)->firstWhere('id', $attached->id)['receipt_id'] !== null
+                && collect($costs)->firstWhere('id', $matching->id)['receipt_id'] === null)
+            ->where('attachableCosts', fn ($costs) => collect($costs)->pluck('id')->contains($matching->id) && ! collect($costs)->pluck('id')->contains($attached->id)));
 });
 
 test('a receipt is booked as a new cost and attached to it', function () {

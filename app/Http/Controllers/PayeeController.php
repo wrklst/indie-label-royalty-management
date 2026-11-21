@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\PayeeRequest;
 use App\Models\ContractSplit;
+use App\Models\Ledger;
 use App\Models\Payee;
 use App\Models\Payout;
 use App\Models\Period;
+use App\Models\Release;
 use App\Models\Statement;
 use App\Models\Transaction;
 use App\Services\Royalties\RoyaltyCalculator;
@@ -44,8 +46,28 @@ class PayeeController extends Controller
         ]);
     }
 
-    public function show(Payee $payee, RoyaltyCalculator $calculator): Response
+    public function show(Request $request, Payee $payee, RoyaltyCalculator $calculator): Response
     {
+        $statementSorting = Sorting::for($request, [
+            'period' => Sorting::related(Period::class, 'period_id'),
+            'status' => Sorting::nullsLast('published_at'),
+            'payable' => 'payable',
+        ], fn (Builder $query) => $query->latest('id'), 'statements');
+        $payoutSorting = Sorting::for($request, [
+            'paid_on' => 'paid_on',
+            'period' => Sorting::related(Period::class, 'period_id'),
+            'memo' => Sorting::nullsLast('memo'),
+            'total' => 'total',
+        ], fn (Builder $query) => $query->orderByDesc('paid_on')->orderByDesc('id'), 'payouts');
+        $transferSorting = Sorting::for($request, [
+            'paid_timestamp' => 'paid_timestamp',
+            'category' => Sorting::nullsLast('category'),
+            'release' => Sorting::related(Release::class, 'release_id'),
+            'ledger' => Sorting::related(Ledger::class, 'ledger_id'),
+            'memo' => Sorting::nullsLast('memo'),
+            'amount' => Sorting::nullsLast('converted_total'),
+        ], fn (Builder $query) => $query->orderByDesc('paid_timestamp')->orderByDesc('id'), 'transfers');
+
         $latestPeriod = Period::query()->orderByDesc('ends_on')->first();
         $summary = $latestPeriod ? ($calculator->forPeriod($latestPeriod, $payee->id)['payees'][0] ?? null) : null;
 
@@ -70,23 +92,27 @@ class PayeeController extends Controller
                         ...($split->contract?->tracks->map(fn ($track): array => ['to' => 'track', 'id' => $track->id, 'name' => $track->name])->all() ?? []),
                     ],
                 ]),
-            'payouts' => Payout::query()->where('payee_id', $payee->id)->with('period:id,name')->orderByDesc('paid_on')->get()
-                ->map(fn (Payout $payout): array => [
+            'payouts' => Payout::query()->where('payee_id', $payee->id)->with('period:id,name')->tap($payoutSorting)
+                ->paginate(25, pageName: 'payouts_page')->withQueryString()
+                ->through(fn (Payout $payout): array => [
                     'id' => $payout->id, 'total' => $payout->total, 'paid_on' => $payout->paid_on->toDateString(),
                     'period' => $payout->period?->name, 'memo' => $payout->memo,
                 ]),
-            'statements' => Statement::query()->where('payee_id', $payee->id)->where('archived', false)->with('period:id,name')->latest('id')->get()
-                ->map(fn (Statement $statement): array => [
+            'statements' => Statement::query()->where('payee_id', $payee->id)->where('archived', false)->with('period:id,name')->tap($statementSorting)
+                ->paginate(25, pageName: 'statements_page')->withQueryString()
+                ->through(fn (Statement $statement): array => [
                     'id' => $statement->id, 'name' => $statement->name, 'period' => $statement->period?->name,
                     'payable' => $statement->payable, 'published' => $statement->published_at !== null,
                 ]),
             'transfers' => Transaction::query()->where('type', 'transfer')->where('payee_id', $payee->id)
-                ->with(['release:id,name', 'ledger:id,name'])->orderByDesc('paid_timestamp')->limit(200)->get()
-                ->map(fn (Transaction $transfer): array => [
+                ->with(['release:id,name', 'ledger:id,name'])->tap($transferSorting)
+                ->paginate(50, pageName: 'transfers_page')->withQueryString()
+                ->through(fn (Transaction $transfer): array => [
                     'id' => $transfer->id, 'paid_timestamp' => $transfer->paid_timestamp->toDateString(), 'total' => $transfer->total,
                     'converted_total' => $transfer->converted_total, 'currency' => $transfer->currency, 'category' => $transfer->category,
                     'memo' => $transfer->memo, 'release' => $transfer->release?->name, 'release_id' => $transfer->release_id, 'ledger' => $transfer->ledger?->name,
                 ]),
+            'filters' => [...$statementSorting->toArray(), ...$payoutSorting->toArray(), ...$transferSorting->toArray()],
         ]);
     }
 

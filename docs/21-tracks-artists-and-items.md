@@ -23,6 +23,7 @@ Open **Catalog → Tracks**. The list shows 50 tracks per page, ordered by title
 
 - **Search title or ISRC…** matches part of the title or of the ISRC. You can type the ISRC with or without dashes.
 - **All releases** narrows the list to one release.
+- **Clear filters** appears when a search or filter is set and resets it.
 
 A recording that is on several releases is one row in this list, naming all its releases; the row is the oldest of its tracks. A track without audio of its own plays the audio of the same recording on another release. Narrow the list to a release to see and edit that release's own track. A badge **No contract on Example Single** marks a release on which the recording has no contract.
 
@@ -93,7 +94,7 @@ Example: `Opening` with the ISRC `ZZEXA2600001` is on the single `Opening` (EX00
 
 **The report.** How the income of the recording developed, which platforms it came from and what each paid per stream; see [Reports and play counts](12-reports-and-play-counts.md). Shown only when there is income or a play count.
 
-**Research log.** The last 20 web searches run for the recording, with their result. Shown only when there are any.
+**Research log.** Every web search run for the recording, 10 to a page and sortable, with its result. Shown only when there are any. The **Airplay** table above it has 25 plays to a page and sorts by **Station**, **Known from**, **Played** and **Earned**.
 
 ### Where to find a track
 
@@ -128,7 +129,7 @@ The pencil in a row opens the same fields for editing. The bin deletes the artis
 
 Set **Alias of** when an artist is another name of an artist already in your catalog, for example the spelling a platform or a statement uses, such as `Example Artist feat. Guest Artist`.
 
-- The artist list shows an alias under its artist, not as a row of its own. Tick **Show aliases as rows of their own** to edit or delete an alias. The search also finds an artist by the name of an alias.
+- The artist list shows an alias under its artist, not as a row of its own. Tick **Aliases** to show them as rows of their own and edit or delete an alias. The search also finds an artist by the name of an alias.
 - The artist page names its aliases under the title; the page of an alias links to its artist.
 - A release or a track that an import creates under the name of an alias belongs to the main artist. Releases and tracks that were given to the alias before stay with it until you change their artist.
 
@@ -142,8 +143,8 @@ Rules:
 
 Click an artist name anywhere to open the page. It shows:
 
-- **Releases**: every release the artist is on, as main artist, in any credit role or with one of their tracks, newest first. A release of another artist shows what this artist's tracks earned on it. Listed with **Catalog number**, **Released** and the buttons to play or queue the whole release.
-- **Tracks**: every track the artist is on, as main artist or in any credit role, with its releases, ISRC and the number of airplay entries. A recording that is on several releases is one row naming all of them, with airplay and income added up.
+- **Releases**: every release the artist is on, as main artist, in any credit role or with one of their tracks, newest first by default. Sortable, 25 to a page. A release of another artist shows what this artist's tracks earned on it. Listed with **Catalog number**, **Released** and the buttons to play or queue the whole release.
+- **Tracks**: every track the artist is on, as main artist or in any credit role, with its releases, ISRC and the number of airplay entries. Sortable, 25 to a page. A recording that is on several releases is one row naming all of them, with airplay and income added up.
 - **Contracts and payees**: the contracts of these releases and tracks, each with its payees and their share. A track uses its own contract, otherwise that of its release.
 
 The page has no edit button. Edit an artist from the artist list.
@@ -203,8 +204,9 @@ Open **Catalog → Items**. The list shows 50 items per page, with unassigned it
 | Total             | The sum of those transactions.                                                 |
 
 - **Search name, ISRC, UPC…** also matches the catalog number.
+- **Clear filters** appears when a search or filter is set and resets it.
 - **All releases** narrows the list to one release.
-- **Unassigned only** shows the items without a release. When there are any, a yellow notice at the top says how many, with the button **Show unassigned**.
+- **Unassigned** shows the items without a release. When there are any, a yellow notice at the top says how many, with the button **Show unassigned**.
 
 ### Assign an item
 

@@ -7,9 +7,11 @@ import TransactionController from '@/actions/App/Http/Controllers/TransactionCon
 import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
 import { Field, SelectInput } from '@/components/field';
+import { FilterBar } from '@/components/filter-bar';
 import { FileDrop } from '@/components/file-drop';
 import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
+import { Pagination } from '@/components/pagination';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,9 +24,11 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { useTableSort } from '@/hooks/use-table-sort';
+import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
 import { date, money, plural, today } from '@/lib/format';
 import { index } from '@/routes/label-costs';
+import type { Paginated } from '@/types';
 
 type Recurring = {
     id: number;
@@ -69,14 +73,26 @@ type Receipt = {
     suggested_cost_id: number | null;
 };
 
+type AttachableCost = Pick<
+    Cost,
+    'id' | 'source' | 'memo' | 'total' | 'currency' | 'paid_on'
+>;
+
 type Props = {
     currency: string;
     categories: string[];
     intervals: { value: string; label: string }[];
-    totals: { this_year: string; last_year: string; year: number };
-    recurring: Recurring[];
-    costs: Cost[];
-    receipts: Receipt[];
+    totals: {
+        this_year: string;
+        last_year: string;
+        year: number;
+        recurring_per_year: string;
+    };
+    filters: Record<string, string | null> & { search: string };
+    recurring: Paginated<Recurring>;
+    costs: Paginated<Cost>;
+    attachableCosts: AttachableCost[];
+    receipts: Paginated<Receipt>;
     receiptReading: boolean;
 };
 
@@ -196,22 +212,6 @@ function AmountFields({
     );
 }
 
-const RECURRING_COLUMNS = {
-    name: (row: Recurring) => row.name,
-    category: (row: Recurring) => row.category,
-    amount: (row: Recurring) => row.amount,
-    starts_on: (row: Recurring) => row.starts_on,
-    next_due_on: (row: Recurring) => row.next_due_on,
-    occurrences_booked: (row: Recurring) => row.occurrences_booked,
-};
-
-const COST_COLUMNS = {
-    paid_on: (row: Cost) => row.paid_on,
-    name: (row: Cost) => row.source ?? row.memo,
-    category: (row: Cost) => row.category,
-    amount: (row: Cost) => row.converted_total,
-};
-
 /** Receipts are uploaded as they are dropped; each one is read on its own. */
 function ReceiptUpload() {
     return (
@@ -246,7 +246,7 @@ function ReceiptRow({
     receiptReading,
 }: {
     receipt: Receipt;
-    costs: Cost[];
+    costs: AttachableCost[];
     currency: string;
     categories: string[];
     receiptReading: boolean;
@@ -415,13 +415,17 @@ export default function LabelCosts({
     categories,
     intervals,
     totals,
+    filters,
     recurring,
     costs,
+    attachableCosts,
     receipts,
     receiptReading,
 }: Props) {
     // What was read off a receipt arrives while the page is open.
-    const reading = receipts.some((receipt) => receipt.status === 'reading');
+    const reading = receipts.data.some(
+        (receipt) => receipt.status === 'reading',
+    );
 
     useEffect(() => {
         if (!reading) {
@@ -429,36 +433,19 @@ export default function LabelCosts({
         }
 
         const timer = window.setInterval(
-            () => router.reload({ only: ['receipts', 'costs'] }),
+            () =>
+                router.reload({
+                    only: ['receipts', 'costs', 'attachableCosts'],
+                }),
             4000,
         );
 
         return () => window.clearInterval(timer);
     }, [reading]);
 
-    const { rows: recurringRows, sorter: recurringSorter } = useTableSort(
-        recurring,
-        RECURRING_COLUMNS,
-    );
-    const { rows: costRows, sorter: costSorter } = useTableSort(
-        costs,
-        COST_COLUMNS,
-    );
-    const yearly = recurring
-        .filter(
-            (cost) => cost.next_due_on !== null && cost.currency === currency,
-        )
-        .reduce(
-            (sum, cost) =>
-                sum +
-                Number(cost.amount) *
-                    (cost.interval === 'monthly'
-                        ? 12
-                        : cost.interval === 'quarterly'
-                          ? 4
-                          : 1),
-            0,
-        );
+    const { apply } = useFilters(index.url(), filters);
+    const recurringSorter = serverSorter(filters, apply, 'recurring');
+    const costSorter = serverSorter(filters, apply, 'costs');
 
     const oneOff = (
         <FormDialog
@@ -598,193 +585,204 @@ export default function LabelCosts({
                 />
                 <Stat
                     label="Recurring, per year"
-                    value={<Amount value={-yearly} currency={currency} />}
+                    value={
+                        <Amount
+                            value={`-${totals.recurring_per_year}`}
+                            currency={currency}
+                        />
+                    }
                     hint="From the recurring costs still running"
                 />
             </div>
 
             <Panel title="Recurring costs" flush>
-                {recurring.length === 0 ? (
+                {recurring.total === 0 ? (
                     <EmptyState
                         compact
                         title="Nothing recurring yet."
                         description="Add a subscription once and it is booked on every due date."
                     />
                 ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <SortableHead
-                                    column="name"
-                                    sorter={recurringSorter}
-                                >
-                                    Cost
-                                </SortableHead>
-                                <SortableHead
-                                    column="category"
-                                    sorter={recurringSorter}
-                                >
-                                    Category
-                                </SortableHead>
-                                <SortableHead
-                                    column="amount"
-                                    sorter={recurringSorter}
-                                    first="desc"
-                                    className="text-right"
-                                >
-                                    Amount
-                                </SortableHead>
-                                <SortableHead
-                                    column="starts_on"
-                                    sorter={recurringSorter}
-                                    first="desc"
-                                >
-                                    Since
-                                </SortableHead>
-                                <SortableHead
-                                    column="next_due_on"
-                                    sorter={recurringSorter}
-                                >
-                                    Next payment
-                                </SortableHead>
-                                <SortableHead
-                                    column="occurrences_booked"
-                                    sorter={recurringSorter}
-                                    first="desc"
-                                    className="text-right"
-                                >
-                                    Booked
-                                </SortableHead>
-                                <TableHead className="w-20" />
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {recurringRows.map((cost) => (
-                                <TableRow key={cost.id}>
-                                    <TableCell className="font-medium">
-                                        {cost.name}
-                                        {cost.memo && (
-                                            <span className="block text-xs font-normal text-muted-foreground">
-                                                {cost.memo}
-                                            </span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {cost.category ?? '–'}
-                                    </TableCell>
-                                    <TableCell className="text-right whitespace-nowrap">
-                                        <Amount
-                                            value={cost.amount}
-                                            currency={cost.currency}
-                                        />{' '}
-                                        <span className="text-xs text-muted-foreground">
-                                            {PER[cost.interval]}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell>
-                                        {date(cost.starts_on)}
-                                    </TableCell>
-                                    <TableCell>
-                                        {cost.next_due_on ? (
-                                            date(cost.next_due_on)
-                                        ) : (
-                                            <Badge variant="outline">
-                                                Ended {date(cost.ends_on)}
-                                            </Badge>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-right tabular-nums">
-                                        {cost.occurrences_booked}×
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex justify-end">
-                                            <FormDialog
-                                                title={`Change ${cost.name}`}
-                                                description="Applies to payments from now on. Payments already booked keep their amounts."
-                                                form={LabelCostController.updateRecurring.form(
-                                                    cost.id,
-                                                )}
-                                                trigger={
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        aria-label={`Change ${cost.name}`}
-                                                    >
-                                                        <Pencil className="text-muted-foreground" />
-                                                    </Button>
-                                                }
-                                            >
-                                                {(errors) => (
-                                                    <>
-                                                        <AmountFields
-                                                            labelCurrency={
-                                                                currency
-                                                            }
-                                                            categories={
-                                                                categories
-                                                            }
-                                                            errors={errors}
-                                                            cost={cost}
-                                                            amountLabel="Amount each time"
-                                                        />
-                                                        <Field
-                                                            label="Last payment"
-                                                            htmlFor="ends_on"
-                                                            error={
-                                                                errors.ends_on
-                                                            }
-                                                            hint="Set a date to end the cost; empty keeps it running."
-                                                        >
-                                                            <Input
-                                                                id="ends_on"
-                                                                name="ends_on"
-                                                                type="date"
-                                                                defaultValue={
-                                                                    cost.ends_on ??
-                                                                    ''
-                                                                }
-                                                            />
-                                                        </Field>
-                                                    </>
-                                                )}
-                                            </FormDialog>
-                                            <DeleteButton
-                                                url={LabelCostController.destroyRecurring.url(
-                                                    cost.id,
-                                                )}
-                                                confirmLabel={
-                                                    cost.occurrences_booked > 0
-                                                        ? 'Stop, keep the payments'
-                                                        : 'Delete'
-                                                }
-                                                alternative={
-                                                    cost.occurrences_booked > 0
-                                                        ? {
-                                                              label: `Delete with its ${plural(cost.occurrences_booked, 'payment', 'payments')}`,
-                                                              url: LabelCostController.destroyRecurring.url(
-                                                                  cost.id,
-                                                                  {
-                                                                      query: {
-                                                                          payments: 1,
-                                                                      },
-                                                                  },
-                                                              ),
-                                                          }
-                                                        : undefined
-                                                }
-                                                title={`Stop or delete ${cost.name}?`}
-                                                description={
-                                                    cost.occurrences_booked > 0
-                                                        ? `Stopping books no further payments and keeps the ${cost.occurrences_booked} already booked in the accounts. Deleting removes those payments too: use it for a cost entered by mistake. Receipts attached to them go back to the list of receipts.`
-                                                        : 'Nothing was booked for it yet.'
-                                                }
-                                            />
-                                        </div>
-                                    </TableCell>
+                    <>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <SortableHead
+                                        column="name"
+                                        sorter={recurringSorter}
+                                    >
+                                        Cost
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="category"
+                                        sorter={recurringSorter}
+                                    >
+                                        Category
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="amount"
+                                        sorter={recurringSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
+                                        Amount
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="starts_on"
+                                        sorter={recurringSorter}
+                                        first="desc"
+                                    >
+                                        Since
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="next_due_on"
+                                        sorter={recurringSorter}
+                                    >
+                                        Next payment
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="occurrences_booked"
+                                        sorter={recurringSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
+                                        Booked
+                                    </SortableHead>
+                                    <TableHead className="w-20" />
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {recurring.data.map((cost) => (
+                                    <TableRow key={cost.id}>
+                                        <TableCell className="font-medium">
+                                            {cost.name}
+                                            {cost.memo && (
+                                                <span className="block text-xs font-normal text-muted-foreground">
+                                                    {cost.memo}
+                                                </span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {cost.category ?? '–'}
+                                        </TableCell>
+                                        <TableCell className="text-right whitespace-nowrap">
+                                            <Amount
+                                                value={cost.amount}
+                                                currency={cost.currency}
+                                            />{' '}
+                                            <span className="text-xs text-muted-foreground">
+                                                {PER[cost.interval]}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell>
+                                            {date(cost.starts_on)}
+                                        </TableCell>
+                                        <TableCell>
+                                            {cost.next_due_on ? (
+                                                date(cost.next_due_on)
+                                            ) : (
+                                                <Badge variant="outline">
+                                                    Ended {date(cost.ends_on)}
+                                                </Badge>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-right tabular-nums">
+                                            {cost.occurrences_booked}×
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex justify-end">
+                                                <FormDialog
+                                                    title={`Change ${cost.name}`}
+                                                    description="Applies to payments from now on. Payments already booked keep their amounts."
+                                                    form={LabelCostController.updateRecurring.form(
+                                                        cost.id,
+                                                    )}
+                                                    trigger={
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            aria-label={`Change ${cost.name}`}
+                                                        >
+                                                            <Pencil className="text-muted-foreground" />
+                                                        </Button>
+                                                    }
+                                                >
+                                                    {(errors) => (
+                                                        <>
+                                                            <AmountFields
+                                                                labelCurrency={
+                                                                    currency
+                                                                }
+                                                                categories={
+                                                                    categories
+                                                                }
+                                                                errors={errors}
+                                                                cost={cost}
+                                                                amountLabel="Amount each time"
+                                                            />
+                                                            <Field
+                                                                label="Last payment"
+                                                                htmlFor="ends_on"
+                                                                error={
+                                                                    errors.ends_on
+                                                                }
+                                                                hint="Set a date to end the cost; empty keeps it running."
+                                                            >
+                                                                <Input
+                                                                    id="ends_on"
+                                                                    name="ends_on"
+                                                                    type="date"
+                                                                    defaultValue={
+                                                                        cost.ends_on ??
+                                                                        ''
+                                                                    }
+                                                                />
+                                                            </Field>
+                                                        </>
+                                                    )}
+                                                </FormDialog>
+                                                <DeleteButton
+                                                    url={LabelCostController.destroyRecurring.url(
+                                                        cost.id,
+                                                    )}
+                                                    confirmLabel={
+                                                        cost.occurrences_booked >
+                                                        0
+                                                            ? 'Stop, keep the payments'
+                                                            : 'Delete'
+                                                    }
+                                                    alternative={
+                                                        cost.occurrences_booked >
+                                                        0
+                                                            ? {
+                                                                  label: `Delete with its ${plural(cost.occurrences_booked, 'payment', 'payments')}`,
+                                                                  url: LabelCostController.destroyRecurring.url(
+                                                                      cost.id,
+                                                                      {
+                                                                          query: {
+                                                                              payments: 1,
+                                                                          },
+                                                                      },
+                                                                  ),
+                                                              }
+                                                            : undefined
+                                                    }
+                                                    title={`Stop or delete ${cost.name}?`}
+                                                    description={
+                                                        cost.occurrences_booked >
+                                                        0
+                                                            ? `Stopping books no further payments and keeps the ${cost.occurrences_booked} already booked in the accounts. Deleting removes those payments too: use it for a cost entered by mistake. Receipts attached to them go back to the list of receipts.`
+                                                            : 'Nothing was booked for it yet.'
+                                                    }
+                                                />
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        <Pagination page={recurring} noun="recurring costs" />
+                    </>
                 )}
             </Panel>
 
@@ -798,150 +796,171 @@ export default function LabelCosts({
             >
                 <ReceiptUpload />
 
-                {receipts.length > 0 && (
-                    <ul className="mt-4 divide-y rounded-lg border">
-                        {receipts.map((receipt) => (
-                            <ReceiptRow
-                                key={receipt.id}
-                                receipt={receipt}
-                                costs={costs.filter(
-                                    (cost) => cost.receipt_id === null,
-                                )}
-                                currency={currency}
-                                categories={categories}
-                                receiptReading={receiptReading}
-                            />
-                        ))}
-                    </ul>
+                {receipts.total > 0 && (
+                    <div className="mt-4 rounded-lg border">
+                        <ul className="divide-y">
+                            {receipts.data.map((receipt) => (
+                                <ReceiptRow
+                                    key={receipt.id}
+                                    receipt={receipt}
+                                    costs={attachableCosts}
+                                    currency={currency}
+                                    categories={categories}
+                                    receiptReading={receiptReading}
+                                />
+                            ))}
+                        </ul>
+                        <Pagination page={receipts} noun="receipts" />
+                    </div>
                 )}
             </Panel>
 
-            {costs.length === 0 ? (
+            {costs.total === 0 && filters.search === '' ? (
                 <EmptyState
                     title="No overheads booked yet"
                     description="Book a one-off cost, or a recurring one such as a subscription."
                 />
             ) : (
-                <Panel
-                    title="Booked costs"
-                    description="The latest 200. Each is an ordinary expense and can be changed or deleted."
-                    flush
-                >
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <SortableHead
-                                    column="paid_on"
-                                    sorter={costSorter}
-                                    first="desc"
-                                >
-                                    Paid date
-                                </SortableHead>
-                                <SortableHead column="name" sorter={costSorter}>
-                                    Cost
-                                </SortableHead>
-                                <SortableHead
-                                    column="category"
-                                    sorter={costSorter}
-                                >
-                                    Category
-                                </SortableHead>
-                                <SortableHead
-                                    column="amount"
-                                    sorter={costSorter}
-                                    first="desc"
-                                    className="text-right"
-                                >
-                                    Amount
-                                </SortableHead>
-                                <TableHead className="w-28" />
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {costRows.map((cost) => (
-                                <TableRow key={cost.id}>
-                                    <TableCell className="whitespace-nowrap">
-                                        {date(cost.paid_on)}
-                                    </TableCell>
-                                    <TableCell>
-                                        {cost.source ?? cost.memo ?? '–'}
-                                        {cost.recurring && (
-                                            <Badge
-                                                variant="info"
-                                                className="ml-2"
-                                            >
-                                                recurring
-                                            </Badge>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {cost.category ?? '–'}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {cost.converted_total === null ? (
-                                            <Badge variant="destructive">
-                                                {money(
-                                                    cost.total,
-                                                    cost.currency,
-                                                )}{' '}
-                                                · no rate
-                                            </Badge>
-                                        ) : (
-                                            <Amount
-                                                value={cost.converted_total}
-                                                currency={currency}
-                                            />
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex justify-end">
-                                            {cost.receipt_id && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    asChild
-                                                >
-                                                    <a
-                                                        href={ReceiptController.show.url(
-                                                            cost.receipt_id,
-                                                        )}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        title="Open receipt"
-                                                        aria-label={`Open the receipt of ${cost.source ?? cost.memo ?? 'this cost'}`}
+                <div className="grid gap-3">
+                    <FilterBar
+                        url={index.url()}
+                        filters={filters}
+                        search="Search cost, memo or category…"
+                    />
+                    {costs.total === 0 ? (
+                        <EmptyState title="No cost matches" />
+                    ) : (
+                        <Panel
+                            title="Booked costs"
+                            description="Each is an ordinary expense and can be changed or deleted."
+                            flush
+                        >
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <SortableHead
+                                            column="paid_on"
+                                            sorter={costSorter}
+                                            first="desc"
+                                        >
+                                            Paid date
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="name"
+                                            sorter={costSorter}
+                                        >
+                                            Cost
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="category"
+                                            sorter={costSorter}
+                                        >
+                                            Category
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="amount"
+                                            sorter={costSorter}
+                                            first="desc"
+                                            className="text-right"
+                                        >
+                                            Amount
+                                        </SortableHead>
+                                        <TableHead className="w-28" />
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {costs.data.map((cost) => (
+                                        <TableRow key={cost.id}>
+                                            <TableCell className="whitespace-nowrap">
+                                                {date(cost.paid_on)}
+                                            </TableCell>
+                                            <TableCell>
+                                                {cost.source ??
+                                                    cost.memo ??
+                                                    '–'}
+                                                {cost.recurring && (
+                                                    <Badge
+                                                        variant="info"
+                                                        className="ml-2"
                                                     >
-                                                        <Paperclip className="text-muted-foreground" />
-                                                    </a>
-                                                </Button>
-                                            )}
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                asChild
-                                            >
-                                                <Link
-                                                    href={TransactionController.edit.url(
-                                                        cost.id,
-                                                    )}
-                                                    aria-label="Edit cost"
-                                                >
-                                                    <Pencil className="text-muted-foreground" />
-                                                </Link>
-                                            </Button>
-                                            <DeleteButton
-                                                url={TransactionController.destroy.url(
-                                                    cost.id,
+                                                        recurring
+                                                    </Badge>
                                                 )}
-                                                title="Delete this cost?"
-                                                description="It is removed from the label result. A recurring cost will not book this date again."
-                                            />
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </Panel>
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground">
+                                                {cost.category ?? '–'}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {cost.converted_total ===
+                                                null ? (
+                                                    <Badge variant="destructive">
+                                                        {money(
+                                                            cost.total,
+                                                            cost.currency,
+                                                        )}{' '}
+                                                        · no rate
+                                                    </Badge>
+                                                ) : (
+                                                    <Amount
+                                                        value={
+                                                            cost.converted_total
+                                                        }
+                                                        currency={currency}
+                                                    />
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex justify-end">
+                                                    {cost.receipt_id && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            asChild
+                                                        >
+                                                            <a
+                                                                href={ReceiptController.show.url(
+                                                                    cost.receipt_id,
+                                                                )}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                title="Open receipt"
+                                                                aria-label={`Open the receipt of ${cost.source ?? cost.memo ?? 'this cost'}`}
+                                                            >
+                                                                <Paperclip className="text-muted-foreground" />
+                                                            </a>
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        asChild
+                                                    >
+                                                        <Link
+                                                            href={TransactionController.edit.url(
+                                                                cost.id,
+                                                            )}
+                                                            aria-label="Edit cost"
+                                                        >
+                                                            <Pencil className="text-muted-foreground" />
+                                                        </Link>
+                                                    </Button>
+                                                    <DeleteButton
+                                                        url={TransactionController.destroy.url(
+                                                            cost.id,
+                                                        )}
+                                                        title="Delete this cost?"
+                                                        description="It is removed from the label result. A recurring cost will not book this date again."
+                                                    />
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                            <Pagination page={costs} noun="costs" />
+                        </Panel>
+                    )}
+                </div>
             )}
         </Page>
     );

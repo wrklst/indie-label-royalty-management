@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { Pencil } from 'lucide-react';
 import TrackController from '@/actions/App/Http/Controllers/TrackController';
+import { FilterBar } from '@/components/filter-bar';
 import { DeleteButton } from '@/components/delete-button';
 import { Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
@@ -77,31 +78,20 @@ export default function Tracks({
             title="Tracks"
             description="Every recording across all releases. A recording on several releases, such as a single and an album, is listed once with all of them; pick a release to see and edit its own entry."
         >
-            <div className="flex flex-wrap items-center gap-3">
-                <Input
-                    type="search"
-                    placeholder="Search title or ISRC…"
-                    defaultValue={filters.search}
-                    onChange={(event) =>
-                        apply({ search: event.target.value }, true)
-                    }
-                    className="max-w-sm"
-                />
-                <SelectInput
-                    aria-label="Release"
-                    value={filters.release ?? ''}
-                    onChange={(event) =>
-                        apply({
-                            release: event.target.value
-                                ? Number(event.target.value)
-                                : null,
-                        })
-                    }
-                    options={releaseOptions}
-                    placeholder="All releases"
-                    className="w-72"
-                />
-            </div>
+            <FilterBar
+                url={index.url()}
+                filters={filters}
+                search="Search title or ISRC…"
+                selects={[
+                    {
+                        name: 'release',
+                        label: 'Release',
+                        placeholder: 'All releases',
+                        options: releaseOptions,
+                        className: 'w-full sm:w-72',
+                    },
+                ]}
+            />
 
             {tracks.total === 0 ? (
                 <EmptyState

@@ -11,6 +11,8 @@ use App\Services\Reports\IncomeReport;
 use App\Support\CurrentLabel;
 use App\Support\Distributors;
 use App\Support\Platforms;
+use App\Support\Sorting;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -27,9 +29,26 @@ class PlayCountController extends Controller
     /** The data export of Zebralution's analytics; it answers to whoever is signed in there. */
     private const string ZEBRALUTION_EXPORT = 'https://musicanalytics.zebralution.tools/maapidata/Export';
 
-    public function index(CurrentLabel $currentLabel): Response
+    /** How many names of tracks the catalog does not have are listed under a file. */
+    private const int UNMATCHED_SHOWN = 30;
+
+    public function index(Request $request, CurrentLabel $currentLabel): Response
     {
-        $unmatched = PlayCount::query()->whereNull('track_id')->toBase()->distinct()->orderBy('track_name')->get(['batch', 'track_name'])->groupBy('batch');
+        $sorting = Sorting::for($request, [
+            'file' => 'source_file',
+            'platform' => 'first_platform',
+            'covers' => 'starts',
+            'rows' => 'counts',
+            'plays' => 'plays',
+            'created_at' => 'created_at',
+        ], fn (Builder $query) => $query->orderByDesc('batch'));
+
+        $files = PlayCount::query()
+            ->selectRaw('batch, MAX(source_file) as source_file, MIN(platform) as first_platform, MIN(period_start) as starts, MAX(period_end) as ends, COUNT(*) as counts, COUNT(track_id) as matched, SUM(plays) as plays, MAX(created_at) as created_at')
+            ->groupBy('batch')->tap($sorting)->paginate(50)->withQueryString();
+        $batches = $files->getCollection()->pluck('batch')->all();
+        $unmatchedCounts = PlayCount::query()->whereNull('track_id')->whereIn('batch', $batches)->toBase()
+            ->selectRaw('batch, COUNT(DISTINCT track_name) as names')->groupBy('batch')->pluck('names', 'batch');
 
         // The week before the last counted day is fetched again: the latest days are still filling up.
         $latest = PlayCount::query()->max('period_end');
@@ -43,21 +62,23 @@ class PlayCountController extends Controller
                 'startdate' => $from->toDateString(), 'enddate' => now()->subDay()->toDateString(),
                 'resulttype' => 'streams', 'groupby_export' => 'track,dsp,date', 'fields' => 'streams',
             ]),
-            'files' => PlayCount::query()->toBase()
-                ->selectRaw('batch, MAX(source_file) as source_file, MIN(period_start) as starts, MAX(period_end) as ends, COUNT(*) as counts, COUNT(track_id) as matched, SUM(plays) as plays, MAX(created_at) as created_at')
-                ->groupBy('batch')->orderByDesc('batch')->get()
-                ->map(fn ($file): array => [
+            'filters' => $sorting->toArray(),
+            'files' => $files
+                ->through(fn (PlayCount $file): array => [
                     'batch' => $file->batch,
                     'source_file' => $file->source_file,
                     'platforms' => PlayCount::query()->where('batch', $file->batch)->distinct()->orderBy('platform')->pluck('platform')
                         ->map(fn (string $key): array => ['key' => $key, 'name' => Platforms::names()[$key] ?? Platforms::of(null)['name']])->all(),
-                    'starts' => substr((string) $file->starts, 0, 10),
-                    'ends' => substr((string) $file->ends, 0, 10),
-                    'counts' => (int) $file->counts,
-                    'matched' => (int) $file->matched,
+                    'starts' => substr((string) $file->getAttribute('starts'), 0, 10),
+                    'ends' => substr((string) $file->getAttribute('ends'), 0, 10),
+                    'counts' => (int) $file->getAttribute('counts'),
+                    'matched' => (int) $file->getAttribute('matched'),
                     'plays' => (int) $file->plays,
                     'created_at' => Carbon::parse($file->created_at)->toIso8601String(),
-                    'unmatched' => ($unmatched[$file->batch] ?? collect())->pluck('track_name')->take(30)->all(),
+                    'unmatched' => [
+                        'names' => PlayCount::query()->whereNull('track_id')->where('batch', $file->batch)->distinct()->orderBy('track_name')->limit(self::UNMATCHED_SHOWN)->pluck('track_name')->all(),
+                        'total' => (int) ($unmatchedCounts[$file->batch] ?? 0),
+                    ],
                 ]),
         ]);
     }

@@ -7,8 +7,10 @@ import { Amount } from '@/components/amount';
 import { IncomeReport } from '@/components/income-report';
 import type { Report } from '@/components/income-report';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
+import { Pagination } from '@/components/pagination';
 import { TrackActions } from '@/components/player/track-actions';
 import { RecordLink } from '@/components/record-link';
+import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,9 +21,12 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { country, date, dateTime, duration, plural } from '@/lib/format';
+import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
+import { count, country, date, dateTime, duration, plural } from '@/lib/format';
 import { index as airplayIndex } from '@/routes/airplays';
-import { index } from '@/routes/tracks';
+import { index, show as showTrack } from '@/routes/tracks';
+import type { Paginated } from '@/types';
 import { index as transactions } from '@/routes/transactions';
 import { ORIGINS } from '@/lib/origins';
 
@@ -78,9 +83,11 @@ type Props = {
         catalog_number: string | null;
         income: string;
     }[];
-    airplays: Airplay[];
+    airplays: Paginated<Airplay>;
+    airplayTotals: { plays: number; with_station: number; earned: string };
+    filters: Record<string, string | null>;
     openFindings: number;
-    searches: {
+    searches: Paginated<{
         id: number;
         query: string;
         region: string | null;
@@ -89,7 +96,7 @@ type Props = {
         error: string | null;
         results: number;
         created_at: string;
-    }[];
+    }>;
     searchAvailable: boolean;
 };
 
@@ -116,6 +123,8 @@ export default function ShowTrack({
     report,
     releases,
     airplays,
+    airplayTotals,
+    filters,
     openFindings,
     searches,
     searchAvailable,
@@ -125,10 +134,9 @@ export default function ShowTrack({
         ? `${track.name} (${track.version})`
         : track.name;
     const contract = track.contract ?? track.inherited_contract;
-    const airplayEarned = airplays.reduce(
-        (sum, airplay) => sum + Number(airplay.amount ?? 0),
-        0,
-    );
+    const { apply } = useFilters(showTrack.url(track.id), filters);
+    const airplaySorter = serverSorter(filters, apply, 'airplays');
+    const searchSorter = serverSorter(filters, apply, 'searches');
     const busy =
         track.research_state === 'queued' || track.research_state === 'running';
 
@@ -216,12 +224,12 @@ export default function ShowTrack({
                 />
                 <Stat
                     label="Airplay"
-                    value={airplays.length}
-                    hint={`${airplays.filter((airplay) => airplay.station !== null).length} with a known station`}
+                    value={count(airplayTotals.plays)}
+                    hint={`${count(airplayTotals.with_station)} with a known station`}
                 />
                 <Stat
                     label="Earned from airplay"
-                    value={<Amount value={airplayEarned} />}
+                    value={<Amount value={airplayTotals.earned} />}
                 />
                 <Stat
                     label="Findings to review"
@@ -358,7 +366,7 @@ export default function ShowTrack({
                 }
                 flush
             >
-                {airplays.length === 0 ? (
+                {airplays.total === 0 ? (
                     <div className="p-4">
                         <EmptyState
                             title="No airplay known yet"
@@ -366,118 +374,160 @@ export default function ShowTrack({
                         />
                     </div>
                 ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Station</TableHead>
-                                <TableHead>Known from</TableHead>
-                                <TableHead>Played</TableHead>
-                                <TableHead className="text-right">
-                                    Earned
-                                </TableHead>
-                                <TableHead>Links</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {airplays.map((airplay) => (
-                                <TableRow key={airplay.id}>
-                                    <TableCell>
-                                        {airplay.station ?? (
-                                            <span className="text-muted-foreground italic">
-                                                Unknown
-                                            </span>
-                                        )}
-                                        <p className="text-xs text-muted-foreground">
-                                            {[
-                                                airplay.media_type,
-                                                airplay.region &&
-                                                    country(airplay.region),
-                                                airplay.society,
-                                            ]
-                                                .filter(Boolean)
-                                                .join(' · ')}
-                                        </p>
-                                    </TableCell>
-                                    <TableCell>
-                                        <RecordLink
-                                            to="import"
-                                            id={
-                                                airplay.origin === 'statement'
-                                                    ? airplay.data_import_id
-                                                    : null
-                                            }
-                                            className="no-underline"
-                                        >
-                                            <Badge variant="secondary">
-                                                {ORIGINS[airplay.origin]}
-                                            </Badge>
-                                        </RecordLink>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {airplay.period_start
-                                            ? airplay.period_end &&
-                                              airplay.period_end !==
-                                                  airplay.period_start
-                                                ? `${date(airplay.period_start)} – ${date(airplay.period_end)}`
-                                                : date(airplay.period_start)
-                                            : '–'}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {airplay.amount === null ? (
-                                            '–'
-                                        ) : (
-                                            <Amount value={airplay.amount} />
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="max-w-sm whitespace-normal">
-                                        {airplay.links.length === 0
-                                            ? '–'
-                                            : airplay.links.map((link) => (
-                                                  <a
-                                                      key={link.url}
-                                                      href={link.url}
-                                                      target="_blank"
-                                                      rel="noreferrer noopener"
-                                                      className="flex items-center gap-1 text-sm hover:underline"
-                                                  >
-                                                      <span className="truncate">
-                                                          {link.title ??
-                                                              link.url}
-                                                      </span>
-                                                      <ExternalLink className="size-3 shrink-0" />
-                                                  </a>
-                                              ))}
-                                        {airplay.notes && (
-                                            <p className="text-xs text-muted-foreground">
-                                                {airplay.notes}
-                                            </p>
-                                        )}
-                                    </TableCell>
+                    <>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <SortableHead
+                                        column="station"
+                                        sorter={airplaySorter}
+                                    >
+                                        Station
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="origin"
+                                        sorter={airplaySorter}
+                                    >
+                                        Known from
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="period"
+                                        sorter={airplaySorter}
+                                    >
+                                        Played
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="amount"
+                                        sorter={airplaySorter}
+                                        className="text-right"
+                                    >
+                                        Earned
+                                    </SortableHead>
+                                    <TableHead>Links</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {airplays.data.map((airplay) => (
+                                    <TableRow key={airplay.id}>
+                                        <TableCell>
+                                            {airplay.station ?? (
+                                                <span className="text-muted-foreground italic">
+                                                    Unknown
+                                                </span>
+                                            )}
+                                            <p className="text-xs text-muted-foreground">
+                                                {[
+                                                    airplay.media_type,
+                                                    airplay.region &&
+                                                        country(airplay.region),
+                                                    airplay.society,
+                                                ]
+                                                    .filter(Boolean)
+                                                    .join(' · ')}
+                                            </p>
+                                        </TableCell>
+                                        <TableCell>
+                                            <RecordLink
+                                                to="import"
+                                                id={
+                                                    airplay.origin ===
+                                                    'statement'
+                                                        ? airplay.data_import_id
+                                                        : null
+                                                }
+                                                className="no-underline"
+                                            >
+                                                <Badge variant="secondary">
+                                                    {ORIGINS[airplay.origin]}
+                                                </Badge>
+                                            </RecordLink>
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {airplay.period_start
+                                                ? airplay.period_end &&
+                                                  airplay.period_end !==
+                                                      airplay.period_start
+                                                    ? `${date(airplay.period_start)} – ${date(airplay.period_end)}`
+                                                    : date(airplay.period_start)
+                                                : '–'}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {airplay.amount === null ? (
+                                                '–'
+                                            ) : (
+                                                <Amount
+                                                    value={airplay.amount}
+                                                />
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="max-w-sm whitespace-normal">
+                                            {airplay.links.length === 0
+                                                ? '–'
+                                                : airplay.links.map((link) => (
+                                                      <a
+                                                          key={link.url}
+                                                          href={link.url}
+                                                          target="_blank"
+                                                          rel="noreferrer noopener"
+                                                          className="flex items-center gap-1 text-sm hover:underline"
+                                                      >
+                                                          <span className="truncate">
+                                                              {link.title ??
+                                                                  link.url}
+                                                          </span>
+                                                          <ExternalLink className="size-3 shrink-0" />
+                                                      </a>
+                                                  ))}
+                                            {airplay.notes && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    {airplay.notes}
+                                                </p>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        <Pagination page={airplays} noun="plays" />
+                    </>
                 )}
             </Panel>
 
             <IncomeReport report={report} />
 
-            {searches.length > 0 && (
+            {searches.total > 0 && (
                 <Panel
                     title="Research log"
-                    description="The last searches run for this track."
+                    description="Every search run for this track."
                     flush
                 >
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>When</TableHead>
-                                <TableHead>Searched</TableHead>
-                                <TableHead>Result</TableHead>
+                                <SortableHead
+                                    column="created_at"
+                                    sorter={searchSorter}
+                                    first="desc"
+                                >
+                                    When
+                                </SortableHead>
+                                <SortableHead
+                                    column="query"
+                                    sorter={searchSorter}
+                                >
+                                    Searched
+                                </SortableHead>
+                                <SortableHead
+                                    column="result"
+                                    sorter={searchSorter}
+                                    first="desc"
+                                >
+                                    Result
+                                </SortableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {searches.map((entry) => (
+                            {searches.data.map((entry) => (
                                 <TableRow key={entry.id}>
                                     <TableCell className="text-muted-foreground">
                                         {dateTime(entry.created_at)}
@@ -503,6 +553,7 @@ export default function ShowTrack({
                             ))}
                         </TableBody>
                     </Table>
+                    <Pagination page={searches} noun="searches" />
                 </Panel>
             )}
         </Page>

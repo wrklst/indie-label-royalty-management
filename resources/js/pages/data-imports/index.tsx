@@ -1,6 +1,9 @@
 import { Link } from '@inertiajs/react';
 import { Upload } from 'lucide-react';
+import DataImportController from '@/actions/App/Http/Controllers/DataImportController';
+import { FilterBar } from '@/components/filter-bar';
 import { Amount } from '@/components/amount';
+import { DeleteButton } from '@/components/delete-button';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
 import { SortableHead } from '@/components/sortable-head';
@@ -10,6 +13,7 @@ import {
     Table,
     TableBody,
     TableCell,
+    TableHead,
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
@@ -26,6 +30,7 @@ type DataImport = {
     importer_name: string;
     original_filename: string | null;
     status: 'pending' | 'imported' | 'review' | 'failed' | 'deleted';
+    rows_count: number;
     transactions_count: number;
     duplicates_count: number;
     errors_count: number;
@@ -69,12 +74,24 @@ export function ImportStatusBadge({
 export default function DataImports({
     imports,
     filters,
+    sourceOptions,
 }: {
     imports: Paginated<DataImport>;
-    filters: { sort: string | null; direction: SortDirection | null };
+    filters: {
+        search: string;
+        source: string;
+        status: string | null;
+        sort: string | null;
+        direction: SortDirection | null;
+    };
+    sourceOptions: { id: string; name: string }[];
 }) {
     const { apply } = useFilters(index.url(), filters);
     const sorter = serverSorter(filters, apply);
+    const filtered =
+        filters.search !== '' ||
+        filters.source !== '' ||
+        filters.status !== null;
 
     return (
         <Page
@@ -89,14 +106,51 @@ export default function DataImports({
                 </Button>
             }
         >
+            <FilterBar
+                url={index.url()}
+                filters={filters}
+                search="Search name or file name…"
+                selects={[
+                    {
+                        name: 'source',
+                        label: 'Source',
+                        placeholder: 'All sources',
+                        options: sourceOptions,
+                    },
+                    {
+                        name: 'status',
+                        label: 'Status',
+                        placeholder: 'Any status',
+                        className: 'w-full sm:w-48',
+                        children: (
+                            <>
+                                <option value="imported">Imported</option>
+                                <option value="review">
+                                    Duplicates to review
+                                </option>
+                                <option value="pending">Pending</option>
+                                <option value="failed">Failed</option>
+                                <option value="deleted">Deleted</option>
+                            </>
+                        ),
+                    },
+                ]}
+            />
+
             {imports.total === 0 ? (
                 <EmptyState
-                    title="No imports yet"
-                    description="Upload a statement from your distributor, Bandcamp or a neighbouring rights society, or a spreadsheet in the template layout."
+                    title={filtered ? 'No import matches' : 'No imports yet'}
+                    description={
+                        filtered
+                            ? undefined
+                            : 'Upload a statement from your distributor, Bandcamp or a neighbouring rights society, or a spreadsheet in the template layout.'
+                    }
                     action={
-                        <Button asChild>
-                            <Link href={create()}>Import a statement</Link>
-                        </Button>
+                        filtered ? undefined : (
+                            <Button asChild>
+                                <Link href={create()}>Import a statement</Link>
+                            </Button>
+                        )
                     }
                 />
             ) : (
@@ -105,7 +159,7 @@ export default function DataImports({
                         <TableHeader>
                             <TableRow>
                                 <SortableHead column="name" sorter={sorter}>
-                                    Import
+                                    File
                                 </SortableHead>
                                 <SortableHead column="importer" sorter={sorter}>
                                     Source
@@ -119,6 +173,14 @@ export default function DataImports({
                                     first="desc"
                                 >
                                     Paid date
+                                </SortableHead>
+                                <SortableHead
+                                    column="rows_count"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
+                                    Rows
                                 </SortableHead>
                                 <SortableHead
                                     column="transactions_count"
@@ -151,6 +213,7 @@ export default function DataImports({
                                 >
                                     Uploaded
                                 </SortableHead>
+                                <TableHead className="w-12" />
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -188,6 +251,9 @@ export default function DataImports({
                                             : 'From file'}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
+                                        {count(dataImport.rows_count)}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums">
                                         {count(dataImport.transactions_count)}
                                     </TableCell>
                                     <TableCell className="text-right text-muted-foreground tabular-nums">
@@ -203,6 +269,15 @@ export default function DataImports({
                                                 {dataImport.user}
                                             </span>
                                         )}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <DeleteButton
+                                            url={DataImportController.destroy.url(
+                                                dataImport.id,
+                                            )}
+                                            title={`Delete ${dataImport.name}?`}
+                                            description={`The transactions it created (${count(dataImport.transactions_count)}) are removed. Periods that included them change accordingly.`}
+                                        />
                                     </TableCell>
                                 </TableRow>
                             ))}

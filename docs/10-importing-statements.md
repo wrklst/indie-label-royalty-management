@@ -121,9 +121,13 @@ On the upload form, choosing the spreadsheet template as the source shows the li
 | `external id`                          |                              | The other side's reference                           |
 | `region`                               | `DE`                         | Two-letter country code                              |
 
+## The list of imports
+
+**Royalties → Data imports** lists every upload, 50 to a page, with the columns **File**, **Source**, **Status**, **Paid date**, **Rows**, **Transactions**, **Skipped duplicates**, **Total** and **Uploaded**. Click a heading to sort by it. Above the table, search a name or file name, choose a **Source** or a **Status**, and use **Clear filters** to start over. The same columns, with the same name **Uploaded**, are used for the files of [Play counts](12-reports-and-play-counts.md) and the earlier runs of the [royalty tools](34-mechanicals-ppd-and-reserves.md).
+
 ## Undoing an import
 
-Open the import and choose **Delete import**. That removes exactly the transactions the import created, nothing else. Releases and tracks it created stay, because other data may refer to them by now.
+Choose the bin at the end of a row of the list, or open the import and choose **Delete import**. That removes exactly the transactions the import created, nothing else. Releases and tracks it created stay, because other data may refer to them by now.
 
 To import a corrected file, delete the old import first and upload the new file.
 

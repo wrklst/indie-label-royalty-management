@@ -128,7 +128,7 @@ Generating again creates a new revision instead of changing the old statement:
 - A statement that replaced an earlier one is marked **Revised** in the list.
 - **Regenerate all statements** also archives the draft of a payee who no longer has anything to state.
 
-**Royalties → Statements** lists the current statements with **Payee**, **Period**, **Status**, **Generated**, **Balance** and **Payable**. Tick **Include archived revisions** to see the history. An archived revision cannot be published. The button **My statements** above the list shows what payees see of the published ones.
+**Royalties → Statements** lists the current statements with **Payee**, **Period**, **Status**, **Generated**, **Balance** and **Payable**. Choose a **Period** or a **Payee** to narrow the list, and tick **Archived** to include the history. **Clear filters** resets them. An archived revision cannot be published. The button **My statements** above the list shows what payees see of the published ones.
 
 ## Publishing and downloading
 
@@ -162,7 +162,7 @@ Rules:
 - It is booked against the payee's ledgers, largest balance first. Unrecouped ledgers are never touched.
 - An amount already paid on a later period cannot be paid again on an earlier one.
 
-**Royalties → Payouts** lists all payouts with the ledgers they were **Booked to** and who recorded them.
+**Royalties → Payouts** lists all payouts with the ledgers they were **Booked to** and who recorded them, 50 to a page. Choose a **Period** or a **Payee** to narrow the list; **Clear filters** resets it.
 
 ## Deleting
 

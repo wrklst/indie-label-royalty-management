@@ -29,7 +29,7 @@ class ReservesController extends ToolController
         $input = $request->hasAny(['from', 'to']) ? $request->validate($this->rangeRules()) : null;
 
         return Inertia::render('royalty-tools/reserves', [
-            ...$this->common($label, $input['from'] ?? null, $input['to'] ?? null),
+            ...$this->common($request, $label, $input['from'] ?? null, $input['to'] ?? null),
             'filters' => ['from' => $input['from'] ?? null, 'to' => $input['to'] ?? null],
             'report' => $input === null ? null : $this->reserves->report($label, $input['from'], $input['to']),
             'balances' => $this->reserves->balances($label),

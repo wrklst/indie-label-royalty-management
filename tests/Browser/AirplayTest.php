@@ -114,6 +114,7 @@ test('an airplay leads to its track, the track to its artist, and back to its ai
         ->click('Example Track')
         ->assertPathIs("/tracks/{$track->id}")
         ->click('Manage airplay and findings')
-        ->assertSee('Showing only')
+        ->assertQueryStringHas('track', (string) $track->id)
+        ->assertSee('Clear filters')
         ->assertNoJavaScriptErrors();
 });

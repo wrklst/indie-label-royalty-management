@@ -43,7 +43,7 @@ test('the statement list shows current statements, newest first', function () {
             ->where('statements.data.1.revision_of_id', $archived->id)
             ->where('statements.data.1.balance', '70.000000000000000')
             ->where('statements.data.1.payable', '50.000000000000000')
-            ->where('filters', ['archived' => false, 'period' => null, 'sort' => null, 'direction' => null]));
+            ->where('filters', ['archived' => false, 'period' => null, 'payee' => null, 'sort' => null, 'direction' => null]));
 });
 
 test('the statement list includes archived statements on request', function () {
@@ -58,7 +58,7 @@ test('the statement list includes archived statements on request', function () {
             ->where('statements.data.0.id', $current->id)
             ->where('statements.data.1.id', $archived->id)
             ->where('statements.data.1.archived', true)
-            ->where('filters', ['archived' => true, 'period' => null, 'sort' => null, 'direction' => null]));
+            ->where('filters', ['archived' => true, 'period' => null, 'payee' => null, 'sort' => null, 'direction' => null]));
 });
 
 test('the statement list can be limited to one period', function () {
@@ -73,7 +73,7 @@ test('the statement list can be limited to one period', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->has('statements.data', 1)
             ->where('statements.data.0.id', $wanted->id)
-            ->where('filters', ['archived' => false, 'period' => $second->id, 'sort' => null, 'direction' => null]));
+            ->where('filters', ['archived' => false, 'period' => $second->id, 'payee' => null, 'sort' => null, 'direction' => null]));
 });
 
 test('a statement shows its stored snapshot', function () {

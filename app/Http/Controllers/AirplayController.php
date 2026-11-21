@@ -86,8 +86,18 @@ class AirplayController extends Controller
             'releases' => Release::query()->orderBy('name')->get(['id', 'name']),
             'staleCount' => $research->stale(Track::query())->count(),
             'staleDays' => AirplayResearch::STALE_DAYS,
-            'filters' => ['track' => $only?->id, ...$sorting->toArray()],
-            'airplays' => Airplay::query()->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with('track:id,artist_id')->tap($sorting)->paginate(50)->withQueryString()
+            'filters' => [
+                'search' => $request->string('search')->value(),
+                'track' => $only?->id,
+                'origin' => AirplayOrigin::tryFrom((string) $request->query('origin'))?->value,
+                ...$sorting->toArray(),
+            ],
+            'airplays' => Airplay::query()->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with('track:id,artist_id')
+                ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
+                    ->where('track_name', 'like', "%{$search}%")->orWhere('artist_name', 'like', "%{$search}%")
+                    ->orWhere('station', 'like', "%{$search}%")->orWhere('isrc', 'like', '%'.str_replace('-', '', $search).'%')))
+                ->when(AirplayOrigin::tryFrom((string) $request->query('origin')), fn ($query, AirplayOrigin $origin) => $query->where('origin', $origin))
+                ->tap($sorting)->paginate(50)->withQueryString()
                 ->through(fn (Airplay $airplay): array => [
                     ...$airplay->only(['id', 'origin', 'track_id', 'track_name', 'artist_name', 'isrc', 'station', 'media_type', 'region', 'society', 'amount', 'notes', 'data_import_id']),
                     'period_start' => $airplay->period_start?->toDateString(),
@@ -104,7 +114,6 @@ class AirplayController extends Controller
                     'id' => $track->id,
                     'name' => collect([ArtistCredits::display($track), $track->name])->filter()->implode(' – '),
                 ]),
-            'onlyTrack' => $only?->only(['id', 'name']),
             'searchAvailable' => $search->isConfigured(),
         ]);
     }

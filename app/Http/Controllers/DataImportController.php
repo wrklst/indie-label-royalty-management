@@ -40,6 +40,7 @@ class DataImportController extends Controller
             'importer' => 'importer',
             'status' => 'status',
             'default_paid_timestamp' => Sorting::nullsLast('default_paid_timestamp'),
+            'rows_count' => 'rows_count',
             'transactions_count' => 'transactions_count',
             'duplicates_count' => 'duplicates_count',
             'total' => 'total',
@@ -51,6 +52,10 @@ class DataImportController extends Controller
         return Inertia::render('data-imports/index', [
             'imports' => DataImport::query()
                 ->with('user:id,name')
+                ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
+                    ->where('name', 'like', "%{$search}%")->orWhere('original_filename', 'like', "%{$search}%")))
+                ->when($request->string('source')->value(), fn ($query, string $source) => $query->where('importer', $source))
+                ->when(ImportStatus::tryFrom((string) $request->query('status')), fn ($query, ImportStatus $status) => $query->where('status', $status))
                 ->tap($sorting)
                 ->paginate(50)
                 ->withQueryString()
@@ -62,7 +67,15 @@ class DataImportController extends Controller
                     'created_at' => $import->created_at->toIso8601String(),
                     'user' => $import->user?->name,
                 ]),
-            'filters' => $sorting->toArray(),
+            'filters' => [
+                'search' => $request->string('search')->value(),
+                'source' => $request->string('source')->value(),
+                'status' => ImportStatus::tryFrom((string) $request->query('status'))?->value,
+                ...$sorting->toArray(),
+            ],
+            'sourceOptions' => DataImport::query()->distinct()->orderBy('importer')->pluck('importer')
+                ->map(fn (string $importer): array => ['id' => $importer, 'name' => $names[$importer] ?? RoyaltyTool::importerName($importer) ?? $importer])
+                ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values(),
         ]);
     }
 

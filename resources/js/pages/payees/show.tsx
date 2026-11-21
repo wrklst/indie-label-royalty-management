@@ -5,6 +5,7 @@ import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
 import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
+import { Pagination } from '@/components/pagination';
 import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
@@ -16,14 +17,15 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { useTableSort } from '@/hooks/use-table-sort';
+import { useFilters } from '@/hooks/use-filters';
+import { serverSorter, useTableSort } from '@/hooks/use-table-sort';
 import { date, percent } from '@/lib/format';
 import { edit as editContract } from '@/routes/contracts';
-import { index } from '@/routes/payees';
+import { index, show as showPayee } from '@/routes/payees';
 import { payee as periodPayee } from '@/routes/periods';
 import { show as showStatement } from '@/routes/statements';
 import { create as createTransaction } from '@/routes/transactions';
-import type { PayeeTotals, StatementLedger } from '@/types';
+import type { Paginated, PayeeTotals, StatementLedger } from '@/types';
 import { PayeeFields } from './index';
 import type { Payee } from './index';
 
@@ -44,21 +46,21 @@ type Props = {
         used_by: string[];
         used_by_links: { to: 'release' | 'track'; id: number; name: string }[];
     }[];
-    payouts: {
+    payouts: Paginated<{
         id: number;
         total: string;
         paid_on: string;
         period: string | null;
         memo: string | null;
-    }[];
-    statements: {
+    }>;
+    statements: Paginated<{
         id: number;
         name: string;
         period: string | null;
         payable: string;
         published: boolean;
-    }[];
-    transfers: {
+    }>;
+    transfers: Paginated<{
         id: number;
         paid_timestamp: string;
         total: string;
@@ -69,7 +71,8 @@ type Props = {
         release: string | null;
         release_id: number | null;
         ledger: string | null;
-    }[];
+    }>;
+    filters: Record<string, string | null>;
 };
 
 type LedgerRow = Omit<StatementLedger, 'releases'>;
@@ -93,15 +96,6 @@ const SPLIT_COLUMNS = {
     used_by: (row: Props['splits'][number]) => row.used_by.join(', '),
 };
 
-const TRANSFER_COLUMNS = {
-    paid_timestamp: (row: Props['transfers'][number]) => row.paid_timestamp,
-    category: (row: Props['transfers'][number]) => row.category,
-    release: (row: Props['transfers'][number]) => row.release,
-    ledger: (row: Props['transfers'][number]) => row.ledger ?? 'From contract',
-    memo: (row: Props['transfers'][number]) => row.memo,
-    amount: (row: Props['transfers'][number]) => row.converted_total,
-};
-
 export default function ShowPayee({
     payee,
     period,
@@ -110,7 +104,12 @@ export default function ShowPayee({
     payouts,
     statements,
     transfers,
+    filters,
 }: Props) {
+    const { apply } = useFilters(showPayee.url(payee.id), filters);
+    const statementSorter = serverSorter(filters, apply, 'statements');
+    const payoutSorter = serverSorter(filters, apply, 'payouts');
+    const transferSorter = serverSorter(filters, apply, 'transfers');
     const { rows: ledgerRows, sorter: ledgerSorter } = useTableSort(
         summary?.ledgers ?? NO_LEDGERS,
         LEDGER_COLUMNS,
@@ -118,10 +117,6 @@ export default function ShowPayee({
     const { rows: splitRows, sorter: splitSorter } = useTableSort(
         splits,
         SPLIT_COLUMNS,
-    );
-    const { rows: transferRows, sorter: transferSorter } = useTableSort(
-        transfers,
-        TRANSFER_COLUMNS,
     );
 
     setLayoutProps({
@@ -403,70 +398,133 @@ export default function ShowPayee({
 
             <div className="grid gap-6 xl:grid-cols-2">
                 <Panel title="Statements" flush>
-                    {statements.length === 0 ? (
+                    {statements.total === 0 ? (
                         <EmptyState
                             compact
                             title="No statements generated yet."
                         />
                     ) : (
-                        <Table>
-                            <TableBody>
-                                {statements.map((statement) => (
-                                    <TableRow key={statement.id}>
-                                        <TableCell>
-                                            <Link
-                                                href={showStatement(
-                                                    statement.id,
-                                                )}
-                                                className="font-medium underline decoration-muted-foreground/40 underline-offset-4"
-                                            >
-                                                {statement.period}
-                                            </Link>
-                                        </TableCell>
-                                        <TableCell>
-                                            {statement.published ? (
-                                                <Badge variant="success">
-                                                    Published
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="warning">
-                                                    Draft
-                                                </Badge>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Amount value={statement.payable} />
-                                        </TableCell>
+                        <>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <SortableHead
+                                            column="period"
+                                            sorter={statementSorter}
+                                        >
+                                            Period
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="status"
+                                            sorter={statementSorter}
+                                        >
+                                            Status
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="payable"
+                                            sorter={statementSorter}
+                                            first="desc"
+                                            className="text-right"
+                                        >
+                                            Payable
+                                        </SortableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {statements.data.map((statement) => (
+                                        <TableRow key={statement.id}>
+                                            <TableCell>
+                                                <Link
+                                                    href={showStatement(
+                                                        statement.id,
+                                                    )}
+                                                    className="font-medium underline decoration-muted-foreground/40 underline-offset-4"
+                                                >
+                                                    {statement.period}
+                                                </Link>
+                                            </TableCell>
+                                            <TableCell>
+                                                {statement.published ? (
+                                                    <Badge variant="success">
+                                                        Published
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="warning">
+                                                        Draft
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Amount
+                                                    value={statement.payable}
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                            <Pagination page={statements} noun="statements" />
+                        </>
                     )}
                 </Panel>
                 <Panel title="Payouts" flush>
-                    {payouts.length === 0 ? (
+                    {payouts.total === 0 ? (
                         <EmptyState compact title="Nothing paid out yet." />
                     ) : (
-                        <Table>
-                            <TableBody>
-                                {payouts.map((payout) => (
-                                    <TableRow key={payout.id}>
-                                        <TableCell>
-                                            {date(payout.paid_on)}
-                                        </TableCell>
-                                        <TableCell className="text-muted-foreground">
-                                            {payout.period}
-                                        </TableCell>
-                                        <TableCell className="text-muted-foreground">
-                                            {payout.memo}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Amount value={payout.total} />
-                                        </TableCell>
+                        <>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <SortableHead
+                                            column="paid_on"
+                                            sorter={payoutSorter}
+                                            first="desc"
+                                        >
+                                            Paid date
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="period"
+                                            sorter={payoutSorter}
+                                        >
+                                            Period
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="memo"
+                                            sorter={payoutSorter}
+                                        >
+                                            Memo
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="total"
+                                            sorter={payoutSorter}
+                                            first="desc"
+                                            className="text-right"
+                                        >
+                                            Amount
+                                        </SortableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {payouts.data.map((payout) => (
+                                        <TableRow key={payout.id}>
+                                            <TableCell>
+                                                {date(payout.paid_on)}
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground">
+                                                {payout.period ?? '–'}
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground">
+                                                {payout.memo ?? '–'}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Amount value={payout.total} />
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                            <Pagination page={payouts} noun="payouts" />
+                        </>
                     )}
                 </Panel>
             </div>
@@ -476,96 +534,103 @@ export default function ShowPayee({
                 description="Advances, paybacks and opening balances. Negative amounts were given to the payee and reduce what they are owed."
                 flush
             >
-                {transfers.length === 0 ? (
+                {transfers.total === 0 ? (
                     <EmptyState compact title="No transfers." />
                 ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <SortableHead
-                                    column="paid_timestamp"
-                                    sorter={transferSorter}
-                                    first="desc"
-                                >
-                                    Paid date
-                                </SortableHead>
-                                <SortableHead
-                                    column="category"
-                                    sorter={transferSorter}
-                                >
-                                    Category
-                                </SortableHead>
-                                <SortableHead
-                                    column="release"
-                                    sorter={transferSorter}
-                                >
-                                    Release
-                                </SortableHead>
-                                <SortableHead
-                                    column="ledger"
-                                    sorter={transferSorter}
-                                >
-                                    Ledger
-                                </SortableHead>
-                                <SortableHead
-                                    column="memo"
-                                    sorter={transferSorter}
-                                >
-                                    Memo
-                                </SortableHead>
-                                <SortableHead
-                                    column="amount"
-                                    sorter={transferSorter}
-                                    first="desc"
-                                    className="text-right"
-                                >
-                                    Amount
-                                </SortableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {transferRows.map((transfer) => (
-                                <TableRow key={transfer.id}>
-                                    <TableCell>
-                                        {date(transfer.paid_timestamp)}
-                                    </TableCell>
-                                    <TableCell>
-                                        {transfer.category ?? '–'}
-                                    </TableCell>
-                                    <TableCell>
-                                        {transfer.release ? (
-                                            <RecordLink
-                                                to="release"
-                                                id={transfer.release_id}
-                                            >
-                                                {transfer.release}
-                                            </RecordLink>
-                                        ) : (
-                                            '–'
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        {transfer.ledger ?? 'From contract'}
-                                    </TableCell>
-                                    <TableCell className="max-w-sm truncate text-muted-foreground">
-                                        {transfer.memo}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {transfer.converted_total === null ? (
-                                            <Badge variant="destructive">
-                                                {transfer.total}{' '}
-                                                {transfer.currency} unconverted
-                                            </Badge>
-                                        ) : (
-                                            <Amount
-                                                value={transfer.converted_total}
-                                            />
-                                        )}
-                                    </TableCell>
+                    <>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <SortableHead
+                                        column="paid_timestamp"
+                                        sorter={transferSorter}
+                                        first="desc"
+                                    >
+                                        Paid date
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="category"
+                                        sorter={transferSorter}
+                                    >
+                                        Category
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="release"
+                                        sorter={transferSorter}
+                                    >
+                                        Release
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="ledger"
+                                        sorter={transferSorter}
+                                    >
+                                        Ledger
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="memo"
+                                        sorter={transferSorter}
+                                    >
+                                        Memo
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="amount"
+                                        sorter={transferSorter}
+                                        first="desc"
+                                        className="text-right"
+                                    >
+                                        Amount
+                                    </SortableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {transfers.data.map((transfer) => (
+                                    <TableRow key={transfer.id}>
+                                        <TableCell>
+                                            {date(transfer.paid_timestamp)}
+                                        </TableCell>
+                                        <TableCell>
+                                            {transfer.category ?? '–'}
+                                        </TableCell>
+                                        <TableCell>
+                                            {transfer.release ? (
+                                                <RecordLink
+                                                    to="release"
+                                                    id={transfer.release_id}
+                                                >
+                                                    {transfer.release}
+                                                </RecordLink>
+                                            ) : (
+                                                '–'
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {transfer.ledger ?? 'From contract'}
+                                        </TableCell>
+                                        <TableCell className="max-w-sm truncate text-muted-foreground">
+                                            {transfer.memo}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {transfer.converted_total ===
+                                            null ? (
+                                                <Badge variant="destructive">
+                                                    {transfer.total}{' '}
+                                                    {transfer.currency}{' '}
+                                                    unconverted
+                                                </Badge>
+                                            ) : (
+                                                <Amount
+                                                    value={
+                                                        transfer.converted_total
+                                                    }
+                                                />
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        <Pagination page={transfers} noun="transfers" />
+                    </>
                 )}
             </Panel>
         </Page>

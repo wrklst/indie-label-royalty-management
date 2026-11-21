@@ -3,14 +3,13 @@ import { Pencil, Plus } from 'lucide-react';
 import TransactionController from '@/actions/App/Http/Controllers/TransactionController';
 import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
-import { CheckField, SelectInput } from '@/components/field';
+import { FilterBar } from '@/components/filter-bar';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
 import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
@@ -52,6 +51,7 @@ type Filters = {
     search?: string;
     type?: string;
     release?: string;
+    track?: string;
     retailer?: string;
     import?: string;
     from?: string;
@@ -70,9 +70,8 @@ type Props = {
     releaseOptions: Option[];
     platformOptions: { id: string; name: string }[];
     importOptions: Option[];
+    trackOptions: Option[];
 };
-
-const isOn = (value: string | undefined) => value === '1' || value === 'true';
 
 export default function Transactions({
     transactions,
@@ -81,6 +80,7 @@ export default function Transactions({
     releaseOptions,
     platformOptions,
     importOptions,
+    trackOptions,
 }: Props) {
     const { apply } = useFilters(index.url(), filters);
     const sorter = serverSorter(filters, apply);
@@ -130,116 +130,53 @@ export default function Transactions({
                 </>
             }
         >
-            <div className="grid gap-3">
-                <div className="flex flex-wrap items-center gap-3">
-                    <Input
-                        type="search"
-                        placeholder="Search memo, platform, track, release, ISRC…"
-                        defaultValue={filters.search ?? ''}
-                        onChange={(event) =>
-                            apply({ search: event.target.value }, true)
-                        }
-                        className="max-w-sm"
-                    />
-                    <SelectInput
-                        aria-label="Type"
-                        value={filters.type ?? ''}
-                        onChange={(event) =>
-                            apply({ type: event.target.value })
-                        }
-                        placeholder="All types"
-                        options={['income', 'expense', 'transfer']}
-                        className="w-36 capitalize"
-                    />
-                    <SelectInput
-                        aria-label="Release"
-                        value={filters.release ?? ''}
-                        onChange={(event) =>
-                            apply({ release: event.target.value })
-                        }
-                        placeholder="All releases"
-                        options={releaseOptions}
-                        className="w-64"
-                    />
-                    <SelectInput
-                        aria-label="Platform"
-                        value={filters.retailer ?? ''}
-                        onChange={(event) =>
-                            apply({ retailer: event.target.value })
-                        }
-                        placeholder="All platforms"
-                        options={platformOptions}
-                        className="w-48"
-                    />
-                    <SelectInput
-                        aria-label="Import"
-                        value={filters.import ?? ''}
-                        onChange={(event) =>
-                            apply({ import: event.target.value })
-                        }
-                        placeholder="All imports"
-                        options={importOptions}
-                        className="w-56"
-                    />
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                    <SelectInput
-                        aria-label="Date used"
-                        value={filters.date ?? ''}
-                        onChange={(event) =>
-                            apply({ date: event.target.value })
-                        }
-                        className="w-36"
-                    >
-                        <option value="">Sale date</option>
-                        <option value="paid">Paid date</option>
-                    </SelectInput>
-                    <Input
-                        aria-label="From"
-                        type="date"
-                        key={filters.from ?? ''}
-                        defaultValue={filters.from ?? ''}
-                        onChange={(event) =>
-                            apply({ from: event.target.value }, true)
-                        }
-                        className="w-40"
-                    />
-                    <span className="text-sm text-muted-foreground">to</span>
-                    <Input
-                        aria-label="To"
-                        type="date"
-                        key={filters.to ?? ''}
-                        defaultValue={filters.to ?? ''}
-                        onChange={(event) =>
-                            apply({ to: event.target.value }, true)
-                        }
-                        className="w-40"
-                    />
-                    <CheckField
-                        label="Unassigned"
-                        checked={isOn(filters.unassigned)}
-                        onChange={(event) =>
-                            apply({
-                                unassigned: event.target.checked ? '1' : '',
-                            })
-                        }
-                    />
-                    <CheckField
-                        label="Unconverted"
-                        checked={isOn(filters.unconverted)}
-                        onChange={(event) =>
-                            apply({
-                                unconverted: event.target.checked ? '1' : '',
-                            })
-                        }
-                    />
-                    {filtered && (
-                        <Button variant="ghost" size="sm" asChild>
-                            <Link href={index()}>Clear filters</Link>
-                        </Button>
-                    )}
-                </div>
-            </div>
+            <FilterBar
+                url={index.url()}
+                filters={filters}
+                search="Search memo, platform, track, release, ISRC…"
+                selects={[
+                    {
+                        name: 'type',
+                        label: 'Type',
+                        placeholder: 'All types',
+                        options: ['income', 'expense', 'transfer'],
+                        className: 'w-full capitalize sm:w-36',
+                    },
+                    {
+                        name: 'release',
+                        label: 'Release',
+                        placeholder: 'All releases',
+                        options: releaseOptions,
+                        className: 'w-full sm:w-64',
+                    },
+                    {
+                        name: 'track',
+                        label: 'Track',
+                        placeholder: 'All tracks',
+                        options: trackOptions,
+                        className: 'w-full sm:w-64',
+                    },
+                    {
+                        name: 'retailer',
+                        label: 'Platform',
+                        placeholder: 'All platforms',
+                        options: platformOptions,
+                        className: 'w-full sm:w-48',
+                    },
+                    {
+                        name: 'import',
+                        label: 'Import',
+                        placeholder: 'All imports',
+                        options: importOptions,
+                        className: 'w-full sm:w-56',
+                    },
+                ]}
+                checks={[
+                    { name: 'unassigned', label: 'Unassigned' },
+                    { name: 'unconverted', label: 'Unconverted' },
+                ]}
+                dates
+            />
 
             {transactions.total === 0 ? (
                 <EmptyState

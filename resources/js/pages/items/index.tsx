@@ -1,9 +1,10 @@
 import { Link2 } from 'lucide-react';
 import { useState } from 'react';
 import ItemController from '@/actions/App/Http/Controllers/ItemController';
+import { FilterBar } from '@/components/filter-bar';
 import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
-import { CheckField, Field, SelectInput } from '@/components/field';
+import { Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { RecordLink } from '@/components/record-link';
 import { EmptyState, Notice, Page, Panel } from '@/components/page';
@@ -11,7 +12,6 @@ import { Pagination } from '@/components/pagination';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
@@ -185,38 +185,21 @@ export default function Items({
                 </Notice>
             )}
 
-            <div className="flex flex-wrap items-center gap-3">
-                <Input
-                    type="search"
-                    placeholder="Search name, ISRC, UPC…"
-                    defaultValue={filters.search}
-                    onChange={(event) =>
-                        apply({ search: event.target.value }, true)
-                    }
-                    className="max-w-sm"
-                />
-                <SelectInput
-                    aria-label="Release"
-                    value={filters.release ?? ''}
-                    onChange={(event) =>
-                        apply({
-                            release: event.target.value
-                                ? Number(event.target.value)
-                                : null,
-                        })
-                    }
-                    options={releaseOptions}
-                    placeholder="All releases"
-                    className="w-72"
-                />
-                <CheckField
-                    label="Unassigned only"
-                    checked={filters.unassigned}
-                    onChange={(event) =>
-                        apply({ unassigned: event.target.checked })
-                    }
-                />
-            </div>
+            <FilterBar
+                url={index.url()}
+                filters={filters}
+                search="Search name, ISRC, UPC…"
+                selects={[
+                    {
+                        name: 'release',
+                        label: 'Release',
+                        placeholder: 'All releases',
+                        options: releaseOptions,
+                        className: 'w-full sm:w-72',
+                    },
+                ]}
+                checks={[{ name: 'unassigned', label: 'Unassigned' }]}
+            />
 
             {items.total === 0 ? (
                 <EmptyState

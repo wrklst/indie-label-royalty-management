@@ -14,6 +14,8 @@ use App\Services\Royalties\PayoutService;
 use App\Services\Royalties\RoyaltyCalculator;
 use App\Services\Royalties\StatementGenerator;
 use App\Support\Decimal;
+use App\Support\Sorting;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -22,15 +24,26 @@ use Inertia\Response;
 
 class PeriodController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $sorting = Sorting::for($request, [
+            'name' => 'name',
+            'starts_on' => 'starts_on',
+            'ends_on' => 'ends_on',
+            'statements_count' => 'statements_count',
+            'payouts_count' => 'payouts_count',
+            'paid' => Sorting::sum('paid'),
+        ], fn (Builder $query) => $query->orderByDesc('starts_on'));
+
         return Inertia::render('periods/index', [
+            'filters' => $sorting->toArray(),
             'periods' => Period::query()
                 ->withCount(['payouts', 'statements' => fn ($query) => $query->where('archived', false)])
                 ->withSum('payouts as paid', 'total')
-                ->orderByDesc('starts_on')
-                ->get()
-                ->map(fn (Period $period): array => [
+                ->tap($sorting)
+                ->paginate(50)
+                ->withQueryString()
+                ->through(fn (Period $period): array => [
                     ...$period->only(['id', 'name', 'payouts_count', 'statements_count']),
                     'starts_on' => $period->starts_on->toDateString(),
                     'ends_on' => $period->ends_on->toDateString(),

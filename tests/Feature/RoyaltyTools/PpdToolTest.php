@@ -249,7 +249,7 @@ test('an overlapping range needs a confirmation to be booked again', function ()
     bookPpd()->assertSessionHasNoErrors();
 
     $this->get(route('royalty-tools.ppd.index', ['from' => '2026-02-01', 'to' => '2026-02-28']))
-        ->assertInertia(fn (Assert $page) => $page->has('overlaps', 1)->where('runs.0.total', '20.000000000000000'));
+        ->assertInertia(fn (Assert $page) => $page->has('overlaps', 1)->where('runs.data.0.total', '20.000000000000000'));
 
     bookPpd(['from' => '2026-02-01', 'to' => '2026-02-28'])->assertSessionHasErrors('confirm_overlap');
     expect(DataImport::query()->count())->toBe(1);
@@ -262,7 +262,7 @@ test('a mechanicals run over the same range is not an overlap for PPD', function
     DataImport::factory()->create(['label_id' => $this->label->id, 'importer' => 'mechanicals-tool', 'options' => ['from' => '2026-01-01', 'to' => '2026-03-31']]);
 
     $this->get(route('royalty-tools.ppd.index', ['from' => '2026-01-01', 'to' => '2026-03-31']))
-        ->assertInertia(fn (Assert $page) => $page->where('overlaps', [])->where('runs', []));
+        ->assertInertia(fn (Assert $page) => $page->where('overlaps', [])->where('runs.data', []));
 });
 
 test('deleting the import of a run removes its transactions', function () {
@@ -273,7 +273,7 @@ test('deleting the import of a run removes its transactions', function () {
     $this->delete(route('data-imports.destroy', DataImport::query()->sole()));
 
     expect(Transaction::query()->where('importer_source', 'ppd-tool')->count())->toBe(0);
-    $this->get(route('royalty-tools.ppd.index'))->assertInertia(fn (Assert $page) => $page->where('runs', []));
+    $this->get(route('royalty-tools.ppd.index'))->assertInertia(fn (Assert $page) => $page->where('runs.data', []));
 });
 
 test('a run is refused when its input is invalid', function (array $input, string $field) {
@@ -312,7 +312,7 @@ test('sales and runs of another label stay out of the report', function () {
     DataImport::factory()->create(['label_id' => $foreign->label_id, 'importer' => 'ppd-tool', 'options' => ['from' => '2026-01-01', 'to' => '2026-03-31']]);
 
     $this->get(route('royalty-tools.ppd.index', ['from' => '2026-01-01', 'to' => '2026-03-31']))
-        ->assertInertia(fn (Assert $page) => $page->where('report.rows', [])->where('runs', [])->where('overlaps', []));
+        ->assertInertia(fn (Assert $page) => $page->where('report.rows', [])->where('runs.data', [])->where('overlaps', []));
 
     $other = Label::factory()->create(['accounts_ppd' => true]);
     $this->release->update(['ppd_rate' => '2']);

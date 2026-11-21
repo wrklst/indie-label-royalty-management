@@ -3,13 +3,11 @@ import type { Flow } from '@/components/money-flow';
 import { Link } from '@inertiajs/react';
 import { Upload } from 'lucide-react';
 import { Amount } from '@/components/amount';
-import { SelectInput } from '@/components/field';
+import { DateRange } from '@/components/date-range';
 import { IncomeReport, MoversPanel } from '@/components/income-report';
 import type { Movers, Report } from '@/components/income-report';
 import { EmptyState, Notice, Page, Stat } from '@/components/page';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useFilters } from '@/hooks/use-filters';
 import { dashboard } from '@/routes';
 import { index as catalog } from '@/routes/catalog';
 import {
@@ -21,7 +19,7 @@ import { index as transactions } from '@/routes/transactions';
 import { count, plural } from '@/lib/format';
 
 type Props = {
-    filters: { from: string; to: string; date: 'sold' | 'paid' };
+    filters: { from: string; to: string; date: 'paid' | null };
     totals: { income: string; expense: string; transactions: number };
     flow: Flow;
     report: Report;
@@ -44,7 +42,6 @@ export default function Dashboard({
     attention,
     hasData,
 }: Props) {
-    const { apply } = useFilters(dashboard.url(), filters);
     const todo = [
         attention.unassigned_items > 0 && {
             text: `${plural(attention.unassigned_items, 'item')} not assigned to a release`,
@@ -87,41 +84,11 @@ export default function Dashboard({
         <Page
             title="Dashboard"
             actions={
-                <>
-                    <SelectInput
-                        aria-label="Date used"
-                        value={filters.date}
-                        onChange={(event) =>
-                            apply({
-                                date: event.target.value as 'sold' | 'paid',
-                            })
-                        }
-                        className="w-40"
-                    >
-                        <option value="sold">By sale date</option>
-                        <option value="paid">By paid date</option>
-                    </SelectInput>
-                    <Input
-                        aria-label="From"
-                        type="date"
-                        key={filters.from}
-                        defaultValue={filters.from}
-                        onChange={(event) =>
-                            apply({ from: event.target.value }, true)
-                        }
-                        className="w-40"
-                    />
-                    <Input
-                        aria-label="To"
-                        type="date"
-                        key={filters.to}
-                        defaultValue={filters.to}
-                        onChange={(event) =>
-                            apply({ to: event.target.value }, true)
-                        }
-                        className="w-40"
-                    />
-                </>
+                <DateRange
+                    url={dashboard.url()}
+                    filters={filters}
+                    note="Without dates: the last twelve months."
+                />
             }
         >
             {todo.length > 0 && (

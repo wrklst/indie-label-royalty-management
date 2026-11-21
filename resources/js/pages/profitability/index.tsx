@@ -1,13 +1,12 @@
 import { Link } from '@inertiajs/react';
 import { useMemo } from 'react';
 import { Download } from 'lucide-react';
+import { FilterBar } from '@/components/filter-bar';
 import { Amount } from '@/components/amount';
-import { SelectInput } from '@/components/field';
 import { EmptyState, Notice, Page, Panel, Stat } from '@/components/page';
 import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
@@ -16,7 +15,6 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { useFilters } from '@/hooks/use-filters';
 import { useTableSort } from '@/hooks/use-table-sort';
 import { percent, plural } from '@/lib/format';
 import { download, index } from '@/routes/profitability';
@@ -46,7 +44,7 @@ type Row = Figures & {
 type Filters = {
     from: string | null;
     to: string | null;
-    date: 'sold' | 'paid';
+    date: 'paid' | null;
     artist: number | null;
 };
 
@@ -155,7 +153,6 @@ export default function Profitability({
     filters,
     artistOptions,
 }: Props) {
-    const { apply } = useFilters(index.url(), filters);
     const filtered =
         filters.from !== null || filters.to !== null || filters.artist !== null;
     // "Not assigned to a release" and "Overheads" stay below the
@@ -186,65 +183,19 @@ export default function Profitability({
                 </Button>
             }
         >
-            <div className="flex flex-wrap items-center gap-3">
-                <SelectInput
-                    aria-label="Date used"
-                    value={filters.date}
-                    onChange={(event) =>
-                        apply({ date: event.target.value as 'sold' | 'paid' })
-                    }
-                    className="w-40"
-                >
-                    <option value="sold">By sale date</option>
-                    <option value="paid">By paid date</option>
-                </SelectInput>
-                <Input
-                    aria-label="From"
-                    type="date"
-                    key={filters.from ?? ''}
-                    defaultValue={filters.from ?? ''}
-                    onChange={(event) =>
-                        apply({ from: event.target.value }, true)
-                    }
-                    className="w-40"
-                />
-                <span className="text-sm text-muted-foreground">to</span>
-                <Input
-                    aria-label="To"
-                    type="date"
-                    key={filters.to ?? ''}
-                    defaultValue={filters.to ?? ''}
-                    onChange={(event) =>
-                        apply({ to: event.target.value }, true)
-                    }
-                    className="w-40"
-                />
-                <SelectInput
-                    aria-label="Artist"
-                    value={filters.artist ?? ''}
-                    onChange={(event) =>
-                        apply({
-                            artist: event.target.value
-                                ? Number(event.target.value)
-                                : null,
-                        })
-                    }
-                    options={artistOptions}
-                    placeholder="All artists"
-                    className="w-52"
-                />
-                {filtered ? (
-                    <Button variant="ghost" size="sm" asChild>
-                        <Link href={index({ query: { date: filters.date } })}>
-                            All time, all artists
-                        </Link>
-                    </Button>
-                ) : (
-                    <span className="text-sm text-muted-foreground">
-                        All time
-                    </span>
-                )}
-            </div>
+            <FilterBar
+                url={index.url()}
+                filters={filters}
+                dates
+                selects={[
+                    {
+                        name: 'artist',
+                        label: 'Artist',
+                        placeholder: 'All artists',
+                        options: artistOptions,
+                    },
+                ]}
+            />
 
             {unconverted > 0 && (
                 <Notice>

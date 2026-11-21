@@ -1,3 +1,4 @@
+import { FilterBar } from '@/components/filter-bar';
 import { RecordLink, recordLinkClass } from '@/components/record-link';
 import { Link } from '@inertiajs/react';
 import { Pencil, Plus } from 'lucide-react';
@@ -151,26 +152,12 @@ export default function Artists({
                 </FormDialog>
             }
         >
-            <Input
-                type="search"
-                placeholder="Search artists…"
-                defaultValue={filters.search}
-                onChange={(event) =>
-                    apply({ search: event.target.value }, true)
-                }
-                className="max-w-sm"
+            <FilterBar
+                url={index.url()}
+                filters={filters}
+                search="Search artists…"
+                checks={[{ name: 'aliases', label: 'Aliases' }]}
             />
-            <label className="flex items-center gap-2 text-sm">
-                <input
-                    type="checkbox"
-                    className="size-4 accent-primary"
-                    checked={filters.aliases}
-                    onChange={(event) =>
-                        apply({ aliases: event.target.checked })
-                    }
-                />
-                Show aliases as rows of their own
-            </label>
 
             {artists.total === 0 ? (
                 <EmptyState

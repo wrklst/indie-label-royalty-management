@@ -87,8 +87,20 @@ class TrackController extends Controller
     /**
      * Everything known about one track: where it belongs, what it earned and where it was played.
      */
-    public function show(Track $track, WebSearch $search): Response
+    public function show(Request $request, Track $track, WebSearch $search): Response
     {
+        $airplaySorting = Sorting::for($request, [
+            'station' => Sorting::nullsLast('station'),
+            'origin' => 'origin',
+            'period' => Sorting::nullsLast('period_start'),
+            'amount' => Sorting::nullsLast('amount'),
+        ], fn (Builder $query) => $query->orderByRaw('station is null')->orderBy('station')->orderByDesc('period_end'), 'airplays');
+        $searchSorting = Sorting::for($request, [
+            'created_at' => 'id',
+            'query' => 'query',
+            'result' => 'new_findings',
+        ], fn (Builder $query) => $query->latest('id'), 'searches');
+
         $track->load([
             'artist:id,name', 'artists:id,name', 'contract:id,name', 'release:id,name,catalog_number,contract_id', 'release.contract:id,name',
             'release.cover:id,release_id',
@@ -125,16 +137,22 @@ class TrackController extends Controller
                     ...$entry->release->only(['id', 'name', 'catalog_number']),
                     'income' => (string) (Transaction::query()->where('track_id', $entry->id)->where('type', TransactionType::Income)->sum('converted_total') ?: '0'),
                 ])->values(),
-            'airplays' => Airplay::query()->whereIn('track_id', $ids)->orderByRaw('station is null')->orderBy('station')->orderByDesc('period_end')->get()
-                ->map(fn (Airplay $airplay): array => [
+            'filters' => [...$airplaySorting->toArray(), ...$searchSorting->toArray()],
+            'airplayTotals' => [
+                'plays' => Airplay::query()->whereIn('track_id', $ids)->count(),
+                'with_station' => Airplay::query()->whereIn('track_id', $ids)->whereNotNull('station')->count(),
+                'earned' => (string) (Airplay::query()->whereIn('track_id', $ids)->sum('amount') ?: '0'),
+            ],
+            'airplays' => Airplay::query()->whereIn('track_id', $ids)->tap($airplaySorting)->paginate(25, pageName: 'airplays_page')->withQueryString()
+                ->through(fn (Airplay $airplay): array => [
                     ...$airplay->only(['id', 'origin', 'station', 'media_type', 'region', 'society', 'amount', 'notes', 'data_import_id']),
                     'period_start' => $airplay->period_start?->toDateString(),
                     'period_end' => $airplay->period_end?->toDateString(),
                     'links' => $airplay->links ?? [],
                 ]),
             'openFindings' => AirplayFinding::query()->whereIn('track_id', $ids)->where('status', AirplayFinding::NEW)->count(),
-            'searches' => AirplaySearch::query()->whereIn('track_id', $ids)->latest('id')->limit(20)->get()
-                ->map(fn (AirplaySearch $entry): array => [
+            'searches' => AirplaySearch::query()->whereIn('track_id', $ids)->tap($searchSorting)->paginate(10, pageName: 'searches_page')->withQueryString()
+                ->through(fn (AirplaySearch $entry): array => [
                     ...$entry->only(['id', 'query', 'region', 'succeeded', 'new_findings', 'error']),
                     'results' => count($entry->results ?? []),
                     'created_at' => $entry->created_at?->toIso8601String(),

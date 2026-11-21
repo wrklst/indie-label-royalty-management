@@ -1,19 +1,21 @@
 import { Link, setLayoutProps, useForm } from '@inertiajs/react';
+import { useMemo } from 'react';
 import RatesController from '@/actions/App/Http/Controllers/RoyaltyTools/RatesController';
 import { CheckField, Field, SelectInput } from '@/components/field';
 import InputError from '@/components/input-error';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { RecordLink } from '@/components/record-link';
+import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
     TableCell,
-    TableHead,
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTableSort } from '@/hooks/use-table-sort';
 import { duration } from '@/lib/format';
 import { index as mechanicals } from '@/routes/royalty-tools/mechanicals';
 import { index as ppd } from '@/routes/royalty-tools/ppd';
@@ -45,6 +47,24 @@ type Props = {
         track: string | null;
         rate: string | null;
     }[];
+};
+
+type TrackRow = Props['tracks'][number] & { position: number };
+type ItemRow = Props['items'][number] & { position: number };
+
+const TRACK_COLUMNS = {
+    track_number: (row: TrackRow) => row.track_number,
+    name: (row: TrackRow) => row.name,
+    duration: (row: TrackRow) => row.duration,
+    accounts: (row: TrackRow) => row.accounts_mechanicals,
+    rate: (row: TrackRow) => row.rate,
+};
+
+const ITEM_COLUMNS = {
+    name: (row: ItemRow) => row.name,
+    track: (row: ItemRow) => row.track,
+    format_group: (row: ItemRow) => row.format_group,
+    rate: (row: ItemRow) => row.rate,
 };
 
 type Choice = 'follow' | 'yes' | 'no';
@@ -97,6 +117,21 @@ export default function Rates({
             { title: 'Rates', href: '#' },
         ],
     });
+
+    const { rows: trackRows, sorter: trackSorter } = useTableSort(
+        useMemo(
+            () => tracks.map((track, position) => ({ ...track, position })),
+            [tracks],
+        ),
+        TRACK_COLUMNS,
+    );
+    const { rows: itemRows, sorter: itemSorter } = useTableSort(
+        useMemo(
+            () => items.map((item, position) => ({ ...item, position })),
+            [items],
+        ),
+        ITEM_COLUMNS,
+    );
 
     const form = useForm({
         rate: release.rate ?? '',
@@ -210,22 +245,48 @@ export default function Rates({
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-12">#</TableHead>
-                                    <TableHead>Track</TableHead>
+                                    <SortableHead
+                                        column="track_number"
+                                        sorter={trackSorter}
+                                        className="w-12"
+                                    >
+                                        #
+                                    </SortableHead>
+                                    <SortableHead
+                                        column="name"
+                                        sorter={trackSorter}
+                                    >
+                                        Track
+                                    </SortableHead>
                                     {isMechanicals && (
                                         <>
-                                            <TableHead>Length</TableHead>
-                                            <TableHead>Mechanicals</TableHead>
+                                            <SortableHead
+                                                column="duration"
+                                                sorter={trackSorter}
+                                            >
+                                                Length
+                                            </SortableHead>
+                                            <SortableHead
+                                                column="accounts"
+                                                sorter={trackSorter}
+                                            >
+                                                Mechanicals
+                                            </SortableHead>
                                         </>
                                     )}
-                                    <TableHead className="text-right">
+                                    <SortableHead
+                                        column="rate"
+                                        sorter={trackSorter}
+                                        className="text-right"
+                                    >
                                         Rate per unit
-                                    </TableHead>
+                                    </SortableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {tracks.map((track, position) => (
+                                {trackRows.map((track) => (
                                     <TableRow key={track.id}>
+                                        {/* position: the row's place in the form, whatever the table is sorted by */}
                                         <TableCell className="text-muted-foreground tabular-nums">
                                             {track.track_number ?? '–'}
                                         </TableCell>
@@ -248,16 +309,20 @@ export default function Rates({
                                                         className="w-44"
                                                         value={
                                                             form.data.tracks[
-                                                                position
+                                                                track.position
                                                             ]
                                                                 .accounts_mechanicals
                                                         }
                                                         onChange={(event) =>
-                                                            setTrack(position, {
-                                                                accounts_mechanicals:
-                                                                    event.target
-                                                                        .value as Choice,
-                                                            })
+                                                            setTrack(
+                                                                track.position,
+                                                                {
+                                                                    accounts_mechanicals:
+                                                                        event
+                                                                            .target
+                                                                            .value as Choice,
+                                                                },
+                                                            )
                                                         }
                                                     >
                                                         <option value="follow">
@@ -279,20 +344,23 @@ export default function Rates({
                                                     label={`Rate for ${track.name}`}
                                                     value={
                                                         form.data.tracks[
-                                                            position
+                                                            track.position
                                                         ].rate
                                                     }
                                                     onChange={(value) =>
-                                                        setTrack(position, {
-                                                            rate: value,
-                                                        })
+                                                        setTrack(
+                                                            track.position,
+                                                            {
+                                                                rate: value,
+                                                            },
+                                                        )
                                                     }
                                                     placeholder={inherited}
                                                 />
                                                 <InputError
                                                     message={
                                                         errors[
-                                                            `tracks.${position}.rate`
+                                                            `tracks.${track.position}.rate`
                                                         ]
                                                     }
                                                 />
@@ -320,16 +388,35 @@ export default function Rates({
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Item</TableHead>
-                                        <TableHead>Track</TableHead>
-                                        <TableHead>Format group</TableHead>
-                                        <TableHead className="text-right">
+                                        <SortableHead
+                                            column="name"
+                                            sorter={itemSorter}
+                                        >
+                                            Item
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="track"
+                                            sorter={itemSorter}
+                                        >
+                                            Track
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="format_group"
+                                            sorter={itemSorter}
+                                        >
+                                            Format group
+                                        </SortableHead>
+                                        <SortableHead
+                                            column="rate"
+                                            sorter={itemSorter}
+                                            className="text-right"
+                                        >
                                             Rate per unit
-                                        </TableHead>
+                                        </SortableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {items.map((item, position) => (
+                                    {itemRows.map((item) => (
                                         <TableRow key={item.id}>
                                             <TableCell className="font-medium">
                                                 {item.name}
@@ -346,7 +433,7 @@ export default function Rates({
                                                         label={`Rate for item ${item.name}`}
                                                         value={
                                                             form.data.items[
-                                                                position
+                                                                item.position
                                                             ].rate
                                                         }
                                                         onChange={(value) =>
@@ -358,7 +445,7 @@ export default function Rates({
                                                                         at,
                                                                     ) =>
                                                                         at ===
-                                                                        position
+                                                                        item.position
                                                                             ? {
                                                                                   ...current,
                                                                                   rate: value,
@@ -371,7 +458,7 @@ export default function Rates({
                                                     <InputError
                                                         message={
                                                             errors[
-                                                                `items.${position}.rate`
+                                                                `items.${item.position}.rate`
                                                             ]
                                                         }
                                                     />

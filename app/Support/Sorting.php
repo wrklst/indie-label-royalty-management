@@ -24,28 +24,32 @@ final readonly class Sorting
         private Closure $default,
         private ?string $sort,
         private ?SortDirection $direction,
+        private string $prefix = '',
     ) {}
 
     /**
      * Read `sort` and `direction` from the query string. An unknown key or
-     * direction leaves the list in its default order.
+     * direction leaves the list in its default order. A page with several
+     * sortable lists gives each a `$prefix` ("files" reads `files_sort` and
+     * `files_direction`).
      *
      * @param  array<string, string|Closure>  $columns
      */
-    public static function for(Request $request, array $columns, Closure $default): self
+    public static function for(Request $request, array $columns, Closure $default, string $prefix = ''): self
     {
-        $sort = $request->query('sort');
-        $direction = match ($request->query('direction', 'asc')) {
+        $name = $prefix === '' ? '' : $prefix.'_';
+        $sort = $request->query($name.'sort');
+        $direction = match ($request->query($name.'direction', 'asc')) {
             'asc' => SortDirection::Ascending,
             'desc' => SortDirection::Descending,
             default => null,
         };
 
         if (! is_string($sort) || ! array_key_exists($sort, $columns) || $direction === null) {
-            return new self($columns, $default, null, null);
+            return new self($columns, $default, null, null, $prefix);
         }
 
-        return new self($columns, $default, $sort, $direction);
+        return new self($columns, $default, $sort, $direction, $prefix);
     }
 
     /**
@@ -112,6 +116,11 @@ final readonly class Sorting
             $query->orderBy($column, $this->direction);
         }
 
+        // A grouped list has no single row to break ties by.
+        if ($query->getQuery()->groups !== null) {
+            return;
+        }
+
         $key = $query->getModel()->getQualifiedKeyName();
         $ordered = array_column($query->getQuery()->orders ?? [], 'column');
 
@@ -124,13 +133,15 @@ final readonly class Sorting
      * The active order for the page's `filters` prop; both null in the
      * default order.
      *
-     * @return array{sort: string|null, direction: 'asc'|'desc'|null}
+     * @return array<string, string|null>
      */
     public function toArray(): array
     {
+        $name = $this->prefix === '' ? '' : $this->prefix.'_';
+
         return [
-            'sort' => $this->sort,
-            'direction' => match ($this->direction) {
+            $name.'sort' => $this->sort,
+            $name.'direction' => match ($this->direction) {
                 SortDirection::Ascending => 'asc',
                 SortDirection::Descending => 'desc',
                 null => null,

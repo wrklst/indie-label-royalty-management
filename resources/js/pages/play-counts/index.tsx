@@ -6,7 +6,9 @@ import { Field } from '@/components/field';
 import { MoversPanel, PlayReport } from '@/components/income-report';
 import type { Movers, Report } from '@/components/income-report';
 import { EmptyState, Page, Panel } from '@/components/page';
+import { Pagination } from '@/components/pagination';
 import { PlatformIcon } from '@/components/platform-icon';
+import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,15 +19,20 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { count, date, quantity } from '@/lib/format';
 import { index } from '@/routes/play-counts';
+import type { Paginated } from '@/types';
 
 type Props = {
     report: Report;
     tracks: Movers;
     releases: Movers;
     zebralutionExport: string | null;
-    files: {
+    filters: { sort: string | null; direction: SortDirection | null };
+    files: Paginated<{
         batch: string;
         source_file: string;
         platforms: { key: string; name: string }[];
@@ -35,8 +42,8 @@ type Props = {
         matched: number;
         plays: number;
         created_at: string;
-        unmatched: string[];
-    }[];
+        unmatched: { names: string[]; total: number };
+    }>;
 };
 
 /** Where each platform lets its figures be downloaded, as far as it does. */
@@ -48,11 +55,15 @@ const SOURCES = [
 
 export default function PlayCounts({
     files,
+    filters,
     report,
     tracks,
     releases,
     zebralutionExport,
 }: Props) {
+    const { apply } = useFilters(index.url(), filters);
+    const sorter = serverSorter(filters, apply);
+
     return (
         <Page
             title="Play counts"
@@ -141,7 +152,7 @@ export default function PlayCounts({
                 plays
             />
 
-            {files.length === 0 ? (
+            {files.total === 0 ? (
                 <EmptyState
                     title="No play counts yet"
                     description="Statements say what was paid for. A platform's own count shows whether that is all it played. Whole months compare best, since statements are monthly."
@@ -151,29 +162,62 @@ export default function PlayCounts({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>File</TableHead>
-                                <TableHead>Platform</TableHead>
-                                <TableHead>Covers</TableHead>
-                                <TableHead className="text-right">
-                                    Tracks matched
-                                </TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead column="file" sorter={sorter}>
+                                    File
+                                </SortableHead>
+                                <SortableHead column="platform" sorter={sorter}>
+                                    Platform
+                                </SortableHead>
+                                <SortableHead
+                                    column="covers"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Covers
+                                </SortableHead>
+                                <SortableHead
+                                    column="rows"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
+                                    Rows
+                                </SortableHead>
+                                <SortableHead
+                                    column="plays"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Plays
-                                </TableHead>
-                                <TableHead>Added</TableHead>
-                                <TableHead />
+                                </SortableHead>
+                                <SortableHead
+                                    column="created_at"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Uploaded
+                                </SortableHead>
+                                <TableHead className="w-12" />
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {files.map((file) => (
+                            {files.data.map((file) => (
                                 <TableRow key={file.batch}>
                                     <TableCell>
                                         <div>{file.source_file}</div>
-                                        {file.unmatched.length > 0 && (
+                                        {file.unmatched.total > 0 && (
                                             <div className="mt-1 max-w-md text-xs whitespace-normal text-muted-foreground">
                                                 Not in the catalog under that
-                                                name:{' '}
-                                                {file.unmatched.join(', ')}
+                                                name
+                                                {file.unmatched.total >
+                                                file.unmatched.names.length
+                                                    ? ` (${count(file.unmatched.names.length)} of ${count(file.unmatched.total)})`
+                                                    : ''}
+                                                :{' '}
+                                                {file.unmatched.names.join(
+                                                    ', ',
+                                                )}
                                             </div>
                                         )}
                                     </TableCell>
@@ -197,8 +241,10 @@ export default function PlayCounts({
                                         {date(file.starts)} – {date(file.ends)}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {count(file.matched)} of{' '}
                                         {count(file.counts)}
+                                        <span className="block text-xs text-muted-foreground">
+                                            {count(file.matched)} matched
+                                        </span>
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
                                         {quantity(file.plays)}
@@ -211,14 +257,15 @@ export default function PlayCounts({
                                             url={PlayCountController.destroy.url(
                                                 file.batch,
                                             )}
-                                            title="Delete these play counts?"
-                                            description={`Every count from ${file.source_file} is removed. Statements and income are not touched.`}
+                                            title={`Delete ${file.source_file}?`}
+                                            description={`The ${count(file.counts)} play counts read from it are removed. Statements and income are not touched.`}
                                         />
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
+                    <Pagination page={files} noun="files" />
                 </Panel>
             )}
         </Page>

@@ -1,16 +1,16 @@
 import { Link, router } from '@inertiajs/react';
-import { useState } from 'react';
 import CatalogController from '@/actions/App/Http/Controllers/CatalogController';
 import { SelectInput } from '@/components/field';
+import { FilterBar } from '@/components/filter-bar';
+import { Pagination } from '@/components/pagination';
 import { RecordLink } from '@/components/record-link';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { index } from '@/routes/catalog';
 import { create as createContract } from '@/routes/contracts';
 import { create as createImport } from '@/routes/data-imports';
-import type { Option } from '@/types';
+import type { Option, Paginated } from '@/types';
 import { plural } from '@/lib/format';
 
 type Track = {
@@ -41,46 +41,19 @@ function assign(type: 'release' | 'track', id: number, value: string) {
 
 export default function CatalogManager({
     releases,
+    filters,
+    uncovered,
+    hasReleases,
     contractOptions,
 }: {
-    releases: Release[];
+    releases: Paginated<Release>;
+    filters: { search: string; without_contract: boolean };
+    uncovered: number;
+    hasReleases: boolean;
     contractOptions: Option[];
 }) {
-    const [search, setSearch] = useState('');
-    const [onlyMissing, setOnlyMissing] = useState(false);
     const contractName = (id: number | null) =>
         contractOptions.find((option) => option.id === id)?.name;
-
-    const needle = search.trim().toLowerCase();
-    const visible = releases.filter((release) => {
-        const matches =
-            needle === '' ||
-            [
-                release.name,
-                release.catalog_number,
-                release.artist,
-                ...release.tracks.flatMap((track) => [
-                    track.name,
-                    track.isrc,
-                    track.artist,
-                ]),
-            ].some((value) => value?.toLowerCase().includes(needle));
-        const missing =
-            release.contract_id === null &&
-            (release.tracks.length === 0 ||
-                release.tracks.some((track) => track.contract_id === null));
-
-        return matches && (!onlyMissing || missing);
-    });
-    const uncovered = releases.reduce(
-        (count, release) =>
-            count +
-            (release.contract_id === null
-                ? release.tracks.filter((track) => track.contract_id === null)
-                      .length
-                : 0),
-        0,
-    );
 
     return (
         <Page
@@ -92,7 +65,7 @@ export default function CatalogManager({
                 </Button>
             }
         >
-            {releases.length === 0 ? (
+            {!hasReleases ? (
                 <EmptyState
                     title="Your catalog is empty"
                     description="Import a distributor statement to build it automatically."
@@ -107,25 +80,20 @@ export default function CatalogManager({
             ) : (
                 <>
                     <div className="flex flex-wrap items-center gap-3">
-                        <Input
-                            type="search"
-                            placeholder="Filter releases and tracks…"
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            className="max-w-sm"
-                        />
-                        <label className="flex items-center gap-2 text-sm">
-                            <input
-                                type="checkbox"
-                                className="size-4 accent-primary"
-                                checked={onlyMissing}
-                                onChange={(event) =>
-                                    setOnlyMissing(event.target.checked)
-                                }
+                        <div className="min-w-0 flex-1">
+                            <FilterBar
+                                url={index.url()}
+                                filters={filters}
+                                search="Search releases and tracks…"
+                                checks={[
+                                    {
+                                        name: 'without_contract',
+                                        label: 'Without contract',
+                                    },
+                                ]}
                             />
-                            Only releases with tracks lacking a contract
-                        </label>
-                        <span className="ml-auto text-sm text-muted-foreground">
+                        </div>
+                        <span className="text-sm text-muted-foreground">
                             {uncovered === 0
                                 ? 'Every track is covered by a contract.'
                                 : `${plural(uncovered, 'track')} without a contract`}
@@ -133,7 +101,7 @@ export default function CatalogManager({
                     </div>
 
                     <div className="grid gap-4">
-                        {visible.map((release) => (
+                        {releases.data.map((release) => (
                             <Panel
                                 key={release.id}
                                 flush
@@ -225,7 +193,7 @@ export default function CatalogManager({
                                                     release.contract_id ===
                                                         null && (
                                                         <Badge variant="destructive">
-                                                            no contract
+                                                            No contract
                                                         </Badge>
                                                     )}
                                                 <SelectInput
@@ -254,11 +222,14 @@ export default function CatalogManager({
                                 )}
                             </Panel>
                         ))}
-                        {visible.length === 0 && (
+                        {releases.total === 0 && (
                             <p className="text-sm text-muted-foreground">
-                                Nothing matches the filter.
+                                Nothing matches the filters.
                             </p>
                         )}
+                    </div>
+                    <div className="rounded-xl border">
+                        <Pagination page={releases} noun="releases" />
                     </div>
                 </>
             )}

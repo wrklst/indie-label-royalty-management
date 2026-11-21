@@ -1,6 +1,7 @@
 import { Link, setLayoutProps } from '@inertiajs/react';
 import { Amount } from '@/components/amount';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
+import { Pagination } from '@/components/pagination';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -10,9 +11,12 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { useTableSort } from '@/hooks/use-table-sort';
+import { useFilters } from '@/hooks/use-filters';
+import { serverSorter, useTableSort } from '@/hooks/use-table-sort';
+import type { Sorter } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
 import { index, show } from '@/routes/portal';
+import type { Paginated } from '@/types';
 
 type Statement = {
     id: number;
@@ -46,27 +50,14 @@ type Payout = {
 type Props = {
     view: 'admin' | 'payee' | 'unlinked';
     overview: Overview | null;
-    payouts: Payout[];
-    statements: Statement[];
+    payouts: Paginated<Payout>;
+    statements: Paginated<Statement>;
+    filters: Record<string, string | null>;
 };
 
 const LEDGER_COLUMNS = {
     name: (row: Overview['ledgers'][number]) => row.name,
     balance: (row: Overview['ledgers'][number]) => row.balance,
-};
-
-const PAYOUT_COLUMNS = {
-    paid_on: (row: Payout) => row.paid_on,
-    period: (row: Payout) => row.period,
-    memo: (row: Payout) => row.memo,
-    total: (row: Payout) => row.total,
-};
-
-const STATEMENT_COLUMNS = {
-    period: (row: Statement) => row.period ?? row.name,
-    published_at: (row: Statement) => row.published_at,
-    balance: (row: Statement) => row.balance,
-    payable: (row: Statement) => row.payable,
 };
 
 function OverviewSection({ overview }: { overview: Overview }) {
@@ -169,132 +160,157 @@ function OverviewSection({ overview }: { overview: Overview }) {
     );
 }
 
-function PayoutsSection({ payouts }: { payouts: Payout[] }) {
-    const { rows, sorter } = useTableSort(payouts, PAYOUT_COLUMNS);
-
+function PayoutsSection({
+    payouts,
+    sorter,
+}: {
+    payouts: Paginated<Payout>;
+    sorter: Sorter;
+}) {
     return (
         <Panel
-            flush={payouts.length > 0}
+            flush={payouts.total > 0}
             title="Payouts"
             description="Payments the label has made to you."
         >
-            {payouts.length === 0 ? (
+            {payouts.total === 0 ? (
                 <p className="text-sm text-muted-foreground">
                     No payouts have been recorded for you yet.
                 </p>
             ) : (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <SortableHead
-                                column="paid_on"
-                                sorter={sorter}
-                                first="desc"
-                            >
-                                Paid date
-                            </SortableHead>
-                            <SortableHead column="period" sorter={sorter}>
-                                For period
-                            </SortableHead>
-                            <SortableHead column="memo" sorter={sorter}>
-                                Memo
-                            </SortableHead>
-                            <SortableHead
-                                column="total"
-                                sorter={sorter}
-                                first="desc"
-                                className="text-right"
-                            >
-                                Amount
-                            </SortableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {rows.map((payout) => (
-                            <TableRow key={payout.id}>
-                                <TableCell>{date(payout.paid_on)}</TableCell>
-                                <TableCell className="text-muted-foreground">
-                                    {payout.period ?? '–'}
-                                </TableCell>
-                                <TableCell className="text-muted-foreground">
-                                    {payout.memo ?? '–'}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <Amount value={payout.total} />
-                                </TableCell>
+                <>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <SortableHead
+                                    column="paid_on"
+                                    sorter={sorter}
+                                    first="desc"
+                                >
+                                    Paid date
+                                </SortableHead>
+                                <SortableHead column="period" sorter={sorter}>
+                                    For period
+                                </SortableHead>
+                                <SortableHead column="memo" sorter={sorter}>
+                                    Memo
+                                </SortableHead>
+                                <SortableHead
+                                    column="total"
+                                    sorter={sorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
+                                    Amount
+                                </SortableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {payouts.data.map((payout) => (
+                                <TableRow key={payout.id}>
+                                    <TableCell>
+                                        {date(payout.paid_on)}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {payout.period ?? '–'}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {payout.memo ?? '–'}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Amount value={payout.total} />
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                    <Pagination page={payouts} noun="payouts" />
+                </>
             )}
         </Panel>
     );
 }
 
-function StatementsTable({ statements }: { statements: Statement[] }) {
-    const { rows, sorter } = useTableSort(statements, STATEMENT_COLUMNS);
-
+function StatementsTable({
+    statements,
+    sorter,
+}: {
+    statements: Paginated<Statement>;
+    sorter: Sorter;
+}) {
     return (
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <SortableHead column="period" sorter={sorter}>
-                        Period
-                    </SortableHead>
-                    <SortableHead
-                        column="published_at"
-                        sorter={sorter}
-                        first="desc"
-                    >
-                        Published
-                    </SortableHead>
-                    <SortableHead
-                        column="balance"
-                        sorter={sorter}
-                        first="desc"
-                        className="text-right"
-                    >
-                        Balance
-                    </SortableHead>
-                    <SortableHead
-                        column="payable"
-                        sorter={sorter}
-                        first="desc"
-                        className="text-right"
-                    >
-                        Payable
-                    </SortableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {rows.map((statement) => (
-                    <TableRow key={statement.id}>
-                        <TableCell>
-                            <Link
-                                href={show(statement.id)}
-                                className="font-medium underline decoration-muted-foreground/40 underline-offset-4"
-                            >
-                                {statement.period ?? statement.name}
-                            </Link>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                            {date(statement.published_at)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                            <Amount value={statement.balance} />
-                        </TableCell>
-                        <TableCell className="text-right">
-                            <Amount value={statement.payable} />
-                        </TableCell>
+        <>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <SortableHead column="period" sorter={sorter}>
+                            Period
+                        </SortableHead>
+                        <SortableHead
+                            column="published_at"
+                            sorter={sorter}
+                            first="desc"
+                        >
+                            Published
+                        </SortableHead>
+                        <SortableHead
+                            column="balance"
+                            sorter={sorter}
+                            first="desc"
+                            className="text-right"
+                        >
+                            Balance
+                        </SortableHead>
+                        <SortableHead
+                            column="payable"
+                            sorter={sorter}
+                            first="desc"
+                            className="text-right"
+                        >
+                            Payable
+                        </SortableHead>
                     </TableRow>
-                ))}
-            </TableBody>
-        </Table>
+                </TableHeader>
+                <TableBody>
+                    {statements.data.map((statement) => (
+                        <TableRow key={statement.id}>
+                            <TableCell>
+                                <Link
+                                    href={show(statement.id)}
+                                    className="font-medium underline decoration-muted-foreground/40 underline-offset-4"
+                                >
+                                    {statement.period ?? statement.name}
+                                </Link>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                                {date(statement.published_at)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <Amount value={statement.balance} />
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <Amount value={statement.payable} />
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+            <Pagination page={statements} noun="statements" />
+        </>
     );
 }
 
-export default function Portal({ view, overview, payouts, statements }: Props) {
+export default function Portal({
+    view,
+    overview,
+    payouts,
+    statements,
+    filters,
+}: Props) {
     const title = 'My statements';
+    const { apply } = useFilters(index.url(), filters);
+    const statementSorter = serverSorter(filters, apply, 'statements');
+    const payoutSorter = serverSorter(filters, apply, 'payouts');
 
     setLayoutProps({ breadcrumbs: [{ title, href: index() }] });
 
@@ -304,14 +320,17 @@ export default function Portal({ view, overview, payouts, statements }: Props) {
                 title={title}
                 description="What payees can see: every published statement of this label. Each payee only gets their own."
             >
-                {statements.length === 0 ? (
+                {statements.total === 0 ? (
                     <EmptyState
                         title="No statements yet"
                         description="Statements appear here, and in My statements of the payee, as soon as you publish them."
                     />
                 ) : (
                     <Panel flush>
-                        <StatementsTable statements={statements} />
+                        <StatementsTable
+                            statements={statements}
+                            sorter={statementSorter}
+                        />
                     </Panel>
                 )}
             </Page>
@@ -343,17 +362,20 @@ export default function Portal({ view, overview, payouts, statements }: Props) {
                 />
             )}
 
-            {(overview || payouts.length > 0) && (
-                <PayoutsSection payouts={payouts} />
+            {(overview || payouts.total > 0) && (
+                <PayoutsSection payouts={payouts} sorter={payoutSorter} />
             )}
 
-            {statements.length > 0 && (
+            {statements.total > 0 && (
                 <Panel
                     flush
                     title="Published statements"
                     description="Open a statement for the full breakdown per release and track."
                 >
-                    <StatementsTable statements={statements} />
+                    <StatementsTable
+                        statements={statements}
+                        sorter={statementSorter}
+                    />
                 </Panel>
             )}
         </Page>

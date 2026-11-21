@@ -45,19 +45,19 @@ test('the period list shows the newest period first with its payouts and current
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('periods/index')
-            ->has('periods', 2)
-            ->where('periods.0.name', '2026 Q2')
-            ->where('periods.0.closed', true)
-            ->where('periods.0.payouts_count', 0)
-            ->where('periods.0.statements_count', 0)
-            ->where('periods.0.paid', '0.000000000000000')
-            ->where('periods.1.id', $first->id)
-            ->where('periods.1.starts_on', '2026-01-01')
-            ->where('periods.1.ends_on', '2026-03-31')
-            ->where('periods.1.closed', false)
-            ->where('periods.1.payouts_count', 2)
-            ->where('periods.1.statements_count', 1)
-            ->where('periods.1.paid', fn (string $paid) => (float) $paid === 30.0));
+            ->has('periods.data', 2)
+            ->where('periods.data.0.name', '2026 Q2')
+            ->where('periods.data.0.closed', true)
+            ->where('periods.data.0.payouts_count', 0)
+            ->where('periods.data.0.statements_count', 0)
+            ->where('periods.data.0.paid', '0.000000000000000')
+            ->where('periods.data.1.id', $first->id)
+            ->where('periods.data.1.starts_on', '2026-01-01')
+            ->where('periods.data.1.ends_on', '2026-03-31')
+            ->where('periods.data.1.closed', false)
+            ->where('periods.data.1.payouts_count', 2)
+            ->where('periods.data.1.statements_count', 1)
+            ->where('periods.data.1.paid', fn (string $paid) => (float) $paid === 30.0));
 });
 
 test('the last full quarter is suggested when the label has no period', function (string $today, array $suggestion) {

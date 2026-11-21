@@ -26,8 +26,8 @@ Click a payee to open their page. It shows:
 
 - what they earned in the latest period, what is **Payable now** and the balance of each ledger, with a link to the **Full breakdown**,
 - **Splits**: every contract they earn from, with ledger, territory and the releases and tracks it applies to,
-- **Statements** and **Payouts**,
-- **Transfers**: advances, paybacks and opening balances. **New transfer** opens a new transfer for this payee, see [Transactions](31-transactions.md).
+- **Statements** and **Payouts**, 25 to a page each and sortable,
+- **Transfers**: advances, paybacks and opening balances, 50 to a page and sortable. **New transfer** opens a new transfer for this payee, see [Transactions](31-transactions.md).
 
 A payee with transfers, payouts or statements cannot be deleted. Deleting any other payee removes them from every contract.
 

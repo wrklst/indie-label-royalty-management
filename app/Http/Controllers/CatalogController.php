@@ -18,21 +18,40 @@ use Inertia\Response;
  */
 class CatalogController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        return Inertia::render('catalog/manager', [
-            'releases' => Release::query()
-                ->with(['artist:id,name', 'tracks' => fn ($query) => $query->orderBy('track_number')->orderBy('id'), 'tracks.artist:id,name'])
-                ->orderByRaw('catalog_number IS NULL')->orderBy('catalog_number')->orderBy('name')
-                ->get()
-                ->map(fn (Release $release): array => [
-                    ...$release->only(['id', 'name', 'catalog_number', 'contract_id', 'artist_id']),
-                    'artist' => $release->artist?->name,
-                    'tracks' => $release->tracks->map(fn (Track $track): array => [
-                        ...$track->only(['id', 'name', 'isrc', 'contract_id', 'artist_id']),
-                        'artist' => $track->artist?->name,
-                    ]),
+        $releases = Release::query()
+            ->with(['artist:id,name', 'tracks' => fn ($query) => $query->orderBy('track_number')->orderBy('id'), 'tracks.artist:id,name'])
+            ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('catalog_number', 'like', "%{$search}%")
+                ->orWhereHas('artist', fn ($query) => $query->where('name', 'like', "%{$search}%"))
+                ->orWhereHas('tracks', fn ($query) => $query->where(fn ($query) => $query
+                    ->where('name', 'like', "%{$search}%")
+                    ->orWhere('isrc', 'like', "%{$search}%")
+                    ->orWhereHas('artist', fn ($query) => $query->where('name', 'like', "%{$search}%"))))))
+            ->when($request->boolean('without_contract'), fn ($query) => $query->whereNull('contract_id')
+                ->where(fn ($query) => $query->doesntHave('tracks')->orWhereHas('tracks', fn ($query) => $query->whereNull('contract_id'))))
+            ->orderByRaw('catalog_number IS NULL')->orderBy('catalog_number')->orderBy('name')->orderBy('id')
+            ->paginate(50)
+            ->withQueryString()
+            ->through(fn (Release $release): array => [
+                ...$release->only(['id', 'name', 'catalog_number', 'contract_id', 'artist_id']),
+                'artist' => $release->artist?->name,
+                'tracks' => $release->tracks->map(fn (Track $track): array => [
+                    ...$track->only(['id', 'name', 'isrc', 'contract_id', 'artist_id']),
+                    'artist' => $track->artist?->name,
                 ]),
+            ]);
+
+        return Inertia::render('catalog/manager', [
+            'releases' => $releases,
+            'filters' => [
+                'search' => $request->string('search')->value(),
+                'without_contract' => $request->boolean('without_contract'),
+            ],
+            'uncovered' => Track::query()->whereNull('contract_id')->whereHas('release', fn ($query) => $query->whereNull('contract_id'))->count(),
+            'hasReleases' => Release::query()->exists(),
             'contractOptions' => Options::contracts(),
         ]);
     }

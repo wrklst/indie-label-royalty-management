@@ -20,6 +20,7 @@ import {
 import { RecordLink } from '@/components/record-link';
 import { ReleaseFiles } from '@/components/release-files';
 import type { ReleaseFile } from '@/components/release-files';
+import { Pagination } from '@/components/pagination';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,15 +34,16 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { useTableSort } from '@/hooks/use-table-sort';
+import { useFilters } from '@/hooks/use-filters';
+import { serverSorter, useTableSort } from '@/hooks/use-table-sort';
 import { count, country, date, duration, quantity } from '@/lib/format';
 import { show as showFile } from '@/routes/release-files';
-import { edit, index } from '@/routes/releases';
+import { edit, index, show } from '@/routes/releases';
 import {
     create as createTransaction,
     index as transactions,
 } from '@/routes/transactions';
-import type { Option } from '@/types';
+import type { Option, Paginated } from '@/types';
 import { AI_LEVELS, AiField } from '@/components/ai-field';
 
 type Credits = Partial<
@@ -115,18 +117,19 @@ type Props = {
         contract: Option | null;
         files: ReleaseFile[];
         tracks: Track[];
-        items: {
-            id: number;
-            name: string;
-            format_group: string | null;
-            is_additionals: boolean;
-            track: string | null;
-            contract: Option | null;
-            sources: string[];
-            transactions: number;
-            total: string;
-        }[];
     };
+    items: Paginated<{
+        id: number;
+        name: string;
+        format_group: string | null;
+        is_additionals: boolean;
+        track: string | null;
+        contract: Option | null;
+        sources: string[];
+        transactions: number;
+        total: string;
+    }>;
+    filters: Record<string, string | null>;
     totals: {
         income: string;
         expense: string;
@@ -459,6 +462,8 @@ const TRACK_COLUMNS = {
 export default function ShowRelease({
     platformLinks,
     release,
+    items,
+    filters,
     totals,
     report,
     movers,
@@ -467,6 +472,8 @@ export default function ShowRelease({
     fileKinds,
     maxUploadMegabytes,
 }: Props) {
+    const { apply } = useFilters(show.url(release.id), filters);
+    const itemSorter = serverSorter(filters, apply, 'items');
     const { rows: trackRows, sorter } = useTableSort(
         release.tracks,
         TRACK_COLUMNS,
@@ -928,18 +935,35 @@ export default function ShowRelease({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Name on statements</TableHead>
-                                <TableHead>Booked on</TableHead>
-                                <TableHead className="text-right">
+                                <SortableHead column="name" sorter={itemSorter}>
+                                    Name on statements
+                                </SortableHead>
+                                <SortableHead
+                                    column="track"
+                                    sorter={itemSorter}
+                                >
+                                    Booked on
+                                </SortableHead>
+                                <SortableHead
+                                    column="transactions_count"
+                                    sorter={itemSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Transactions
-                                </TableHead>
-                                <TableHead className="text-right">
+                                </SortableHead>
+                                <SortableHead
+                                    column="total"
+                                    sorter={itemSorter}
+                                    first="desc"
+                                    className="text-right"
+                                >
                                     Amount
-                                </TableHead>
+                                </SortableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {release.items.map((item) => (
+                            {items.data.map((item) => (
                                 <TableRow
                                     key={item.id}
                                     className={
@@ -985,6 +1009,7 @@ export default function ShowRelease({
                             ))}
                         </TableBody>
                     </Table>
+                    <Pagination page={items} noun="items" />
                 </Panel>
             </div>
 

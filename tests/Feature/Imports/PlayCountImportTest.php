@@ -33,12 +33,12 @@ test('a portal export is read by its columns and matched to tracks by name', fun
         ->and($counts[2])->toMatchArray(['track_id' => null, 'track_name' => 'Unknown Song', 'plays' => 2]);
 
     $this->get(route('play-counts.index'))->assertInertia(fn (Assert $page) => $page
-        ->has('files', 1)
-        ->where('files.0.counts', 3)
-        ->where('files.0.matched', 2)
-        ->where('files.0.plays', 131)
-        ->where('files.0.platforms', [['key' => 'spotify', 'name' => 'Spotify']])
-        ->where('files.0.unmatched', ['Unknown Song']));
+        ->has('files.data', 1)
+        ->where('files.data.0.counts', 3)
+        ->where('files.data.0.matched', 2)
+        ->where('files.data.0.plays', 131)
+        ->where('files.data.0.platforms', [['key' => 'spotify', 'name' => 'Spotify']])
+        ->where('files.data.0.unmatched', ['names' => ['Unknown Song'], 'total' => 1]));
 });
 
 test('the template names platform, period and ISRC on each line, and a recording on two releases is one', function () {
@@ -110,7 +110,7 @@ test('a file that names neither platform nor dates is the total up to today and 
         ->and($spotify->fresh())->not->toBeNull();
 
     $this->get(route('play-counts.index'))->assertInertia(fn (Assert $page) => $page
-        ->where('files.0.platforms', [['key' => 'unknown', 'name' => 'Unknown']]));
+        ->where('files.data.0.platforms', [['key' => 'unknown', 'name' => 'Unknown']]));
 });
 
 test('a file that cannot be read as play counts is refused and nothing is stored', function (string $content, array $fields, string $message) {

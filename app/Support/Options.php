@@ -6,6 +6,7 @@ use App\Models\Artist;
 use App\Models\Contract;
 use App\Models\Ledger;
 use App\Models\Payee;
+use App\Models\Period;
 use App\Models\Release;
 use App\Models\Territory;
 use App\Models\Track;
@@ -41,6 +42,13 @@ class Options
     public static function payees(): array
     {
         return self::named(Payee::class);
+    }
+
+    /** @return array<int, array{id: int, name: string}> */
+    public static function periods(): array
+    {
+        return Period::query()->orderByDesc('ends_on')->get(['id', 'name'])
+            ->map(fn (Period $period): array => ['id' => $period->id, 'name' => $period->name])->values()->all();
     }
 
     /** @return list<array{id: int, name: string}> */

@@ -6,6 +6,7 @@ use App\Models\Payee;
 use App\Models\Payout;
 use App\Models\Period;
 use App\Models\User;
+use App\Support\Options;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -29,6 +30,8 @@ class PayoutController extends Controller
         return Inertia::render('payouts/index', [
             'payouts' => Payout::query()
                 ->with(['payee:id,name', 'period:id,name', 'user:id,name', 'allocations.ledger:id,name'])
+                ->when($request->integer('period'), fn ($query, int $period) => $query->where('period_id', $period))
+                ->when($request->integer('payee'), fn ($query, int $payee) => $query->where('payee_id', $payee))
                 ->tap($sorting)
                 ->paginate(50)
                 ->withQueryString()
@@ -43,7 +46,13 @@ class PayoutController extends Controller
                         'amount' => $allocation->amount,
                     ]),
                 ]),
-            'filters' => $sorting->toArray(),
+            'filters' => [
+                'period' => $request->integer('period') ?: null,
+                'payee' => $request->integer('payee') ?: null,
+                ...$sorting->toArray(),
+            ],
+            'periodOptions' => Options::periods(),
+            'payeeOptions' => Options::payees(),
         ]);
     }
 

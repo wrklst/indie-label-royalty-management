@@ -93,8 +93,8 @@ test('a regenerated draft does not change the overview until it is published', f
         ->assertInertia(fn (Assert $page) => $page
             ->where('overview.statement_id', $published->id)
             ->where('overview.owed', '50.000000000000000')
-            ->has('statements', 1)
-            ->where('statements.0.id', $published->id));
+            ->has('statements.data', 1)
+            ->where('statements.data.0.id', $published->id));
 });
 
 test('the overview follows the latest period, not the statement created last', function () {
@@ -111,7 +111,7 @@ test('the overview follows the latest period, not the statement created last', f
             ->where('overview.statement_id', $latest->id)
             ->where('overview.period', '2026 Q2')
             ->where('overview.owed', '80')
-            ->has('statements', 2));
+            ->has('statements.data', 2));
 });
 
 test('drafts, archived statements and other payees never feed the overview', function () {
@@ -131,7 +131,7 @@ test('drafts, archived statements and other payees never feed the overview', fun
             ->where('overview.statement_id', $own->id)
             ->where('overview.period', '2026 Q1')
             ->where('overview.owed', '30')
-            ->has('statements', 1));
+            ->has('statements.data', 1));
 });
 
 test('a negative ledger is marked as unrecouped and does not reduce what is owed', function () {
@@ -188,7 +188,7 @@ test('a payee sees all of their own payouts, newest first', function () {
     $this->actingAs(portalPayee($label, $payee))
         ->get(route('portal.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('payouts', [
+            ->where('payouts.data', [
                 ['id' => $newer->id, 'paid_on' => '2026-05-02', 'period' => '2026 Q1', 'total' => '30.000000000000000', 'memo' => null],
                 ['id' => $older->id, 'paid_on' => '2026-04-10', 'period' => '2026 Q1', 'total' => '20.000000000000000', 'memo' => 'Bank transfer'],
             ]));
@@ -206,8 +206,8 @@ test('a payout recorded after the statement is reported as paid since', function
         ->assertInertia(fn (Assert $page) => $page
             ->where('overview.owed', '50.000000000000000')
             ->where('overview.paid_since', '20.000000000000000')
-            ->has('payouts', 1)
-            ->where('payouts.0.memo', 'Bank transfer'));
+            ->has('payouts.data', 1)
+            ->where('payouts.data.0.memo', 'Bank transfer'));
 });
 
 test('someone who is a payee of two labels only sees the label they are working in', function () {
@@ -229,10 +229,10 @@ test('someone who is a payee of two labels only sees the label they are working 
         ->assertInertia(fn (Assert $page) => $page
             ->where('overview.statement_id', $own->id)
             ->where('overview.owed', '30')
-            ->has('payouts', 1)
-            ->where('payouts.0.id', $payout->id)
-            ->has('statements', 1)
-            ->where('statements.0.id', $own->id));
+            ->has('payouts.data', 1)
+            ->where('payouts.data.0.id', $payout->id)
+            ->has('statements.data', 1)
+            ->where('statements.data.0.id', $own->id));
 
     $this->actingAs($user)->get(route('portal.show', $elsewhere->id))->assertNotFound();
     $this->actingAs($user)->get(route('portal.download', $elsewhere->id))->assertNotFound();
@@ -264,8 +264,8 @@ test('a payee with nothing published gets an empty portal, not live figures', fu
         ->assertInertia(fn (Assert $page) => $page
             ->where('view', 'payee')
             ->where('overview', null)
-            ->where('payouts', [])
-            ->where('statements', []));
+            ->where('payouts.data', [])
+            ->where('statements.data', []));
 });
 
 test('a payee user without a linked payee gets an explanation instead of figures', function () {
@@ -281,8 +281,8 @@ test('a payee user without a linked payee gets an explanation instead of figures
         ->assertInertia(fn (Assert $page) => $page
             ->where('view', 'unlinked')
             ->where('overview', null)
-            ->where('payouts', [])
-            ->where('statements', []));
+            ->where('payouts.data', [])
+            ->where('statements.data', []));
 });
 
 test('an admin previews every published statement without a personal overview or payouts', function () {
@@ -299,7 +299,7 @@ test('an admin previews every published statement without a personal overview or
         ->assertInertia(fn (Assert $page) => $page
             ->where('view', 'admin')
             ->where('overview', null)
-            ->where('payouts', [])
-            ->has('statements', 2)
-            ->where('statements.1.id', $statement->id));
+            ->where('payouts.data', [])
+            ->has('statements.data', 2)
+            ->where('statements.data.1.id', $statement->id));
 });

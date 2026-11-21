@@ -12,6 +12,7 @@ use App\Models\Transaction;
 use App\Services\Imports\Identifiers;
 use App\Services\Royalties\ExchangeRates;
 use App\Support\CurrentLabel;
+use App\Support\DateRange;
 use App\Support\Decimal;
 use App\Support\Formats;
 use App\Support\Options;
@@ -31,9 +32,6 @@ class TransactionController extends Controller
             'search' => ['nullable', 'string', 'max:255'],
             'type' => ['nullable', 'string'],
             'retailer' => ['nullable', 'string', 'max:255'],
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date'],
-            'date' => ['nullable', 'string'],
         ]);
 
         $query = $this->filtered($request);
@@ -76,13 +74,18 @@ class TransactionController extends Controller
                 'total' => Decimal::parse($summary->total ?? 0) ?? '0',
                 'quantity' => Decimal::parse($summary->quantity ?? 0) ?? '0',
             ],
-            'filters' => [...$request->only(['search', 'type', 'release', 'retailer', 'import', 'from', 'to', 'date', 'unassigned', 'unconverted']), ...$sorting->toArray()],
+            'filters' => [
+                ...$request->only(['search', 'type', 'release', 'track', 'retailer', 'import', 'unassigned', 'unconverted']),
+                ...DateRange::fromRequest($request)->toArray(),
+                ...$sorting->toArray(),
+            ],
             'releaseOptions' => Options::releases(),
+            'trackOptions' => Options::tracks(),
             'platformOptions' => Transaction::query()->distinct()->pluck('retailer')
                 ->map(fn (?string $retailer): array => Platforms::of($retailer))
                 ->unique('key')->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()
                 ->map(fn (array $platform): array => ['id' => $platform['key'], 'name' => $platform['name']]),
-            'importOptions' => DataImport::query()->latest('id')->limit(100)->get(['id', 'name'])->map->only(['id', 'name']),
+            'importOptions' => DataImport::query()->latest('id')->get(['id', 'name'])->map->only(['id', 'name']),
         ]);
     }
 
@@ -164,16 +167,12 @@ class TransactionController extends Controller
      */
     private function filtered(Request $request): Builder
     {
-        $dateColumn = $request->input('date') === 'paid' ? 'paid_timestamp' : 'timestamp';
-
-        return Transaction::query()
+        return DateRange::fromRequest($request)->apply(Transaction::query())
             ->when(TransactionType::tryFrom((string) $request->input('type')), fn ($query, TransactionType $type) => $query->where('type', $type))
             ->when($request->integer('release'), fn ($query, int $release) => $query->where('release_id', $release))
             ->when($request->integer('track'), fn ($query, int $track) => $query->whereIn('track_id', Track::query()->find($track)?->recordingIds() ?? [$track]))
             ->when($request->integer('import'), fn ($query, int $import) => $query->where('data_import_id', $import))
             ->when($request->string('retailer')->value(), fn ($query, string $platform) => $this->onPlatform($query, $platform))
-            ->when($request->date('from'), fn ($query, $from) => $query->where($dateColumn, '>=', $from->toDateString()))
-            ->when($request->date('to'), fn ($query, $to) => $query->where($dateColumn, '<=', $to->toDateString()))
             ->when($request->boolean('unassigned'), fn ($query) => $query->whereNull('release_id')->where('type', '<>', 'transfer')
                 ->where(fn ($query) => $query->where('type', '<>', 'expense')->orWhere('recoupable', true)))
             ->when($request->boolean('unconverted'), fn ($query) => $query->whereNull('converted_total'))

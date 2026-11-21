@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { FileSpreadsheet, Plus } from 'lucide-react';
+import { FilterBar } from '@/components/filter-bar';
 import { Amount } from '@/components/amount';
-import { CheckField, SelectInput } from '@/components/field';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
 import type { PlayerTrack } from '@/components/player/player-store';
@@ -10,7 +10,6 @@ import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
@@ -93,51 +92,35 @@ export default function Releases({
                 </>
             }
         >
-            <div className="flex flex-wrap items-center gap-3">
-                <Input
-                    type="search"
-                    placeholder="Search name, catalog number or UPC…"
-                    defaultValue={filters.search}
-                    onChange={(event) =>
-                        apply({ search: event.target.value }, true)
-                    }
-                    className="max-w-sm"
-                />
-                <SelectInput
-                    aria-label="Artist"
-                    value={filters.artist ?? ''}
-                    onChange={(event) =>
-                        apply({
-                            artist: event.target.value
-                                ? Number(event.target.value)
-                                : null,
-                        })
-                    }
-                    options={artistOptions}
-                    placeholder="All artists"
-                    className="w-52"
-                />
-                <SelectInput
-                    aria-label="Status"
-                    value={filters.status ?? ''}
-                    onChange={(event) =>
-                        apply({ status: event.target.value || null })
-                    }
-                    placeholder="Any status"
-                    className="w-36"
-                >
-                    <option value="todo">To do</option>
-                    <option value="in_progress">In progress</option>
-                    <option value="done">Done</option>
-                </SelectInput>
-                <CheckField
-                    label="Without contract"
-                    checked={filters.without_contract}
-                    onChange={(event) =>
-                        apply({ without_contract: event.target.checked })
-                    }
-                />
-            </div>
+            <FilterBar
+                url={index.url()}
+                filters={filters}
+                search="Search name, catalog number or UPC…"
+                selects={[
+                    {
+                        name: 'artist',
+                        label: 'Artist',
+                        placeholder: 'All artists',
+                        options: artistOptions,
+                    },
+                    {
+                        name: 'status',
+                        label: 'Status',
+                        placeholder: 'Any status',
+                        className: 'w-full sm:w-36',
+                        children: (
+                            <>
+                                <option value="todo">To do</option>
+                                <option value="in_progress">In progress</option>
+                                <option value="done">Done</option>
+                            </>
+                        ),
+                    },
+                ]}
+                checks={[
+                    { name: 'without_contract', label: 'Without contract' },
+                ]}
+            />
 
             {releases.total === 0 ? (
                 <EmptyState

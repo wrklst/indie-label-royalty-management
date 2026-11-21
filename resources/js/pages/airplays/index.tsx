@@ -1,4 +1,4 @@
-import { Form, Link, router, useHttp } from '@inertiajs/react';
+import { Form, router, useHttp } from '@inertiajs/react';
 import {
     Check,
     ExternalLink,
@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from 'react';
 import AirplayController from '@/actions/App/Http/Controllers/AirplayController';
 import AirplayResearchController from '@/actions/App/Http/Controllers/AirplayResearchController';
+import { FilterBar } from '@/components/filter-bar';
 import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
 import { Field, SelectInput } from '@/components/field';
@@ -898,7 +899,6 @@ export default function Airplays({
     filters,
     trackResearch,
     airplayResearch,
-    onlyTrack,
     tracks,
     releases,
     staleCount,
@@ -909,13 +909,14 @@ export default function Airplays({
     findings: Paginated<Finding>;
     searches: Paginated<SearchEntry>;
     filters: {
+        search: string;
         track: number | null;
+        origin: Origin | null;
         sort: string | null;
         direction: SortDirection | null;
     };
     trackResearch: TrackResearch[];
     airplayResearch: TrackResearch[];
-    onlyTrack: Option | null;
     tracks: Option[];
     releases: Option[];
     staleCount: number;
@@ -952,6 +953,10 @@ export default function Airplays({
 
     const { apply } = useFilters(index.url(), filters);
     const sorter = serverSorter(filters, apply);
+    const filtered =
+        filters.search !== '' ||
+        filters.track !== null ||
+        filters.origin !== null;
 
     return (
         <Page
@@ -985,21 +990,30 @@ export default function Airplays({
                 </>
             }
         >
-            {onlyTrack && (
-                <p className="text-sm">
-                    Showing only{' '}
-                    <RecordLink to="track" id={onlyTrack.id}>
-                        {onlyTrack.name}
-                    </RecordLink>
-                    .{' '}
-                    <Link
-                        href={index()}
-                        className="underline underline-offset-4"
-                    >
-                        Show all airplay
-                    </Link>
-                </p>
-            )}
+            <FilterBar
+                url={index.url()}
+                filters={filters}
+                search="Search track, artist, station or ISRC…"
+                selects={[
+                    {
+                        name: 'track',
+                        label: 'Track',
+                        placeholder: 'All tracks',
+                        options: tracks,
+                        className: 'w-full sm:w-72',
+                    },
+                    {
+                        name: 'origin',
+                        label: 'Known from',
+                        placeholder: 'Any origin',
+                        options: Object.entries(ORIGINS).map(([id, name]) => ({
+                            id,
+                            name,
+                        })),
+                        className: 'w-full sm:w-64',
+                    },
+                ]}
+            />
             <ResearchProgress
                 tracks={trackResearch}
                 airplays={airplayResearch}
@@ -1007,8 +1021,12 @@ export default function Airplays({
             {findings.total > 0 && <Findings findings={findings} />}
             {airplays.total === 0 ? (
                 <EmptyState
-                    title="No airplay yet"
-                    description="Import a Rightz Audio statement under Data imports, start a research, or add a play by hand."
+                    title={filtered ? 'No airplay matches' : 'No airplay yet'}
+                    description={
+                        filtered
+                            ? undefined
+                            : 'Import a Rightz Audio statement under Data imports, start a research, or add a play by hand.'
+                    }
                 />
             ) : (
                 <Panel flush>

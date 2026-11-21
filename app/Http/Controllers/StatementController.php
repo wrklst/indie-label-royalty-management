@@ -6,6 +6,7 @@ use App\Models\Payee;
 use App\Models\Period;
 use App\Models\Statement;
 use App\Support\Decimal;
+use App\Support\Options;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +34,7 @@ class StatementController extends Controller
                 ->with(['payee:id,name', 'period:id,name'])
                 ->when(! $request->boolean('archived'), fn ($query) => $query->where('archived', false))
                 ->when($request->integer('period'), fn ($query, int $period) => $query->where('period_id', $period))
+                ->when($request->integer('payee'), fn ($query, int $payee) => $query->where('payee_id', $payee))
                 ->tap($sorting)
                 ->paginate(50)
                 ->withQueryString()
@@ -43,7 +45,14 @@ class StatementController extends Controller
                     'published' => $statement->published_at !== null,
                     'created_at' => $statement->created_at->toIso8601String(),
                 ]),
-            'filters' => ['archived' => $request->boolean('archived'), 'period' => $request->integer('period') ?: null, ...$sorting->toArray()],
+            'filters' => [
+                'archived' => $request->boolean('archived'),
+                'period' => $request->integer('period') ?: null,
+                'payee' => $request->integer('payee') ?: null,
+                ...$sorting->toArray(),
+            ],
+            'periodOptions' => Options::periods(),
+            'payeeOptions' => Options::payees(),
         ]);
     }
 

@@ -48,18 +48,17 @@ Payments of royalties you owe are not transfers. Record them as payouts on the p
 Every transaction has two dates:
 
 - **Sale date** (just **Date** on expenses and transfers; column **Sold**): when the sale or cost happened.
-- **Paid date** (column **Paid**): when the money arrived at the label or left it.
+- **Paid date** (column **Paid date**): when the money arrived at the label or left it.
 
 **The paid date decides which period a transaction counts in.** A distributor reports January streams in a statement that is paid in March or later. You can only pay your artists from money you have received, so a period settles what was paid in it, not what was sold in it.
 
 Where each date is used:
 
-| Place                                     | Date used                                          |
-| ----------------------------------------- | -------------------------------------------------- |
-| Periods, statements, balances             | Paid date, always                                  |
-| Mechanicals, PPD and reserves tools       | Paid date, always                                  |
-| Profitability report                      | Sale date by default; can be switched to paid date |
-| Transaction list filter **From** / **To** | Sale date by default; can be switched to paid date |
+| Place                                                                 | Date used                                          |
+| --------------------------------------------------------------------- | -------------------------------------------------- |
+| Periods, statements, balances                                         | Paid date, always                                  |
+| Mechanicals, PPD and reserves tools                                   | Paid date, always                                  |
+| Dashboard, profitability report, transaction list (**From** / **To**) | Sale date by default; can be switched to paid date |
 
 ## Currencies and conversion
 
@@ -130,24 +129,23 @@ To change a transaction, use the edit button in its row. An imported transaction
 
 The list shows 100 transactions per page with the columns **Sold**, **Paid date**, **Type**, **Release / track**, **Platform**, **Format / category**, **Country**, **Units** and **Amount**. Most headings sort the list. Above the table, **Matching**, **Units** and **Total** summarise everything that matches the filters, not only the current page.
 
-| Filter                                          | What it does                                                                                                                       |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Search field                                    | Finds text in the memo, platform or category, in the track name, release name or catalog number, an ISRC, or an exact external ID. |
-| **All types**                                   | Income, expense or transfer.                                                                                                       |
-| **All releases**                                | One release.                                                                                                                       |
-| **All platforms**                               | One platform; "Apple" and "Apple/iTunes" are one choice.                                                                           |
-| **All imports**                                 | The transactions of one data import (the latest 100 imports are offered).                                                          |
-| **Sale date** / **Paid date**, **From**, **To** | A date range on the chosen date.                                                                                                   |
-| **Unassigned**                                  | Income and recoupable expenses without a release.                                                                                  |
-| **Unconverted**                                 | Transactions without a conversion rate.                                                                                            |
+| Filter                                                | What it does                                                                                                                       |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Search field                                          | Finds text in the memo, platform or category, in the track name, release name or catalog number, an ISRC, or an exact external ID. |
+| **All types**                                         | Income, expense or transfer.                                                                                                       |
+| **All releases**                                      | One release.                                                                                                                       |
+| **All platforms**                                     | One platform; "Apple" and "Apple/iTunes" are one choice.                                                                           |
+| **All tracks**                                        | One track; every track that shares its ISRC is included.                                                                           |
+| **All imports**                                       | The transactions of one data import. Every import is offered.                                                                      |
+| **By sale date** / **By paid date**, **From**, **To** | A date range on the chosen date. Without dates the list covers all time.                                                           |
+| **Unassigned**                                        | Income and recoupable expenses without a release.                                                                                  |
+| **Unconverted**                                       | Transactions without a conversion rate.                                                                                            |
 
 **Clear filters** resets them.
 
 ### The track filter
 
-The list can also be limited to one track, but there is no control for it in the filter bar. You reach it from the track: open the track under **Catalog → Tracks** and follow the link **… transactions** under **Income**. The address then ends in `?track=` followed by the track's number.
-
-The track filter includes every track that shares the same ISRC, so a recording that appears on a single and on an album is shown together. It can be combined with the other filters.
+**All tracks** limits the list to one track. The link **… transactions** under **Income** on a track page opens the list with the track already chosen; the filter shows it and **Clear filters** removes it. The filter includes every track that shares the same ISRC, so a recording that appears on a single and on an album is shown together. It can be combined with the other filters.
 
 ## Full precision amounts
 

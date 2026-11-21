@@ -180,11 +180,11 @@ test('the page lists recurring and booked costs of this label only and books wha
 
     $this->get(route('label-costs.index'))->assertInertia(fn (Assert $page) => $page
         ->component('label-costs/index')
-        ->has('recurring', 1)
-        ->where('recurring.0.name', 'Ours')
-        ->where('recurring.0.next_due_on', '2026-03-15')
-        ->has('costs', 2)
-        ->where('costs.0.recurring', true)
+        ->has('recurring.data', 1)
+        ->where('recurring.data.0.name', 'Ours')
+        ->where('recurring.data.0.next_due_on', '2026-03-15')
+        ->has('costs.data', 2)
+        ->where('costs.data.0.recurring', true)
         ->where('totals.this_year', '-20.000000000000000'));
 });
 

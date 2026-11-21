@@ -141,15 +141,28 @@ export function useTableSort<T, K extends string>(
 
 /**
  * Sorting for a paginated list, which is ordered by the server: the order
- * travels in the query string next to the other filters.
+ * travels in the query string next to the other filters. A page with
+ * several sortable lists gives each a `prefix` ("files" uses `files_sort`
+ * and `files_direction`).
  */
 export function serverSorter(
-    filters: { sort?: string | null; direction?: SortDirection | null },
-    apply: (changes: SortState) => void,
+    filters: object,
+    apply: (changes: never, debounce?: boolean) => void,
+    prefix = '',
 ): Sorter {
+    const name = prefix === '' ? '' : `${prefix}_`;
+    const query = filters as Record<string, unknown>;
+    const sort = query[`${name}sort`];
+    const direction = query[`${name}direction`];
+
     return {
-        sort: filters.sort ?? null,
-        direction: filters.direction ?? null,
-        onSort: (next) => apply(next),
+        sort: typeof sort === 'string' ? sort : null,
+        direction:
+            direction === 'asc' || direction === 'desc' ? direction : null,
+        onSort: (next) =>
+            (apply as (changes: Record<string, string | null>) => void)({
+                [`${name}sort`]: next.sort,
+                [`${name}direction`]: next.direction,
+            }),
     };
 }

@@ -7,7 +7,10 @@ use App\Models\Period;
 use App\Models\Statement;
 use App\Support\CurrentLabel;
 use App\Support\Decimal;
+use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,8 +25,20 @@ class PortalController extends Controller
 {
     public function __construct(private readonly CurrentLabel $currentLabel) {}
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $statementSorting = Sorting::for($request, [
+            'period' => Sorting::related(Period::class, 'period_id'),
+            'published_at' => 'published_at',
+            'balance' => 'balance',
+            'payable' => 'payable',
+        ], fn (Builder $query) => $query->latest('id'), 'statements');
+        $payoutSorting = Sorting::for($request, [
+            'paid_on' => 'paid_on',
+            'period' => Sorting::related(Period::class, 'period_id'),
+            'memo' => Sorting::nullsLast('memo'),
+            'total' => 'total',
+        ], fn (Builder $query) => $query->orderByDesc('paid_on')->orderByDesc('id'), 'payouts');
         $isAdmin = $this->currentLabel->isAdmin();
         $payeeId = $isAdmin ? null : $this->currentLabel->payeeId();
 
@@ -34,13 +49,15 @@ class PortalController extends Controller
                 default => 'payee',
             },
             'overview' => $payeeId === null ? null : $this->overview($payeeId),
-            'payouts' => $payeeId === null ? [] : $this->payouts($payeeId),
-            'statements' => $this->visible()->with('period:id,name,starts_on,ends_on')->latest('id')->get()
-                ->map(fn (Statement $statement): array => [
+            'payouts' => $this->payouts($payeeId ?? 0, $payoutSorting),
+            'statements' => $this->visible()->with('period:id,name,starts_on,ends_on')->tap($statementSorting)
+                ->paginate(25, pageName: 'statements_page')->withQueryString()
+                ->through(fn (Statement $statement): array => [
                     ...$statement->only(['id', 'name', 'balance', 'payable']),
                     'period' => $statement->period?->name,
                     'published_at' => $statement->published_at?->toDateString(),
                 ]),
+            'filters' => [...$statementSorting->toArray(), ...$payoutSorting->toArray()],
         ]);
     }
 
@@ -128,23 +145,22 @@ class PortalController extends Controller
      * Every payment the label recorded for the payee. Payouts are facts,
      * so they show whether or not a statement mentions them yet.
      *
-     * @return list<array{id: int, paid_on: string, period: string|null, total: string, memo: string|null}>
+     * @return LengthAwarePaginator<int, array{id: int, paid_on: string, period: string|null, total: string, memo: string|null}>
      */
-    private function payouts(int $payeeId): array
+    private function payouts(int $payeeId, Sorting $sorting): LengthAwarePaginator
     {
-        return array_values(Payout::query()
+        return Payout::query()
             ->where('payee_id', $payeeId)
             ->with('period:id,name')
-            ->orderByDesc('paid_on')->orderByDesc('id')
-            ->get()
-            ->map(fn (Payout $payout): array => [
+            ->tap($sorting)
+            ->paginate(25, pageName: 'payouts_page')->withQueryString()
+            ->through(fn (Payout $payout): array => [
                 'id' => $payout->id,
                 'paid_on' => $payout->paid_on->toDateString(),
                 'period' => $payout->period?->name,
                 'total' => $payout->total,
                 'memo' => $payout->memo,
-            ])
-            ->all());
+            ]);
     }
 
     /**

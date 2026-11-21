@@ -48,6 +48,7 @@ The last row is the **Total**. The four figures above the table repeat its **Inc
 | **By sale date** / **By paid date** | Which date the range applies to. Sale date is the default.              |
 | **From**, **To**                    | The date range. Without dates the report covers everything ever booked. |
 | **All artists**                     | Only releases of one artist.                                            |
+| **Clear filters**                   | Appears when a filter is set and resets all of them.                    |
 
 **Download CSV** saves the table as shown by the filters, with amounts rounded to four decimals and the margin in percent.
 
@@ -84,7 +85,7 @@ Step by step for Example Release: net is 2,000 − 400 = 1,600. Payees earn 60% 
 
 **Royalties → Overheads** is for what it costs to run the label: subscriptions, software, hosting, accounting, fees. These are label costs that belong to no release, and they never reduce what payees earn.
 
-The page shows the costs paid in the current and the previous year, what the recurring costs still running add up to per year, the list **Recurring costs** and the list **Booked costs** (the latest 200).
+The page shows the costs paid in the current and the previous year, what the recurring costs still running add up to per year, the list **Recurring costs** (25 to a page), the **Receipts** that wait for a cost (10 to a page) and the list **Booked costs** (50 to a page). **Booked costs** can be searched by name, memo or category and sorted by any heading; the sort covers every cost, not only the page you see.
 
 ### A one-off cost
 
@@ -108,7 +109,7 @@ Due dates are counted from the first payment: a monthly cost starting on 31 Janu
 
 Due dates in the past are booked right away. A monthly cost whose first payment was two years ago gets a payment for every month since as soon as you add it.
 
-The list **Recurring costs** shows **Since**, the **Next payment** and how many payments are **Booked**.
+The list **Recurring costs** shows **Since**, the **Next payment** and how many payments are **Booked**; every heading sorts it.
 
 - **Change** edits the name, amount, currency, rate, category, memo and **Last payment**. It applies to payments from now on; payments already booked keep their amounts. The rhythm and the first payment cannot be changed. Stop the cost and add a new one instead.
 - **Stop** ends the cost. No further payments are booked; the ones already booked stay in the accounts.

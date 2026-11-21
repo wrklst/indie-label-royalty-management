@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Services\Royalties\ProfitabilityReport;
 use App\Support\CurrentLabel;
+use App\Support\DateRange;
 use App\Support\Decimal;
 use App\Support\Options;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
@@ -71,27 +71,20 @@ class ProfitabilityController extends Controller
     }
 
     /**
-     * @return array{from: string|null, to: string|null, date: 'paid'|'sold', artist: int|null}
+     * @return array{from: string|null, to: string|null, date: 'paid'|null, artist: int|null}
      */
     private function filters(Request $request): array
     {
-        $request->validate([
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date', 'after_or_equal:from'],
-            'date' => ['nullable', Rule::in(['sold', 'paid'])],
-            'artist' => ['nullable', 'integer'],
-        ]);
+        $request->validate(['artist' => ['nullable', 'integer']]);
 
         return [
-            'from' => $request->date('from')?->toDateString(),
-            'to' => $request->date('to')?->toDateString(),
-            'date' => $request->input('date') === 'paid' ? 'paid' : 'sold',
+            ...DateRange::fromRequest($request)->toArray(),
             'artist' => $request->integer('artist') ?: null,
         ];
     }
 
     /**
-     * @param  array{from: string|null, to: string|null, date: 'paid'|'sold', artist: int|null}  $filters
+     * @param  array{from: string|null, to: string|null, date: 'paid'|null, artist: int|null}  $filters
      * @return Report
      */
     private function report(array $filters): array

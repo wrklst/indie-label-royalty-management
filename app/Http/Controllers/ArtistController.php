@@ -13,6 +13,7 @@ use App\Models\Track;
 use App\Models\Transaction;
 use App\Services\Releases\PlayableAudio;
 use App\Services\Reports\IncomeReport;
+use App\Support\CollectionPage;
 use App\Support\Decimal;
 use App\Support\Options;
 use App\Support\Sorting;
@@ -72,7 +73,7 @@ class ArtistController extends Controller
     /**
      * The releases and tracks of one artist, and where the tracks were played.
      */
-    public function show(Artist $artist): Response
+    public function show(Request $request, Artist $artist): Response
     {
         $tracks = Track::query()->where(fn ($query) => $query->where('artist_id', $artist->id)->orWhereHas('artists', fn ($query) => $query->whereKey($artist->id)))
             ->with('release:id,name,contract_id')->withCount('airplays')->orderBy('name')->get();
@@ -81,7 +82,6 @@ class ArtistController extends Controller
         $releases = Release::query()->where(fn ($query) => $query->where('artist_id', $artist->id)->orWhereHas('artists', fn ($query) => $query->whereKey($artist->id))
             ->orWhereIn('id', $tracks->pluck('release_id')->filter()))
             ->orderByDesc('released_on')->orderBy('name')->get(['id', 'name', 'catalog_number', 'released_on', 'artist_id', 'contract_id']);
-        $albums = PlayableAudio::albums($releases);
         $own = $releases->filter(fn (Release $release): bool => $release->artist_id === $artist->id || $release->artists->contains($artist))->modelKeys();
         // The contract of a track is its own, otherwise that of its release.
         $contracts = Contract::query()->with('splits.payee:id,name')->orderBy('name')
@@ -100,6 +100,29 @@ class ArtistController extends Controller
         $income = Decimal::parse($byType['income']->total ?? 0) ?? '0';
         $expense = Decimal::parse($byType['expense']->total ?? 0) ?? '0';
 
+        $releaseRows = $releases->toBase()->map(fn (Release $release): array => [
+            ...$release->only(['id', 'name', 'catalog_number']),
+            'released_on' => $release->released_on?->toDateString(),
+            // On a release of others: what the artist's tracks on it earned.
+            'income' => in_array($release->id, $own, true)
+                ? Decimal::parse($incomeByRelease[$release->id] ?? 0) ?? '0'
+                : $tracks->where('release_id', $release->id)->reduce(fn (string $sum, Track $track): string => Decimal::add($sum, Decimal::parse($incomeByTrack[$track->id] ?? 0) ?? '0'), '0'),
+        ]);
+        $releasePage = CollectionPage::of($releaseRows, $request, ['name', 'catalog_number', 'released_on', 'income'], 'releases');
+        $albums = PlayableAudio::albums($releases->whereIn('id', $releasePage['page']->pluck('id')));
+        $releasePage['page']->through(fn (array $row): array => [...$row, 'player_tracks' => $albums[$row['id']]]);
+
+        // A recording on several releases has one track per release; it is listed once.
+        $trackRows = $tracks->toBase()->groupBy(fn (Track $track): string => $track->isrc ?? "track {$track->id}")->values()
+            ->map(fn (Collection $entries): array => [
+                ...$entries->first()->only(['id', 'name', 'isrc']),
+                'releases' => $entries->map(fn (Track $track): ?array => $track->release?->only(['id', 'name']))->filter()->unique('id')->values(),
+                'release' => $entries->map(fn (Track $track): ?string => $track->release?->name)->filter()->first(),
+                'airplays_count' => (int) $entries->sum('airplays_count'),
+                'income' => $entries->reduce(fn (string $sum, Track $track): string => Decimal::add($sum, Decimal::parse($incomeByTrack[$track->id] ?? 0) ?? '0'), '0'),
+            ]);
+        $trackPage = CollectionPage::of($trackRows, $request, ['name', 'release', 'isrc', 'airplays_count', 'income'], 'tracks');
+
         return Inertia::render('artists/show', [
             'artist' => [
                 ...$artist->only(['id', 'name']),
@@ -114,16 +137,9 @@ class ArtistController extends Controller
                 'transactions' => (int) $byType->sum('transactions'),
                 'airplays' => (int) $tracks->sum('airplays_count'),
             ],
-            'releases' => $releases
-                ->map(fn (Release $release): array => [
-                    ...$release->only(['id', 'name', 'catalog_number']),
-                    'player_tracks' => $albums[$release->id],
-                    'released_on' => $release->released_on?->toDateString(),
-                    // On a release of others: what the artist's tracks on it earned.
-                    'income' => in_array($release->id, $own, true)
-                        ? Decimal::parse($incomeByRelease[$release->id] ?? 0) ?? '0'
-                        : $tracks->where('release_id', $release->id)->reduce(fn (string $sum, Track $track): string => Decimal::add($sum, Decimal::parse($incomeByTrack[$track->id] ?? 0) ?? '0'), '0'),
-                ]),
+            'incomeByRelease' => $releaseRows->filter(fn (array $row): bool => (float) $row['income'] > 0)
+                ->map(fn (array $row): array => ['name' => $row['name'], 'income' => $row['income']])->values(),
+            'releases' => $releasePage['page'],
             'report' => IncomeReport::of($booked(), PlayCount::query()->whereIn('track_id', $tracks->modelKeys())),
             'movers' => IncomeReport::movers($booked(), 'release_id'),
             'contracts' => $contracts->map(fn (Contract $contract): array => [
@@ -133,14 +149,8 @@ class ArtistController extends Controller
                     'split_amount' => $split->split_amount,
                 ])->values(),
             ])->values(),
-            // A recording on several releases has one track per release; it is listed once.
-            'tracks' => $tracks->toBase()->groupBy(fn (Track $track): string => $track->isrc ?? "track {$track->id}")->values()
-                ->map(fn (Collection $entries): array => [
-                    ...$entries->first()->only(['id', 'name', 'isrc']),
-                    'releases' => $entries->map(fn (Track $track): ?array => $track->release?->only(['id', 'name']))->filter()->unique('id')->values(),
-                    'airplays_count' => (int) $entries->sum('airplays_count'),
-                    'income' => $entries->reduce(fn (string $sum, Track $track): string => Decimal::add($sum, Decimal::parse($incomeByTrack[$track->id] ?? 0) ?? '0'), '0'),
-                ]),
+            'tracks' => $trackPage['page'],
+            'filters' => [...$releasePage['filters'], ...$trackPage['filters']],
         ]);
     }
 
