@@ -5,6 +5,7 @@ use App\Models\Contract;
 use App\Models\ContractSplit;
 use App\Models\Label;
 use App\Models\Payee;
+use App\Models\Release;
 use App\Models\Territory;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -261,4 +262,42 @@ test('a payee cannot reach the label settings', function () {
 
     $this->assertDatabaseHas('labels', ['id' => $label->id, 'name' => 'Example Records']);
     $this->assertDatabaseCount('territories', 1);
+});
+
+test('a distributor that is switched off no longer shows what is built for it', function () {
+    $label = Label::factory()->create(['name' => 'Example Records', 'currency' => 'EUR']);
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    $admin = labelAdmin($label);
+
+    $this->actingAs($admin)->get(route('label-settings.edit'))->assertInertia(fn (Assert $page) => $page
+        ->where('distributors', [['key' => 'zebralution', 'name' => 'Zebralution', 'enabled' => true]])
+        ->where('label.distributors', ['zebralution']));
+    $this->get(route('play-counts.index'))->assertInertia(fn (Assert $page) => $page->where('zebralutionExport', fn (?string $url): bool => $url !== null));
+    $this->get(route('data-imports.create'))->assertInertia(fn (Assert $page) => $page->where('sources', fn ($sources): bool => collect($sources)->contains('key', 'zebralution')));
+
+    $this->put(route('label-settings.update'), ['name' => 'Example Records', 'currency' => 'EUR', 'distributors' => ['zebralution' => '0']])->assertSessionHasNoErrors();
+
+    expect($label->refresh()->delivery_settings)->toBe(['distributors' => ['zebralution' => false]]);
+
+    $this->get(route('label-settings.edit'))->assertInertia(fn (Assert $page) => $page
+        ->where('distributors.0.enabled', false)
+        ->where('label.distributors', []));
+    $this->get(route('play-counts.index'))->assertInertia(fn (Assert $page) => $page->where('zebralutionExport', null));
+    $this->get(route('data-imports.create'))->assertInertia(fn (Assert $page) => $page
+        ->where('sources', fn ($sources): bool => ! collect($sources)->contains('key', 'zebralution') && collect($sources)->contains('key', 'bandcamp')));
+    $this->get(route('releases.edit', $release->id))->assertInertia(fn (Assert $page) => $page->where('genreOptions', []));
+    $this->get(route('releases.zebralution-package', $release->id))->assertNotFound();
+
+    // A form without the distributors leaves the choice alone.
+    $this->put(route('label-settings.update'), ['name' => 'Example Records', 'currency' => 'EUR'])->assertSessionHasNoErrors();
+
+    expect($label->refresh()->usesDistributor('zebralution'))->toBeFalse();
+});
+
+test('a distributor this installation does not know is refused', function () {
+    $label = Label::factory()->create(['name' => 'Example Records', 'currency' => 'EUR']);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('label-settings.update'), ['name' => 'Example Records', 'currency' => 'EUR', 'distributors' => ['example' => '1']])
+        ->assertSessionHasErrors('distributors');
 });

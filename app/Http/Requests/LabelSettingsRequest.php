@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Services\Releases\ZebralutionSheet;
+use App\Support\Distributors;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
 
@@ -51,6 +52,8 @@ class LabelSettingsRequest extends LabelFormRequest
             'ignore_negative_quantities' => ['boolean'],
             'airplay_markets' => ['array', 'min:1', 'max:10'],
             'airplay_markets.*' => ['string', 'size:2', 'alpha:ascii'],
+            'distributors' => ['array:'.implode(',', array_keys(Distributors::NAMES))],
+            'distributors.*' => ['boolean'],
             'zebralution_number' => ['nullable', 'string', 'max:32'],
             'zebralution_origin_country' => ['nullable', 'string', 'size:2', 'alpha:ascii'],
             'zebralution_price_group' => ['nullable', 'integer', Rule::in(ZebralutionSheet::PRICE_GROUPS)],

@@ -92,7 +92,7 @@ export default function DataImports({
             {imports.total === 0 ? (
                 <EmptyState
                     title="No imports yet"
-                    description="Upload a Zebralution, Bandcamp or neighbouring rights statement, or a spreadsheet in the template layout."
+                    description="Upload a statement from your distributor, Bandcamp or a neighbouring rights society, or a spreadsheet in the template layout."
                     action={
                         <Button asChild>
                             <Link href={create()}>Import a statement</Link>

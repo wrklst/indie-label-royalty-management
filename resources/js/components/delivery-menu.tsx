@@ -31,7 +31,7 @@ import {
  * browser back with the reasons, which are listed in a dialog.
  */
 export function DeliveryMenu({ releaseId }: { releaseId: number }) {
-    const { errors } = usePage().props;
+    const { errors, label } = usePage().props;
     const store = errors?.zebralution_package
         ? 'Zebralution'
         : errors?.bandcamp_package
@@ -65,12 +65,16 @@ export function DeliveryMenu({ releaseId }: { releaseId: number }) {
                 'Cover, one lossless file per track and a sheet to copy from, to unpack and add on Bandcamp.',
             href: bandcampPackage.url(releaseId),
         },
-        {
-            label: 'Zebralution ZIP',
-            description:
-                "Zebralution's metadata sheet filled in, the cover, and the WAV masters named for its FTP server.",
-            href: zebralutionPackage.url(releaseId),
-        },
+        ...(label?.distributors.includes('zebralution')
+            ? [
+                  {
+                      label: 'Zebralution ZIP',
+                      description:
+                          "Zebralution's metadata sheet filled in, the cover, and the WAV masters named for its FTP server.",
+                      href: zebralutionPackage.url(releaseId),
+                  },
+              ]
+            : []),
         {
             label: 'Metadata CSV',
             description: 'Release and track metadata as a spreadsheet.',

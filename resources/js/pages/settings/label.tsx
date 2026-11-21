@@ -27,6 +27,7 @@ type Props = {
         zebralution_work_rights: string;
     };
     zebralutionWorkRights: string[];
+    distributors: { key: string; name: string; enabled: boolean }[];
     royaltyTools: {
         mechanicals_usd_rate: string | null;
         mechanicals_include_physical: boolean;
@@ -68,12 +69,22 @@ export default function LabelSettings({
     royaltyTools,
     territories,
     zebralutionWorkRights,
+    distributors,
 }: Props) {
     const { label } = usePage().props;
     const [tools, setTools] = useState({
         mechanicals: settings.accounts_mechanicals,
         ppd: settings.accounts_ppd,
     });
+
+    const [used, setUsed] = useState(
+        Object.fromEntries(
+            distributors.map((distributor) => [
+                distributor.key,
+                distributor.enabled,
+            ]),
+        ),
+    );
 
     return (
         <>
@@ -184,6 +195,35 @@ export default function LabelSettings({
                             </div>
 
                             <div className="grid gap-3">
+                                <p className="text-sm font-medium">
+                                    Distributors
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    The ones you work with. Their delivery
+                                    package, statement layouts and export links
+                                    are only shown when switched on.
+                                </p>
+                                {distributors.map((distributor) => (
+                                    <Toggle
+                                        key={distributor.key}
+                                        name={`distributors[${distributor.key}]`}
+                                        label={distributor.name}
+                                        defaultChecked={distributor.enabled}
+                                        onChange={(checked) =>
+                                            setUsed((current) => ({
+                                                ...current,
+                                                [distributor.key]: checked,
+                                            }))
+                                        }
+                                    />
+                                ))}
+                            </div>
+
+                            <div
+                                className={
+                                    used.zebralution ? 'grid gap-3' : 'hidden'
+                                }
+                            >
                                 <p className="text-sm font-medium">
                                     Zebralution delivery
                                 </p>

@@ -30,6 +30,20 @@ Two options that apply to uploaded Bandcamp reports and to the automatic sync al
 
 The connection itself (client ID and secret) is on its own page: follow the link **connect your Bandcamp account** or open **Settings → Bandcamp**. See [Bandcamp](11-bandcamp.md).
 
+## Distributors
+
+Tick the distributors the label works with. What is built for a distributor is only shown when it is ticked:
+
+| Distributor | What it switches on                                                                                                                                                                                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Zebralution | The **Zebralution ZIP** under **Delivery** on a release, its genres as suggestions on the release form, its statement layouts in the list on **Data imports → New import**, the link to its analytics export on **Play counts**, and the section **Zebralution delivery** below. |
+
+A label that never chose has all of them ticked. Switching one off hides its options and keeps what was imported or entered. A statement of a distributor that is switched off is still recognised when uploaded with **Detect automatically**.
+
+Statements of any other distributor go in through the template layout; see [Importing statements](10-importing-statements.md). To add a distributor of your own, see [Extending](51-extending.md).
+
+**Zebralution delivery** holds what goes into every metadata sheet: the number Zebralution gave the label, the country of origin, the price group, and who holds the rights in compositions and lyrics.
+
 ## Airplay research
 
 - The login for the web search itself is a connection: **Settings → Connections**. See [Connections](42-connections.md).

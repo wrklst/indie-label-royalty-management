@@ -24,7 +24,7 @@ type Props = {
     report: Report;
     tracks: Movers;
     releases: Movers;
-    zebralutionExport: string;
+    zebralutionExport: string | null;
     files: {
         batch: string;
         source_file: string;
@@ -88,20 +88,22 @@ export default function PlayCounts({
                             </div>
                             <div className="flex flex-wrap items-start justify-between gap-4">
                                 <ul className="grid gap-0.5 text-xs text-muted-foreground">
-                                    <li>
-                                        Zebralution:{' '}
-                                        <a
-                                            href={zebralutionExport}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="font-medium text-foreground underline underline-offset-4"
-                                        >
-                                            download the streams since the last
-                                            import
-                                        </a>
-                                        , by track, platform and day. Sign in to
-                                        Greenhouse first.
-                                    </li>
+                                    {zebralutionExport && (
+                                        <li>
+                                            Zebralution:{' '}
+                                            <a
+                                                href={zebralutionExport}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="font-medium text-foreground underline underline-offset-4"
+                                            >
+                                                download the streams since the
+                                                last import
+                                            </a>
+                                            , by track, platform and day. Sign
+                                            in to Greenhouse first.
+                                        </li>
+                                    )}
                                     {SOURCES.map((source) => (
                                         <li key={source}>{source}</li>
                                     ))}

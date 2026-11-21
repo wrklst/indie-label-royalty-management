@@ -68,7 +68,7 @@ export default function Dashboard({
             <Page title="Dashboard">
                 <EmptyState
                     title="Nothing imported yet"
-                    description="Upload a statement from Zebralution, Bandcamp or your neighbouring rights society. Releases, tracks and artists are created from the file."
+                    description="Upload a statement from your distributor, Bandcamp or your neighbouring rights society. Releases, tracks and artists are created from the file."
                     action={
                         <Button asChild>
                             <Link href={createImport()}>

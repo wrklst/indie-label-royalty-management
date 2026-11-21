@@ -62,6 +62,8 @@ What you do not have to handle: the encoding, the delimiter, title lines above t
 - `category` and `format` must be values from `config/royalties.php`.
 - Strip personal data: do not put buyer names, emails or addresses into `raw`.
 
+A distributor becomes a choice under **Settings → Label → Distributors** by an entry in `App\\Support\\Distributors::NAMES`, keyed by the `source()` of its importers. Anything built only for it asks `$label->usesDistributor('key')` on the server and `label.distributors.includes('key')` on a page.
+
 Read `BaseImporter` and the existing importers (`ZebralutionImporter` is a good model) before writing your own, and add a test with a small invented sample file under `tests/Fixtures`.
 
 ## Adding a station

@@ -205,7 +205,7 @@ export default function CreateDataImport({
                                 onChange={(event) =>
                                     form.setData('name', event.target.value)
                                 }
-                                placeholder="Zebralution 2026 Q3"
+                                placeholder="Distributor 2026 Q3"
                             />
                         </Field>
                     </div>

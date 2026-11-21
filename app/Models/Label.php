@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Distributors;
 use Carbon\CarbonImmutable;
 use Database\Factories\LabelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -80,6 +81,31 @@ class Label extends Model
     public function airplayMarkets(): array
     {
         return $this->airplay_markets ?: ['DE', 'GB', 'US'];
+    }
+
+    /**
+     * Whether the label works with a distributor, so what is built for
+     * that distributor is shown. A label that never chose has them all.
+     */
+    public function usesDistributor(string $key): bool
+    {
+        return isset(Distributors::NAMES[$key]) && (bool) $this->deliverySetting("distributors.{$key}", true);
+    }
+
+    /**
+     * @return list<string> The keys of the distributors the label works with.
+     */
+    public function distributors(): array
+    {
+        $used = [];
+
+        foreach (array_keys(Distributors::NAMES) as $key) {
+            if ($this->usesDistributor($key)) {
+                $used[] = $key;
+            }
+        }
+
+        return $used;
     }
 
     /**

@@ -9,6 +9,7 @@ use App\Services\Imports\ImportException;
 use App\Services\Imports\PlayCountImport;
 use App\Services\Reports\IncomeReport;
 use App\Support\CurrentLabel;
+use App\Support\Distributors;
 use App\Support\Platforms;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,7 +27,7 @@ class PlayCountController extends Controller
     /** The data export of Zebralution's analytics; it answers to whoever is signed in there. */
     private const string ZEBRALUTION_EXPORT = 'https://musicanalytics.zebralution.tools/maapidata/Export';
 
-    public function index(): Response
+    public function index(CurrentLabel $currentLabel): Response
     {
         $unmatched = PlayCount::query()->whereNull('track_id')->toBase()->distinct()->orderBy('track_name')->get(['batch', 'track_name'])->groupBy('batch');
 
@@ -38,7 +39,7 @@ class PlayCountController extends Controller
             'report' => IncomeReport::plays(PlayCount::query(), Transaction::query()),
             'tracks' => IncomeReport::playMovers(PlayCount::query(), 'track_id'),
             'releases' => IncomeReport::playMovers(PlayCount::query(), 'release_id'),
-            'zebralutionExport' => self::ZEBRALUTION_EXPORT.'?'.http_build_query([
+            'zebralutionExport' => ! $currentLabel->get()->usesDistributor(Distributors::ZEBRALUTION) ? null : self::ZEBRALUTION_EXPORT.'?'.http_build_query([
                 'startdate' => $from->toDateString(), 'enddate' => now()->subDay()->toDateString(),
                 'resulttype' => 'streams', 'groupby_export' => 'track,dsp,date', 'fields' => 'streams',
             ]),
