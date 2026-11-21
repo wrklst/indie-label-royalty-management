@@ -10,6 +10,7 @@ use App\Support\CurrentLabel;
 use App\Support\Platforms;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,11 +21,22 @@ use Inertia\Response;
  */
 class PlayCountController extends Controller
 {
+    /** The data export of Zebralution's analytics; it answers to whoever is signed in there. */
+    private const string ZEBRALUTION_EXPORT = 'https://musicanalytics.zebralution.tools/maapidata/Export';
+
     public function index(): Response
     {
         $unmatched = PlayCount::query()->whereNull('track_id')->toBase()->distinct()->orderBy('track_name')->get(['batch', 'track_name'])->groupBy('batch');
 
+        // The week before the last counted day is fetched again: the latest days are still filling up.
+        $latest = PlayCount::query()->max('period_end');
+        $from = $latest === null ? now()->subYear() : Carbon::parse($latest)->subWeek();
+
         return Inertia::render('play-counts/index', [
+            'zebralutionExport' => self::ZEBRALUTION_EXPORT.'?'.http_build_query([
+                'startdate' => $from->toDateString(), 'enddate' => now()->subDay()->toDateString(),
+                'resulttype' => 'streams', 'groupby_export' => 'track,dsp,date', 'fields' => 'streams',
+            ]),
             'files' => PlayCount::query()->toBase()
                 ->selectRaw('batch, MAX(source_file) as source_file, MIN(period_start) as starts, MAX(period_end) as ends, COUNT(*) as counts, COUNT(track_id) as matched, SUM(plays) as plays, MAX(created_at) as created_at')
                 ->groupBy('batch')->orderByDesc('batch')->get()

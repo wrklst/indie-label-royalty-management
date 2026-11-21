@@ -19,6 +19,7 @@ import { date, quantity } from '@/lib/format';
 import { index } from '@/routes/play-counts';
 
 type Props = {
+    zebralutionExport: string;
     files: {
         batch: string;
         source_file: string;
@@ -38,10 +39,9 @@ const SOURCES = [
     'Spotify for Artists: Music, then Songs, then the download arrow above the table.',
     'Apple Music for Artists: Music, then See All; set the date range, then download the CSV.',
     'Amazon Music for Artists: set the date range on a report page and export it.',
-    'Zebralution: the analytics export. It has every platform in one count and is listed as “Not named”.',
 ];
 
-export default function PlayCounts({ files }: Props) {
+export default function PlayCounts({ files, zebralutionExport }: Props) {
     return (
         <Page
             title="Play counts"
@@ -77,6 +77,20 @@ export default function PlayCounts({ files }: Props) {
                             </div>
                             <div className="flex flex-wrap items-start justify-between gap-4">
                                 <ul className="grid gap-0.5 text-xs text-muted-foreground">
+                                    <li>
+                                        Zebralution:{' '}
+                                        <a
+                                            href={zebralutionExport}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="font-medium text-foreground underline underline-offset-4"
+                                        >
+                                            download the streams since the last
+                                            import
+                                        </a>
+                                        , by track, platform and day. Sign in to
+                                        Greenhouse first.
+                                    </li>
                                     {SOURCES.map((source) => (
                                         <li key={source}>{source}</li>
                                     ))}

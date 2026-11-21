@@ -125,3 +125,17 @@ test('play counts are for label admins', function () {
     $this->get(route('play-counts.index'))->assertRedirect(route('login'));
     $this->post(route('play-counts.store'))->assertRedirect(route('login'));
 });
+
+test('the page links to the Zebralution export from a week before the last counted day until yesterday', function () {
+    $this->travelTo('2026-02-10 12:00:00');
+    $label = Label::factory()->create();
+    $admin = labelAdmin($label);
+    $url = fn (string $from): string => "https://musicanalytics.zebralution.tools/maapidata/Export?startdate={$from}&enddate=2026-02-09&resulttype=streams&groupby_export=track%2Cdsp%2Cdate&fields=streams";
+
+    $this->actingAs($admin)->get(route('play-counts.index'))->assertInertia(fn (Assert $page) => $page->where('zebralutionExport', $url('2025-02-10')));
+
+    PlayCount::factory()->create(['label_id' => $label->id, 'period_start' => '2026-01-20', 'period_end' => '2026-01-20']);
+    PlayCount::factory()->create(['period_start' => '2026-02-08', 'period_end' => '2026-02-08']);
+
+    $this->actingAs($admin)->get(route('play-counts.index'))->assertInertia(fn (Assert $page) => $page->where('zebralutionExport', $url('2026-01-13')));
+});
