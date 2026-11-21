@@ -39,7 +39,7 @@ class PlayCountImport
         'listeners' => ['listeners', 'unique listeners'],
         'artist' => ['artist', 'artists', 'artist name'],
         'isrc' => ['isrc'],
-        'platform' => ['platform', 'service', 'store', 'retailer'],
+        'platform' => ['platform', 'service', 'store', 'retailer', 'dsp', 'shop'],
         'date' => ['date', 'day'],
         'from' => ['from', 'start', 'start date', 'period start'],
         'to' => ['to', 'end', 'end date', 'period end'],
@@ -102,8 +102,9 @@ class PlayCountImport
             $named = $row->string('platform');
             $key = $named === null ? $platform : Platforms::of($named)['key'];
 
-            if ($named !== null && ! isset(Platforms::names()[$key])) {
-                throw new ImportException("Line {$line}: \"{$named}\" is not a platform this installation knows.");
+            // ponytail: a platform this installation has no name for is counted as not named; store its name when one matters.
+            if (! isset(Platforms::names()[$key])) {
+                $key = Platforms::of(null)['key'];
             }
 
             $dated[] = $start !== null;

@@ -64,10 +64,10 @@ test('a newer file replaces counts of the same track and platform for the days i
     $other = PlayCount::factory()->create(['platform' => 'spotify', 'track_name' => 'Example Track', 'period_start' => '2026-01-01', 'period_end' => '2026-01-31']);
 
     $this->actingAs(labelAdmin($label))->post(route('play-counts.store'), [
-        'file' => playCountFile("track,date,plays\nExample Track,2026-01-15,7\n", 'Spotify example.csv'),
+        'file' => playCountFile("track,date,dsp,plays\nExample Track,2026-01-15,Spotify,7\nExample Track,2026-01-15,Example Jukebox,3\n"),
     ])->assertSessionHasNoErrors();
 
-    expect(PlayCount::query()->withoutGlobalScope('label')->where('label_id', $label->id)->orderBy('plays')->pluck('plays')->all())->toBe([7, 20, 30])
+    expect(PlayCount::query()->withoutGlobalScope('label')->where('label_id', $label->id)->orderBy('plays')->get()->map(fn (PlayCount $count): string => "{$count->platform} {$count->plays}")->all())->toBe(['unknown 3', 'spotify 7', 'spotify 20', 'tidal 30'])
         ->and($february->fresh())->not->toBeNull()
         ->and($tidal->fresh())->not->toBeNull()
         ->and($other->fresh())->not->toBeNull();
@@ -106,7 +106,6 @@ test('a file that cannot be read as play counts is refused and nothing is stored
 
     expect(PlayCount::query()->withoutGlobalScope('label')->count())->toBe(0);
 })->with([
-    'unknown platform' => ["platform,song,streams,date\nExample Jukebox,Example Track,5,2026-01-01\n", [], 'Line 2: "Example Jukebox" is not a platform this installation knows.'],
     'no play count column' => ["song,revenue\nExample Track,5\n", [], 'The file needs a column with the play count, called "plays" or "streams", and one naming the track, called "track", "song" or "isrc". Found: song, revenue.'],
     'second line breaks' => ["song,streams,date\nExample Track,5,2026-01-01\nExample Track,5,01/02/2026\n", [], 'Line 3: The date "01/02/2026" in "date" can be read two ways. Use the format 2026-03-31.'],
 ]);

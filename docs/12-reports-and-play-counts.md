@@ -50,7 +50,20 @@ No platform offers these figures to a label's own software. They have to be down
 | Spotify for Artists      | **Music → Songs**, then the download arrow above the table.     |
 | Apple Music for Artists  | **Music → See All**; set the date range, then download the CSV. |
 | Amazon Music for Artists | Set the date range on a report page and export it.              |
-| Zebralution              | The analytics export. Every platform in one count.              |
+| Zebralution              | **Analytics → Datenexport**, set as described below.            |
+
+### The Zebralution export
+
+Zebralution counts every platform it delivers to, so one export covers most of them. In its analytics, set the date filter to the months you want and remove every other filter, then open **Datenexport** and tick:
+
+| Section         | Tick                           | Leave empty                                             |
+| --------------- | ------------------------------ | ------------------------------------------------------- |
+| **Gruppierung** | **Tracks**, **DSP**, **Datum** | Releases, Land, Firma, Label, Künstler\*innen, Playlist |
+| **Datenfelder** | **Streams**                    | Downloads, Views, Creations                             |
+
+**Tracks** puts the ISRC on each line, which is what a line is matched by. **DSP** names the platform, so each count is held against that platform's statement lines. **Datum** gives the days, so a later export replaces exactly the days it covers.
+
+With **DSP** ticked the export takes only the kind of figure that is active in the analytics view, so have streams showing there. If the export does not let **DSP** be combined with **Tracks**, tick **Tracks** and **Datum** only: the file then has all platforms in one count and is listed as **Not named**. Country and playlist are not stored: ticking them only makes the file longer. An export filtered to one country or playlist would replace the full figures of those days with partial ones.
 
 ### Importing a file
 
@@ -58,7 +71,7 @@ No platform offers these figures to a label's own software. They have to be down
 2. Choose the file: CSV or Excel.
 3. **Import play counts**.
 
-Nothing else is asked. The platform is the one the lines name, otherwise the one in the file name (`spotify-songs.csv`), otherwise the one the columns give away. A file that names none, such as a distributor's export of all platforms together, is listed as **Not named**. A file without dates counts as the total up to the day it is imported and replaces every earlier count of its tracks on that platform.
+Nothing else is asked. The platform is the one the lines name, otherwise the one in the file name (`spotify-songs.csv`), otherwise the one the columns give away. A file that names none, such as a distributor's export of all platforms together, is listed as **Not named**. So is a platform the application has no name for. A file without dates counts as the total up to the day it is imported and replaces every earlier count of its tracks on that platform.
 
 The file is read by what its columns are called, not by where it comes from:
 
@@ -68,7 +81,7 @@ The file is read by what its columns are called, not by where it comes from:
 | The count               | `plays`, `streams`, `play count`, `listens`, `views` |
 | Optional: listeners     | `listeners`                                          |
 | Optional: artist        | `artist`                                             |
-| Optional: platform      | `platform`, `service`, `store`                       |
+| Optional: platform      | `platform`, `service`, `store`, `dsp`                |
 | Optional: day or period | `date`, or `from` and `to`                           |
 
 A line is matched to a track by its ISRC, otherwise by its name. Punctuation does not matter: `Example Track - Example Remix` is the track `Example Track (Example Remix)`. Where several recordings share a name, the artist column decides. A recording on several releases is counted once.
