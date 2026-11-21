@@ -341,10 +341,10 @@ test('the airplay page lists new findings and how many tracks are due', function
     $this->actingAs(labelAdmin($label))
         ->get(route('airplays.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->has('findings', 1)
-            ->where('findings.0.id', $finding->id)
-            ->where('findings.0.track', 'Example Track')
-            ->has('searches', 0)
+            ->where('findings.total', 1)
+            ->where('findings.data.0.id', $finding->id)
+            ->where('findings.data.0.track', 'Example Track')
+            ->where('searches.total', 0)
             ->where('staleCount', 1)
             ->where('staleDays', 31));
 });

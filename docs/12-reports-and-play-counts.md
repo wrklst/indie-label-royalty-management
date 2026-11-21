@@ -43,22 +43,22 @@ On the page of the track "Example Track" the Platforms table shows Spotify with 
 
 A platform pays for streams months after they happened, and only for those it counts as paid. Its artist portal shows what it counted itself. Importing that count lets the report show both side by side.
 
-No platform offers these figures to a label's own software. They have to be downloaded by hand, or typed off:
+No platform offers these figures to a label's own software. They have to be downloaded by hand:
 
-| Platform                                  | Where the figures are                                           |
-| ----------------------------------------- | --------------------------------------------------------------- |
-| Spotify for Artists                       | **Music → Songs**, then the download arrow above the table.     |
-| Apple Music for Artists                   | **Music → See All**; set the date range, then download the CSV. |
-| Amazon Music for Artists                  | Set the date range on a report page and export it.              |
-| Tidal, Deezer, Beatport, Qobuz and others | Shown without a download. Type them into the template.          |
+| Platform                 | Where the figures are                                           |
+| ------------------------ | --------------------------------------------------------------- |
+| Spotify for Artists      | **Music → Songs**, then the download arrow above the table.     |
+| Apple Music for Artists  | **Music → See All**; set the date range, then download the CSV. |
+| Amazon Music for Artists | Set the date range on a report page and export it.              |
+| Zebralution              | The analytics export. Every platform in one count.              |
 
 ### Importing a file
 
 1. Open **Royalties → Play counts**.
 2. Choose the file: CSV or Excel.
-3. Choose the **Platform**, unless the file has a platform column.
-4. Enter **Covers from** and **Covers to**, unless the file has dates. Use whole months: statements are monthly, so only whole months compare well.
-5. **Import play counts**.
+3. **Import play counts**.
+
+Nothing else is asked. The platform is the one the lines name, otherwise the one in the file name (`spotify-songs.csv`), otherwise the one the columns give away. A file that names none, such as a distributor's export of all platforms together, is listed as **Not named**. A file without dates counts as the total up to the day it is imported and replaces every earlier count of its tracks on that platform.
 
 The file is read by what its columns are called, not by where it comes from:
 
@@ -76,15 +76,6 @@ A line is matched to a track by its ISRC, otherwise by its name. Punctuation doe
 Lines whose track is not in the catalogue are kept and listed under the file as **Not in the catalogue under that name**. They count for the label as a whole, not for a track.
 
 A newer file replaces earlier counts of the same track and platform for the days it covers, so nothing is counted twice. **Delete** removes everything one file brought; statements and income are not touched.
-
-### The template
-
-**Template** downloads an empty file with the columns `platform`, `isrc`, `track`, `artist`, `from`, `to`, `plays`, `listeners`. One line is one track on one platform in one period:
-
-```csv
-platform,isrc,track,artist,from,to,plays,listeners
-Tidal,ZZTST2600001,Example Track,Example Artist,2026-01-01,2026-03-31,1250,
-```
 
 ### Reading the comparison
 

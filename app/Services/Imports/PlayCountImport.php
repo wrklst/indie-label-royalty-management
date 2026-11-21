@@ -10,15 +10,23 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Reads what a platform's artist portal exports, or the template filled
- * in by hand, into play counts. The portals do not share a layout and
- * change theirs without notice, so a file is read by what its columns
- * are called, not by where it comes from.
+ * Reads what a platform's artist portal or a distributor's analytics
+ * export into play counts. The portals do not share a layout and change
+ * theirs without notice, so a file is read by what its columns are
+ * called, and nothing has to be said about it.
  */
 class PlayCountImport
 {
-    /** @var list<string> The columns of the template. */
-    public const array COLUMNS = ['platform', 'isrc', 'track', 'artist', 'from', 'to', 'plays', 'listeners'];
+    /**
+     * Columns that give a portal away when its file names it nowhere:
+     * platform => headers only its export has together, in lower case.
+     * ponytail: Spotify only, from its Songs export; add a portal when one of its files comes in as "Not named".
+     *
+     * @var array<string, list<string>>
+     */
+    private const array SIGNATURES = [
+        'spotify' => ['song', 'listeners', 'streams', 'saves'],
+    ];
 
     /**
      * What the portals call a column: column => headers, in lower case.
@@ -42,15 +50,18 @@ class PlayCountImport
     /**
      * Store the play counts of a file. A count replaces earlier ones of
      * the same track on the same platform whose period overlaps its own,
-     * so a newer export never counts plays twice.
+     * so a newer export never counts plays twice. A file without dates
+     * is the total up to today and replaces everything before it.
      *
-     * @param  string|null  $platform  For a file that does not name the platform on each line.
-     * @param  string|null  $from  For a file without dates: the period it covers.
+     * The platform is the one each line names, else the one in the file
+     * name, else the one its columns give away, else "Not named", which
+     * is also right for a distributor's export of all platforms together.
+     *
      * @return array{batch: string, counts: int, matched: int, unmatched: list<string>}
      *
      * @throws ImportException when the file cannot be read as play counts; nothing is stored then
      */
-    public function import(Label $label, string $path, string $filename, ?string $platform = null, ?string $from = null, ?string $to = null): array
+    public function import(Label $label, string $path, string $filename): array
     {
         $reader = $this->readers->open($path);
         $found = $reader->locateHeader(function (array $headers): bool {
@@ -66,7 +77,9 @@ class PlayCountImport
         $index = self::index($reader->headers());
         $catalog = $this->catalog($label);
         $batch = (string) Str::ulid();
+        $platform = self::platform($filename, array_map(strval(...), $reader->headers()));
         $counts = [];
+        $dated = [];
 
         foreach ($reader->rows() as $line => $values) {
             $row = new Row($line, $values, $index);
@@ -80,23 +93,20 @@ class PlayCountImport
             }
 
             try {
-                $start = $row->date('date') ?? $row->date('from') ?? $from;
-                $end = $row->date('date') ?? $row->date('to') ?? $to ?? $start;
+                $start = $row->date('date') ?? $row->date('from');
+                $end = $row->date('date') ?? $row->date('to') ?? $start ?? now()->toDateString();
             } catch (RowException $exception) {
                 throw new ImportException("Line {$line}: {$exception->getMessage()}");
-            }
-
-            if ($start === null) {
-                throw new ImportException('The file has no dates. Say which period it covers.');
             }
 
             $named = $row->string('platform');
             $key = $named === null ? $platform : Platforms::of($named)['key'];
 
-            if ($key === null || ! isset(Platforms::names()[$key])) {
-                throw new ImportException($named === null ? 'The file does not name the platform. Choose it.' : "Line {$line}: \"{$named}\" is not a platform this installation knows.");
+            if ($named !== null && ! isset(Platforms::names()[$key])) {
+                throw new ImportException("Line {$line}: \"{$named}\" is not a platform this installation knows.");
             }
 
+            $dated[] = $start !== null;
             $counts[] = [
                 'label_id' => $label->id,
                 'track_id' => $this->match($catalog, $isrc, $name, $row->string('artist')),
@@ -106,8 +116,8 @@ class PlayCountImport
                 'track_name' => mb_substr($name ?? (string) $isrc, 0, 255),
                 'artist_name' => $row->string('artist') === null ? null : mb_substr($row->string('artist'), 0, 255),
                 'isrc' => $isrc,
-                'period_start' => min($start, $end),
-                'period_end' => max($start, $end),
+                'period_start' => min($start ?? $end, $end),
+                'period_end' => max($start ?? $end, $end),
                 'plays' => max(0, (int) round((float) $plays)),
                 'listeners' => $row->decimal('listeners') === null ? null : max(0, (int) round((float) $row->decimal('listeners'))),
                 'created_at' => now(),
@@ -119,10 +129,18 @@ class PlayCountImport
             throw new ImportException('The file has no line with a track and a play count.');
         }
 
-        DB::transaction(function () use ($counts, $label, $batch): void {
-            // ponytail: one delete per line; group by track and platform if files grow past some ten thousand lines.
-            foreach ($counts as $count) {
-                PlayCount::query()->withoutGlobalScope('label')->where('label_id', $label->id)->where('batch', '!=', $batch)
+        // One span per track and platform: daily exports have tens of thousands of lines.
+        $spans = [];
+
+        foreach ($counts as $at => $count) {
+            $key = $count['platform'].'|'.($count['track_id'] ?? 'name:'.$count['track_name']);
+            $from = $dated[$at] ? $count['period_start'] : '0001-01-01';
+            $spans[$key] = [...$count, 'period_start' => min($spans[$key]['period_start'] ?? $from, $from), 'period_end' => max($spans[$key]['period_end'] ?? $count['period_end'], $count['period_end'])];
+        }
+
+        DB::transaction(function () use ($counts, $spans, $label): void {
+            foreach ($spans as $count) {
+                PlayCount::query()->withoutGlobalScope('label')->where('label_id', $label->id)
                     ->where('platform', $count['platform'])
                     ->when($count['track_id'] !== null, fn ($query) => $query->where('track_id', $count['track_id']), fn ($query) => $query->whereNull('track_id')->where('track_name', $count['track_name']))
                     ->where('period_start', '<=', $count['period_end'])->where('period_end', '>=', $count['period_start'])
@@ -137,6 +155,28 @@ class PlayCountImport
         $unmatched = array_values(array_unique(array_column(array_filter($counts, fn (array $count): bool => $count['track_id'] === null), 'track_name')));
 
         return ['batch' => $batch, 'counts' => count($counts), 'matched' => count(array_filter($counts, fn (array $count): bool => $count['track_id'] !== null)), 'unmatched' => $unmatched];
+    }
+
+    /**
+     * @param  list<string>  $headers  As the file spells them.
+     */
+    private static function platform(string $filename, array $headers): string
+    {
+        $named = Platforms::of(pathinfo($filename, PATHINFO_FILENAME))['key'];
+
+        if (isset(Platforms::names()[$named])) {
+            return $named;
+        }
+
+        $headers = array_map(Row::normalize(...), $headers);
+
+        foreach (self::SIGNATURES as $key => $signature) {
+            if (array_diff($signature, $headers) === []) {
+                return $key;
+            }
+        }
+
+        return Platforms::of(null)['key'];
     }
 
     /**

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Airplay;
+use App\Models\AirplayFinding;
 use App\Models\AirplaySearch;
 use App\Models\Label;
 use App\Models\Track;
@@ -28,12 +29,12 @@ test('the airplay list shows the plays of the current label only', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('airplays/index')
-            ->has('airplays', 1)
-            ->where('airplays.0.id', $airplay->id)
-            ->where('airplays.0.origin', 'manual')
-            ->where('airplays.0.period_end', '2025-12-31')
-            ->where('airplays.0.links.0.url', 'https://example.com/playlist')
-            ->where('airplays.0.search_query', '"Example Artist" "Example Track" Example Radio')
+            ->has('airplays.data', 1)
+            ->where('airplays.data.0.id', $airplay->id)
+            ->where('airplays.data.0.origin', 'manual')
+            ->where('airplays.data.0.period_end', '2025-12-31')
+            ->where('airplays.data.0.links.0.url', 'https://example.com/playlist')
+            ->where('airplays.data.0.search_query', '"Example Artist" "Example Track" Example Radio')
             ->where('searchAvailable', true));
 });
 
@@ -217,3 +218,26 @@ test('a failed web search reports why', function (Closure $arrange, string $mess
         'Web search is not set up. Enter the DataForSEO login under Settings → Connections.',
     ],
 ]);
+
+test('plays, findings and the research log each have pages of their own, and plays are sorted across pages', function () {
+    $label = Label::factory()->create();
+    Airplay::factory()->count(50)->create(['label_id' => $label->id, 'station' => 'Example Radio', 'links' => null]);
+    $linked = Airplay::factory()->create(['label_id' => $label->id, 'station' => 'Sample FM', 'links' => [['url' => 'https://example.com/playlist', 'title' => null, 'description' => null]]]);
+    $queued = Airplay::factory()->create(['label_id' => $label->id, 'track_name' => 'Example Track', 'station' => 'Zebra FM', 'research_state' => 'queued', 'research_state_at' => now()]);
+    AirplayFinding::factory()->count(26)->create(['label_id' => $label->id, 'status' => AirplayFinding::NEW]);
+    $admin = labelAdmin($label);
+
+    $this->actingAs($admin)->get(route('airplays.index'))->assertInertia(fn (Assert $page) => $page
+        ->has('airplays.data', 50)
+        ->where('airplays.total', 52)
+        ->has('findings.data', 25)
+        ->where('findings.total', 26)
+        // A play that waits for its research is named even when its row is on another page.
+        ->where('airplayResearch', [['id' => $queued->id, 'name' => 'Example Track on Zebra FM', 'state' => 'queued', 'step' => null]]));
+
+    $this->actingAs($admin)->get(route('airplays.index', ['findings_page' => 2, 'sort' => 'links', 'direction' => 'desc']))->assertInertia(fn (Assert $page) => $page
+        ->has('findings.data', 1)
+        ->where('airplays.current_page', 1)
+        ->where('airplays.data.0.id', $linked->id)
+        ->where('filters', ['track' => null, 'sort' => 'links', 'direction' => 'desc']));
+});

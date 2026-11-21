@@ -18,6 +18,7 @@ import { Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import InputError from '@/components/input-error';
 import { EmptyState, Page, Panel } from '@/components/page';
+import { Pagination } from '@/components/pagination';
 import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
@@ -41,10 +42,12 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { useTableSort } from '@/hooks/use-table-sort';
+import { useFilters } from '@/hooks/use-filters';
+import { serverSorter } from '@/hooks/use-table-sort';
+import type { SortDirection } from '@/hooks/use-table-sort';
 import { country, date } from '@/lib/format';
 import { index } from '@/routes/airplays';
-import type { Option } from '@/types';
+import type { Option, Paginated } from '@/types';
 
 type Origin = 'statement' | 'search' | 'manual';
 
@@ -608,13 +611,13 @@ function ResearchDialog({
 /**
  * Pages the research found, waiting to be kept or dismissed.
  */
-function Findings({ findings }: { findings: Finding[] }) {
+function Findings({ findings }: { findings: Paginated<Finding> }) {
     const decide = (url: string) =>
         router.post(url, {}, { preserveScroll: true, preserveState: true });
 
     return (
         <Panel
-            title={`Findings to review (${findings.length})`}
+            title={`Findings to review (${findings.total})`}
             description="Found by the automatic research. Keep a page to store it with the play, or as a new play when the station was not known yet. A dismissed page is not suggested again."
             flush
         >
@@ -628,7 +631,7 @@ function Findings({ findings }: { findings: Finding[] }) {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {findings.map((finding) => (
+                    {findings.data.map((finding) => (
                         <TableRow key={finding.id}>
                             <TableCell className="align-top font-medium">
                                 <RecordLink to="track" id={finding.track_id}>
@@ -736,7 +739,7 @@ function ResearchProgress({
     airplays,
 }: {
     tracks: TrackResearch[];
-    airplays: Airplay[];
+    airplays: TrackResearch[];
 }) {
     const entries = [
         ...tracks.map((track) => ({
@@ -745,14 +748,12 @@ function ResearchProgress({
             state: track.state,
             step: track.step,
         })),
-        ...airplays
-            .filter((airplay) => airplay.research_state !== null)
-            .map((airplay) => ({
-                key: `airplay-${airplay.id}`,
-                label: `${airplay.track_name} on ${stationName(airplay)}`,
-                state: airplay.research_state as ResearchStateName,
-                step: airplay.research_step,
-            })),
+        ...airplays.map((airplay) => ({
+            key: `airplay-${airplay.id}`,
+            label: airplay.name,
+            state: airplay.state,
+            step: airplay.step,
+        })),
     ];
     const running = entries.filter((entry) => entry.state === 'running');
     const queued = entries.filter((entry) => entry.state === 'queued');
@@ -812,11 +813,11 @@ function ResearchProgress({
 /**
  * Every search that was run, newest first, so nothing is researched twice without need.
  */
-function ResearchLog({ searches }: { searches: SearchEntry[] }) {
+function ResearchLog({ searches }: { searches: Paginated<SearchEntry> }) {
     return (
         <Panel
             title="Research log"
-            description="The last 100 searches with what they returned."
+            description="Every search with what it returned, newest first."
             flush
         >
             <Table>
@@ -829,7 +830,7 @@ function ResearchLog({ searches }: { searches: SearchEntry[] }) {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {searches.map((entry) => (
+                    {searches.data.map((entry) => (
                         <TableRow key={entry.id}>
                             <TableCell className="align-top text-muted-foreground">
                                 {entry.created_at}
@@ -891,22 +892,13 @@ function ResearchLog({ searches }: { searches: SearchEntry[] }) {
     );
 }
 
-const SORT_COLUMNS = {
-    track: (row: Airplay) => row.track_name,
-    artist: (row: Airplay) => row.artist_name,
-    station: (row: Airplay) => row.station,
-    researched: (row: Airplay) => row.researched_at,
-    origin: (row: Airplay) => ORIGINS[row.origin],
-    period: (row: Airplay) => row.period_start,
-    amount: (row: Airplay) => (row.amount === null ? null : Number(row.amount)),
-    links: (row: Airplay) => row.links.length,
-};
-
 export default function Airplays({
     airplays,
     findings,
     searches,
+    filters,
     trackResearch,
+    airplayResearch,
     onlyTrack,
     tracks,
     releases,
@@ -914,10 +906,16 @@ export default function Airplays({
     staleDays,
     searchAvailable,
 }: {
-    airplays: Airplay[];
-    findings: Finding[];
-    searches: SearchEntry[];
+    airplays: Paginated<Airplay>;
+    findings: Paginated<Finding>;
+    searches: Paginated<SearchEntry>;
+    filters: {
+        track: number | null;
+        sort: string | null;
+        direction: SortDirection | null;
+    };
     trackResearch: TrackResearch[];
+    airplayResearch: TrackResearch[];
     onlyTrack: Option | null;
     tracks: Option[];
     releases: Option[];
@@ -927,11 +925,7 @@ export default function Airplays({
 }) {
     const active =
         trackResearch.some((track) => track.state !== 'failed') ||
-        airplays.some(
-            (airplay) =>
-                airplay.research_state === 'queued' ||
-                airplay.research_state === 'running',
-        );
+        airplayResearch.some((airplay) => airplay.state !== 'failed');
 
     // While a research is queued or running, fetch its progress and what it found.
     useEffect(() => {
@@ -947,6 +941,7 @@ export default function Airplays({
                         'findings',
                         'searches',
                         'trackResearch',
+                        'airplayResearch',
                         'staleCount',
                     ],
                 }),
@@ -956,7 +951,8 @@ export default function Airplays({
         return () => window.clearInterval(timer);
     }, [active]);
 
-    const { rows, sorter } = useTableSort(airplays, SORT_COLUMNS);
+    const { apply } = useFilters(index.url(), filters);
+    const sorter = serverSorter(filters, apply);
 
     return (
         <Page
@@ -1005,9 +1001,12 @@ export default function Airplays({
                     </Link>
                 </p>
             )}
-            <ResearchProgress tracks={trackResearch} airplays={airplays} />
-            {findings.length > 0 && <Findings findings={findings} />}
-            {airplays.length === 0 ? (
+            <ResearchProgress
+                tracks={trackResearch}
+                airplays={airplayResearch}
+            />
+            {findings.total > 0 && <Findings findings={findings} />}
+            {airplays.total === 0 ? (
                 <EmptyState
                     title="No airplay yet"
                     description="Import a Rightz Audio statement under Data imports, start a research, or add a play by hand."
@@ -1046,7 +1045,7 @@ export default function Airplays({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {rows.map((airplay) => (
+                            {airplays.data.map((airplay) => (
                                 <TableRow key={airplay.id}>
                                     <TableCell className="font-medium">
                                         <RecordLink
@@ -1209,9 +1208,10 @@ export default function Airplays({
                             ))}
                         </TableBody>
                     </Table>
+                    <Pagination page={airplays} noun="plays" />
                 </Panel>
             )}
-            {searches.length > 0 && <ResearchLog searches={searches} />}
+            {searches.total > 0 && <ResearchLog searches={searches} />}
         </Page>
     );
 }

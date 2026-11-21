@@ -89,7 +89,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('data-imports/{data_import}/resolve', [DataImportController::class, 'resolve'])->name('data-imports.resolve');
             Route::resource('data-imports', DataImportController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
 
-            Route::get('play-counts/template', [PlayCountController::class, 'template'])->name('play-counts.template');
             Route::get('play-counts', [PlayCountController::class, 'index'])->name('play-counts.index');
             Route::post('play-counts', [PlayCountController::class, 'store'])->name('play-counts.store');
             Route::delete('play-counts/{batch}', [PlayCountController::class, 'destroy'])->name('play-counts.destroy');

@@ -90,7 +90,7 @@ class IncomeReport
 
         foreach ($plays?->clone()->toBase()->selectRaw('platform, MIN(period_start) as starts, MAX(period_end) as ends, SUM(plays) as plays')->groupBy('platform')->get() ?? [] as $counted) {
             $key = (string) $counted->platform;
-            $entry = $platforms[$key] ?? self::platform($key, Platforms::names()[$key] ?? $key, $order, $empty);
+            $entry = $platforms[$key] ?? self::platform($key, Platforms::names()[$key] ?? Platforms::of(null)['name'], $order, $empty);
             $from = substr((string) $counted->starts, 0, 7);
             $to = substr((string) $counted->ends, 0, 7);
             $reported = 0.0;

@@ -14,6 +14,10 @@ use App\Services\Airplay\ResearchState;
 use App\Services\Airplay\WebSearch;
 use App\Services\Releases\ArtistCredits;
 use App\Support\CurrentLabel;
+use App\Support\Sorting;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Expression;
+use Illuminate\Database\Query\Grammars\SQLiteGrammar;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,6 +26,7 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
+use SortDirection;
 
 class AirplayController extends Controller
 {
@@ -33,16 +38,28 @@ class AirplayController extends Controller
         $researched = AirplaySearch::query()->whereNotNull('airplay_id')->where('succeeded', true)
             ->selectRaw('airplay_id, MAX(created_at) as researched_at')->groupBy('airplay_id')->toBase()->pluck('researched_at', 'airplay_id');
 
+        $sorting = Sorting::for($request, [
+            'track' => 'track_name',
+            'artist' => Sorting::nullsLast('artist_name'),
+            'station' => Sorting::nullsLast('station'),
+            'origin' => 'origin',
+            'period' => Sorting::nullsLast('period_start'),
+            'amount' => Sorting::nullsLast('amount'),
+            'links' => fn (Builder $query, SortDirection $direction) => $query->orderBy(new Expression(
+                $query->getGrammar() instanceof SQLiteGrammar ? 'COALESCE(json_array_length(links), 0)' : 'COALESCE(JSON_LENGTH(links), 0)',
+            ), $direction),
+        ], fn (Builder $query) => $query->orderByRaw('station is null')->orderBy('station')->orderByDesc('period_end')->orderBy('track_name'));
+
         return Inertia::render('airplays/index', [
             'findings' => AirplayFinding::query()->where('status', AirplayFinding::NEW)->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with(['track:id,name', 'airplay:id,track_name,station'])
-                ->orderByRaw("verification = 'confirmed' desc")->orderByDesc('is_radio')->latest()->limit(200)->get()
-                ->map(fn (AirplayFinding $finding): array => [
+                ->orderByRaw("verification = 'confirmed' desc")->orderByDesc('is_radio')->latest()->orderByDesc('id')->paginate(25, pageName: 'findings_page')->withQueryString()
+                ->through(fn (AirplayFinding $finding): array => [
                     ...$finding->only(['id', 'track_id', 'is_radio', 'station', 'url', 'title', 'description', 'domain', 'query', 'airplay_id', 'verification', 'page_title', 'show', 'excerpt']),
                     'track' => $finding->track->name ?? $finding->airplay?->track_name,
                     'airplay_station' => $finding->airplay_id === null ? null : ($finding->airplay->station ?? __('Unidentified')),
                 ]),
-            'searches' => AirplaySearch::query()->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with(['track:id,name', 'airplay:id,track_name,station'])->latest('id')->limit(100)->get()
-                ->map(fn (AirplaySearch $entry): array => [
+            'searches' => AirplaySearch::query()->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with(['track:id,name', 'airplay:id,track_name,station'])->latest('id')->paginate(25, pageName: 'log_page')->withQueryString()
+                ->through(fn (AirplaySearch $entry): array => [
                     ...$entry->only(['id', 'track_id', 'query', 'region', 'succeeded', 'new_findings', 'error', 'airplay_id']),
                     'track' => $entry->track->name ?? $entry->airplay?->track_name,
                     'station' => $entry->airplay?->station,
@@ -57,12 +74,20 @@ class AirplayController extends Controller
                     'state' => ResearchState::visible($track->research_state, $track->research_state_at),
                     'step' => $track->research_step,
                 ])->whereNotNull('state')->values(),
+            'airplayResearch' => Airplay::query()->whereNotNull('research_state')->orderBy('research_state_at')
+                ->get(['id', 'track_name', 'station', 'research_state', 'research_step', 'research_state_at'])
+                ->map(fn (Airplay $airplay): array => [
+                    'id' => $airplay->id,
+                    'name' => $airplay->track_name.' on '.($airplay->station ?? __('an unidentified station')),
+                    'state' => ResearchState::visible($airplay->research_state, $airplay->research_state_at),
+                    'step' => $airplay->research_step,
+                ])->whereNotNull('state')->values(),
             'releases' => Release::query()->orderBy('name')->get(['id', 'name']),
             'staleCount' => $research->stale(Track::query())->count(),
             'staleDays' => AirplayResearch::STALE_DAYS,
-            // ponytail: the whole list in one page; paginate when a label has thousands of plays.
-            'airplays' => Airplay::query()->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with('track:id,artist_id')->orderByRaw('station is null')->orderBy('station')->orderByDesc('period_end')->orderBy('track_name')->get()
-                ->map(fn (Airplay $airplay): array => [
+            'filters' => ['track' => $only?->id, ...$sorting->toArray()],
+            'airplays' => Airplay::query()->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with('track:id,artist_id')->tap($sorting)->paginate(50)->withQueryString()
+                ->through(fn (Airplay $airplay): array => [
                     ...$airplay->only(['id', 'origin', 'track_id', 'track_name', 'artist_name', 'isrc', 'station', 'media_type', 'region', 'society', 'amount', 'notes', 'data_import_id']),
                     'period_start' => $airplay->period_start?->toDateString(),
                     'period_end' => $airplay->period_end?->toDateString(),

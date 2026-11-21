@@ -209,8 +209,8 @@ test('the airplay page and the transaction list can be limited to one track', fu
 
     $this->actingAs($admin)->get(route('airplays.index', ['track' => $track->id]))
         ->assertInertia(fn (Assert $page) => $page
-            ->has('airplays', 1)
-            ->where('airplays.0.id', $airplay->id)
+            ->has('airplays.data', 1)
+            ->where('airplays.data.0.id', $airplay->id)
             ->where('onlyTrack', ['id' => $track->id, 'name' => 'Example Track']));
 
     $this->actingAs($admin)->get(route('transactions.index', ['track' => $track->id]))
@@ -241,7 +241,7 @@ test('a track on several releases shows every release and combines airplay and i
             ->where('airplays.0.id', $airplay->id));
 
     $this->actingAs($admin)->get(route('airplays.index', ['track' => $first->id]))
-        ->assertInertia(fn (Assert $page) => $page->has('airplays', 1)->where('airplays.0.id', $airplay->id));
+        ->assertInertia(fn (Assert $page) => $page->has('airplays.data', 1)->where('airplays.data.0.id', $airplay->id));
 });
 
 test('the track page names the main artist first and then the further credits', function () {

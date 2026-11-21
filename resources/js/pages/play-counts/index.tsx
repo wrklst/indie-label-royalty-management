@@ -1,8 +1,8 @@
 import { Form } from '@inertiajs/react';
-import { Download, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import PlayCountController from '@/actions/App/Http/Controllers/PlayCountController';
 import { DeleteButton } from '@/components/delete-button';
-import { Field, SelectInput } from '@/components/field';
+import { Field } from '@/components/field';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { PlatformIcon } from '@/components/platform-icon';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { date, quantity } from '@/lib/format';
-import { index, template } from '@/routes/play-counts';
+import { index } from '@/routes/play-counts';
 
 type Props = {
     files: {
@@ -31,7 +31,6 @@ type Props = {
         created_at: string;
         unmatched: string[];
     }[];
-    platforms: { value: string; label: string }[];
 };
 
 /** Where each platform lets its figures be downloaded, as far as it does. */
@@ -39,26 +38,18 @@ const SOURCES = [
     'Spotify for Artists: Music, then Songs, then the download arrow above the table.',
     'Apple Music for Artists: Music, then See All; set the date range, then download the CSV.',
     'Amazon Music for Artists: set the date range on a report page and export it.',
-    'Tidal, Deezer, Beatport, Qobuz and others show figures without a download: type them into the template.',
+    'Zebralution: the analytics export. It has every platform in one count and is listed as “Not named”.',
 ];
 
-export default function PlayCounts({ files, platforms }: Props) {
+export default function PlayCounts({ files }: Props) {
     return (
         <Page
             title="Play counts"
             description="What the platforms themselves say was played, from the files their artist portals export. The reports hold these counts against the streams on your statements."
-            actions={
-                <Button variant="outline" asChild>
-                    <a href={template.url()}>
-                        <Download />
-                        Template
-                    </a>
-                </Button>
-            }
         >
             <Panel
                 title="Add a file"
-                description="A CSV or Excel file with a column naming the track (or its ISRC) and one with the plays or streams. A newer file replaces earlier counts of the same track and platform for the days it covers."
+                description="The file as the portal exported it, CSV or Excel. The platform and the days are read from it; a file without dates counts as the total up to today. A newer file replaces earlier counts of the same track and platform for the days it covers."
             >
                 <Form
                     {...PlayCountController.store.form()}
@@ -68,7 +59,7 @@ export default function PlayCounts({ files, platforms }: Props) {
                 >
                     {({ errors, processing }) => (
                         <>
-                            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            <div className="grid gap-4 md:max-w-md">
                                 <Field
                                     label="File"
                                     htmlFor="play_count_file"
@@ -81,53 +72,6 @@ export default function PlayCounts({ files, platforms }: Props) {
                                         type="file"
                                         accept=".csv,.txt,.tsv,.xlsx"
                                         required
-                                    />
-                                </Field>
-                                <Field
-                                    label="Platform"
-                                    htmlFor="play_count_platform"
-                                    error={errors.platform}
-                                    hint="Not needed when the file has a platform column."
-                                >
-                                    <SelectInput
-                                        id="play_count_platform"
-                                        name="platform"
-                                        defaultValue=""
-                                    >
-                                        <option value="">
-                                            Named in the file
-                                        </option>
-                                        {platforms.map((platform) => (
-                                            <option
-                                                key={platform.value}
-                                                value={platform.value}
-                                            >
-                                                {platform.label}
-                                            </option>
-                                        ))}
-                                    </SelectInput>
-                                </Field>
-                                <Field
-                                    label="Covers from"
-                                    htmlFor="play_count_from"
-                                    error={errors.from}
-                                    hint="Not needed when the file has dates."
-                                >
-                                    <Input
-                                        id="play_count_from"
-                                        name="from"
-                                        type="date"
-                                    />
-                                </Field>
-                                <Field
-                                    label="Covers to"
-                                    htmlFor="play_count_to"
-                                    error={errors.to}
-                                >
-                                    <Input
-                                        id="play_count_to"
-                                        name="to"
-                                        type="date"
                                     />
                                 </Field>
                             </div>
