@@ -12,14 +12,14 @@ Tracks are created in two ways: by an import, from the lines of a statement, or 
 
 Open **Catalog → Tracks**. The list shows 50 tracks per page, ordered by title.
 
-| Column   | What it shows                                                                                   |
-| -------- | ----------------------------------------------------------------------------------------------- |
-| Title    | The track title, linked to the track page.                                                      |
-| Artist   | The main artist of the track.                                                                   |
-| Release  | The release the track is on.                                                                    |
-| ISRC     | The ISRC, or `–`.                                                                               |
-| Contract | The track's own contract; or the release contract followed by `(release)`; or the badge `none`. |
-| Listen   | Play buttons, or **No audio** when no audio file is attached.                                   |
+| Column   | What it shows                                                                                            |
+| -------- | -------------------------------------------------------------------------------------------------------- |
+| Title    | The track title, linked to the track page.                                                               |
+| Artist   | The main artist of the track.                                                                            |
+| Release  | The release or releases the track is on.                                                                 |
+| ISRC     | The ISRC, or `–`.                                                                                        |
+| Contract | The track's own contract; or the release contract followed by `(release)`; or the badge **No contract**. |
+| Listen   | Play buttons, or **No audio** when no audio file is attached.                                            |
 
 - **Search title or ISRC…** matches part of the title or of the ISRC. You can type the ISRC with or without dashes.
 - **All releases** narrows the list to one release.
@@ -27,31 +27,36 @@ Open **Catalog → Tracks**. The list shows 50 tracks per page, ordered by title
 
 A recording that is on several releases is one row in this list, naming all its releases; the row is the oldest of its tracks. A track without audio of its own plays the audio of the same recording on another release. Narrow the list to a release to see and edit that release's own track. A badge **No contract on Example Single** marks a release on which the recording has no contract.
 
-- Click a column heading to sort, again to reverse, and a third time to return to the default order.
+- Click a column heading to sort (Title, Artist, Release, ISRC, Contract), again to reverse, and a third time to return to the default order. **Listen** cannot be sorted.
 
-The pencil at the end of a row opens the track dialog **Edit {track title}**. The bin deletes the track.
+The pencil at the end of a row opens the track dialog **Edit {track title}**. The bin opens the dialog **Delete {track title}?**, which says that the track's transactions stay on the release but lose the track and any track-level contract.
 
 ### Editing a track: the track dialog
 
-One dialog edits a track wherever you open it: the pencil in the track list, the pencil at the end of a track row on the release page, and **Edit** in the header of the track page. It always has the same fields, and the release form's quick track rows use the same labels and are checked by the same rules:
+One dialog edits a track wherever you open it: the pencil in the track list, the pencil at the end of a track row on the release page, and **Edit** in the header of the track page. It always has the same fields and is saved with **Save track**. The lyrics and credits of a track are loaded when the dialog opens, so they appear a moment after the other fields. The release form's quick track rows use the same labels and are checked by the same rules:
 
-| Field                                       | Notes                                                                          |
-| ------------------------------------------- | ------------------------------------------------------------------------------ |
-| Title                                       | Required.                                                                      |
-| Version                                     | For example `Radio Edit` or the remix name. Shown in brackets after the title. |
-| Main artist                                 | Empty means **Same as release**.                                               |
-| Contract                                    | Empty means **Same as release**.                                               |
-| Further artist credits                      | Additional artists with a role; see [Artist credits](#artist-credits).         |
-| ISRC, ISWC                                  | See below.                                                                     |
-| Length (seconds)                            | The length in whole seconds. Shown as minutes and seconds elsewhere.           |
-| Disc, Track number                          | Disc 1 to 99, track number 1 to 999.                                           |
-| Preview starts at (s)                       | The second at which a platform preview should start.                           |
-| BPM                                         | 20 to 400, with up to two decimals.                                            |
-| Key                                         | Free text, for example `F minor`.                                              |
-| Explicit                                    | **Same as release** (empty), **Explicit** or **Clean version**.                |
-| Genre, Language, ℗ line                     | Leave empty to use the value of the release in exports.                        |
-| Composers, Lyricists, Producers, Publishers | Names separated by commas.                                                     |
-| Lyrics                                      | Free text.                                                                     |
+| Field                                                        | Notes                                                                                                                                                                          |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Title                                                        | Required.                                                                                                                                                                      |
+| Version                                                      | For example `Radio Edit` or the remix name. Shown in brackets after the title.                                                                                                 |
+| Main artist                                                  | Empty means **Same as release**.                                                                                                                                               |
+| Contract                                                     | Empty means **Same as release**.                                                                                                                                               |
+| Further artist credits                                       | Additional artists with a role; see [Artist credits](#artist-credits).                                                                                                         |
+| ISRC, ISWC                                                   | See below.                                                                                                                                                                     |
+| Length (seconds)                                             | The length in whole seconds. Shown as minutes and seconds elsewhere.                                                                                                           |
+| Disc, Track number                                           | Disc 1 to 99, track number 1 to 999.                                                                                                                                           |
+| Preview starts at (s)                                        | The second at which a platform preview should start.                                                                                                                           |
+| BPM                                                          | 20 to 400, with up to two decimals.                                                                                                                                            |
+| Key                                                          | Free text, for example `F minor`.                                                                                                                                              |
+| Explicit                                                     | **Same as release** (empty), **Explicit** or **Clean version**.                                                                                                                |
+| AI in the recording, AI in the composition, AI in the lyrics | **Not declared** (empty), **None**, **Partly AI-generated** or **Fully AI-generated**. See [AI declarations](#ai-declarations).                                                |
+| Genre, Language, ℗ line                                      | Leave empty to use the value of the release in exports. While the label works with Zebralution, the genre field suggests Zebralution's genres; otherwise any text is accepted. |
+| Composers, Lyricists, Producers, Publishers                  | Names separated by commas.                                                                                                                                                     |
+| Lyrics                                                       | Free text.                                                                                                                                                                     |
+
+### AI declarations
+
+Distributors ask whether AI was used in a track. Each track has three declarations, **AI in the recording**, **AI in the composition** and **AI in the lyrics**; the release has a fourth, **AI in the artwork** (see [Releases](20-releases.md#ai-declarations)). Each takes one of **None**, **Partly AI-generated** or **Fully AI-generated**; **Not declared** leaves it empty. Nothing is derived from the files: you answer for each track. The values are exported in the metadata CSV (`ai_recording`, `ai_composition`, `ai_lyrics`) and written into the Zebralution sheet, which refuses a release with a declaration missing. See [Files, audio and delivery](22-files-audio-and-delivery.md#metadata-csv).
 
 ### ISRC and ISWC
 
@@ -65,7 +70,7 @@ A track without a contract uses the contract of its release. Give a track its ow
 
 Example: `Example Release` has the contract `Example Artist 50/50`. `Second Track` is a remix, so you set the contract `Remixer deal` on that track. Income booked on `Second Track` is now split by `Remixer deal`; income booked on `Opening` or on the release as a whole is still split by `Example Artist 50/50`.
 
-You can set a track contract in the release form, in either track dialog, or in the Catalog manager; see [Releases](20-releases.md#catalog-manager). How contracts split income is explained in [Contracts, payees and ledgers](30-contracts-payees-and-ledgers.md).
+You can set a track contract in the release form, in the track dialog, or in the Catalog manager; see [Releases](20-releases.md#catalog-manager). How contracts split income is explained in [Contracts, payees and ledgers](30-contracts-payees-and-ledgers.md).
 
 ### The track page
 
@@ -73,7 +78,7 @@ Click a track title anywhere to open its page. The heading shows the title (with
 
 **One recording, several releases.** All tracks of your label that share the same ISRC count as one recording on this page. Income, airplay, findings and the research log cover all of them together, whichever entry you opened. A track without an ISRC is never combined with another.
 
-**Buttons.** The play buttons appear when the track has audio. **Research airplay** appears when a web search is set up for your label; see [Airplay](23-airplay.md).
+**Buttons.** The play buttons appear when the track has audio. **Research airplay** appears when a web search is set up for your label; see [Airplay](23-airplay.md). **Edit** opens the track dialog. **Delete** opens the dialog **Delete {track title}?**; after you confirm you return to the track list.
 
 **Tiles.**
 
@@ -94,7 +99,7 @@ Example: `Opening` with the ISRC `ZZEXA2600001` is on the single `Opening` (EX00
 
 **The report.** How the income of the recording developed, which platforms it came from and what each paid per stream; see [Reports and play counts](12-reports-and-play-counts.md). Shown only when there is income or a play count.
 
-**Research log.** Every web search run for the recording, 10 to a page and sortable, with its result. Shown only when there are any. The **Airplay** table above it has 25 plays to a page and sorts by **Station**, **Known from**, **Played** and **Earned**.
+**Research log.** Every web search run for the recording, 25 to a page and sortable, with its result. Shown only when there are any. The **Airplay** table above it has 25 plays to a page and sorts by **Station**, **Known from**, **Played** and **Earned**.
 
 ### Where to find a track
 
@@ -108,14 +113,14 @@ Artists are the performers on your releases and tracks. An import creates an art
 
 Open **Catalog → Artists**. The list shows 50 artists per page, ordered by name.
 
-| Column   | What it shows                                                                                                                 |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Name     | The name, linked to the artist page, with a badge `alias of …` or `… aliases` where that applies.                             |
-| Releases | The number of releases with this artist as main artist. A number above zero links to the release list filtered to the artist. |
-| Tracks   | The number of tracks with this artist as main artist.                                                                         |
-| Notes    | Your notes.                                                                                                                   |
+| Column   | What it shows                                                                                                                                                                     |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Name     | The name, linked to the artist page, with a badge `alias of …` where it is an alias, and `also …` with its aliases below it.                                                      |
+| Releases | The number of releases the artist is on in any role: main artist, a further credit, or on one of its tracks. A number above zero links to the release list filtered the same way. |
+| Tracks   | The number of tracks the artist is on, as main artist or in a further credit.                                                                                                     |
+| Notes    | Your notes.                                                                                                                                                                       |
 
-**Search artists…** matches part of the name.
+**Search artists…** matches part of the name or of an alias. Every column except the bin can be sorted.
 
 To add an artist:
 
@@ -123,7 +128,7 @@ To add an artist:
 2. Enter the **Name**. Optionally fill **Alias of**, **Spotify ID**, **Discogs search name** and **Notes**.
 3. Click **Create artist**.
 
-The pencil in a row opens the same fields for editing. The bin deletes the artist.
+The pencil in a row opens the same fields for editing. The bin opens the dialog **Delete {artist name}?**, which says that releases and tracks of the artist stay in the catalog but lose their artist.
 
 ### Aliases
 
@@ -143,11 +148,14 @@ Rules:
 
 Click an artist name anywhere to open the page. It shows:
 
-- **Releases**: every release the artist is on, as main artist, in any credit role or with one of their tracks, newest first by default. Sortable, 25 to a page. A release of another artist shows what this artist's tracks earned on it. Listed with **Catalog number**, **Released** and the buttons to play or queue the whole release.
-- **Tracks**: every track the artist is on, as main artist or in any credit role, with its releases, ISRC and the number of airplay entries. Sortable, 25 to a page. A recording that is on several releases is one row naming all of them, with airplay and income added up.
+- **Four tiles.** **Income to date** (with the units and transactions behind it), **Expenses to date**, **Net** (income less expenses, before any split) and **Airplay**. They count everything booked on the artist's releases and what the artist's tracks earned on other releases; a release shared with other artists counts in full for each of them.
+- **Income by release**: a bar of what each release brought in. Shown only when more than one release has income.
+- **The report**: how the income developed and which platforms it came from, and **Releases by income**; see [Reports and play counts](12-reports-and-play-counts.md).
+- **Releases**: every release the artist is on, as main artist, in any credit role or with one of their tracks, newest first by default. The columns are **Release**, **Catalog number**, **Released** and **Income**, with the buttons to play or queue the whole release. Sortable, 25 to a page. On a release of another artist, **Income** is what this artist's tracks earned on it.
 - **Contracts and payees**: the contracts of these releases and tracks, each with its payees and their share. A track uses its own contract, otherwise that of its release.
+- **Tracks**: every track the artist is on, as main artist or in any credit role, with **Release**, **ISRC**, **Airplay** (the number of airplay entries) and **Income**. Sortable, 25 to a page. A recording that is on several releases is one row naming all of them, with airplay and income added up.
 
-The page has no edit button. Edit an artist from the artist list.
+**Edit** in the header opens a dialog with the same fields as **New artist**. **Delete** opens the dialog **Delete {artist name}?**; after you confirm you return to the artist list.
 
 ### Artist credits
 
@@ -207,12 +215,13 @@ Open **Catalog → Items**. The list shows 50 items per page, with unassigned it
 - **Clear filters** appears when a search or filter is set and resets it.
 - **All releases** narrows the list to one release.
 - **Unassigned** shows the items without a release. When there are any, a yellow notice at the top says how many, with the button **Show unassigned**.
+- Every column except the buttons at the end of a row can be sorted. Without a sort, unassigned items come first.
 
 ### Assign an item
 
 Income on an unassigned item stays with the label until you assign the item.
 
-1. Open **Catalog → Items** and tick **Unassigned only**.
+1. Open **Catalog → Items** and tick **Unassigned**.
 2. Click the link icon at the end of the row. The dialog **Assign item** shows what the statement said under **From the file**.
 3. Choose the **Release**.
 4. Choose the **Track**, or leave it at **Whole release** when the item is the release itself, for example an album download.
@@ -232,10 +241,10 @@ An item contract beats the track and release contract. Only a contract set direc
 
 - Deleting a track keeps its transactions on the release, but they lose the track and any track-level contract. Items of the track without transactions are deleted with it.
 - Deleting an artist keeps the releases and tracks, which lose their artist. Aliases of the artist stay and are no longer aliases. Further credits of the artist are removed.
-- The **All artists** filter of the release list only sees the main artist of a release. The counts in the artist list and the artist page also include releases and tracks where the artist is a further credit, such as a remixer, and releases of others that carry one of the artist's tracks.
+- The **All artists** filter of the release list and the release count in the artist list use the same rule: the artist is the main artist or a further credit of the release, or is on one of its tracks.
 - The artist column of the track list shows the main artist of the track only, without further credits.
 - When you choose a track for an item, the release of that track is used, whatever release was selected. When you move an item to another release, its track is cleared.
 - Changing only the contract override of an item does not move any transactions.
-- An item can be deleted only when it has no transactions; the bin is shown only then.
+- An item can be deleted only when it has no transactions. With transactions the bin is disabled, and hovering over it says how many transactions the item has and to delete or reassign them first. Otherwise the dialog is titled **Delete {item name}?**.
 - The `[Additionals]` item belongs to its release. It cannot be reassigned or deleted, and it follows the catalog number and UPC of the release.
 - Recordings are combined on the track page by ISRC within your label only. Two tracks with the same title but different or missing ISRCs stay separate.

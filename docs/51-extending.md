@@ -58,11 +58,11 @@ class ExampleDistributorImporter extends BaseImporter
 What you do not have to handle: the encoding, the delimiter, title lines above the header, the difference between CSV and Excel, capitalisation and underscores in header names, matching to the catalog and skipping lines imported before. That happens before and after your code runs.
 
 - Return `true` from `requiresPaidDate()` when the file does not say when the label was paid; the upload form then asks for the date.
-- Call `$this->skip('reason')` inside `map()` for a line that is not a sale. The reason is shown on the import page.
+- Call `$this->skip('reason')` inside `map()` for a line that is not a sale, such as a subtotal or a payout. It is only counted, in the **Skipped** tile of the import; the reason is not stored. Call `$this->fail('reason')` for a line that should have been readable: it is listed under the import's errors with its line number.
 - `category` and `format` must be values from `config/royalties.php`.
 - Strip personal data: do not put buyer names, emails or addresses into `raw`.
 
-A service becomes a card with a switch under **Settings → Connections** by an entry in `App\\Support\\Services::ALL` (its name, its kind, what it is for and what it shows), keyed by the `source()` of its importers when it has any. Anything built only for it asks `$label->usesService('key')` on the server and `label.services.includes('key')` on a page; a route that is only for it takes the middleware `service:key`, which answers 404 when the label has switched the service off. Its options, if it has any, are added to the card on the Connections page and to `ConnectionsController::service`.
+A service becomes a card with a switch under **Settings → Connections** by an entry in `App\Support\Services::ALL` (its name, its kind, what it is for and what it shows), keyed by the `source()` of its importers when it has any. Anything built only for it asks `$label->usesService('key')` on the server and `label.services.includes('key')` on a page; a route that is only for it takes the middleware `service:key`, which answers 404 when the label has switched the service off. Its switch is stored per label under `delivery_settings.distributors`; a label that never chose has every service on. Its options, if it has any, are added to its card on the Connections page and to `ConnectionsController::service`, which saves only the fields its card sends.
 
 Read `BaseImporter` and the existing importers (`ZebralutionImporter` is a good model) before writing your own, and add a test with a small invented sample file under `tests/Fixtures`.
 
@@ -163,9 +163,9 @@ npm run build && vendor/bin/pest tests/Browser
 
 ## The handbook
 
-The handbook pages are the Markdown files in `docs`, named `NN-title.md`. The number orders them and its first digit is the chapter. The first heading is the title. Link to another page by its file name, for example `[Airplay](23-airplay.md)`; the application turns that into a handbook link, and the same link works on GitHub.
+The handbook pages are the Markdown files in `docs`, named `NN-title.md`. The number orders them. Its first digit is the chapter (`0` Setup, `1` Importing, `2` Catalog, `3` Accounting, `4` People and settings, anything else Reference), with two exceptions: 30 is in Deals and 33 in Label (see `App\Services\Handbook\Handbook`). Importing, Accounting, Deals, Catalog and Label are also the groups of the sidebar, and a test checks that they stay the same. The first heading is the title. Link to another page by its file name, for example `[Airplay](23-airplay.md)`; the application turns that into a handbook link, and the same link works on GitHub.
 
-Which page the **?** button opens for a screen is decided by the list `HELP_TOPICS` in `resources/js/components/help/help-store.ts`.
+Which page the **?** button opens for a screen is decided by the list `HELP_TOPICS` in `resources/js/components/help/help-store.ts`. The handbook and the **?** button are for admins only. When you name a page in a handbook text, write its sidebar path in bold, such as **Importing → Data imports**; a test checks that the group is the one the page is in.
 
 ## Good to know
 

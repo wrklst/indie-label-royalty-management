@@ -4,20 +4,21 @@ How to get Label Office running: what the server needs, the installation itself,
 
 ## Server requirements
 
-| Component               | Requirement                                                                                                                                                                                                                                                       |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PHP                     | 8.3 or newer (8.4 and 8.5 are in daily use)                                                                                                                                                                                                                       |
-| PHP extensions          | `bcmath`, `ctype`, `curl`, `dom`, `fileinfo`, `filter`, `hash`, `iconv`, `intl`, `mbstring`, `openssl`, `pcntl`, `pdo` with the driver of your database, `posix`, `redis`, `session`, `simplexml`, `sockets`, `tokenizer`, `xml`, `xmlreader`, `xmlwriter`, `zip` |
-| Optional PHP extensions | `gd` for cover thumbnails, `exif` to honour the rotation of photos                                                                                                                                                                                                |
-| Composer                | 2.x                                                                                                                                                                                                                                                               |
-| Node.js                 | 22 or newer, with npm (only needed to build the interface)                                                                                                                                                                                                        |
-| Database                | MySQL 8 or SQLite. PostgreSQL is supported by the framework but not tested with this application.                                                                                                                                                                 |
-| Redis                   | For the queue. Optional: see "Without Redis" in [Configuration](03-configuration.md).                                                                                                                                                                             |
-| ffmpeg                  | Built with `libmp3lame`, for the MP3 playback copies of audio masters. Optional.                                                                                                                                                                                  |
-| poppler-utils           | `pdftotext` and `pdftoppm`, for reading PDF receipts with an AI service. Optional.                                                                                                                                                                                |
-| Cron                    | One entry that runs the scheduler every minute.                                                                                                                                                                                                                   |
-| Mail                    | An SMTP account or a mail service. Sign-in codes and invitations are sent by email.                                                                                                                                                                               |
-| Storage                 | Disk space for release files, or an S3-compatible bucket. Masters are large: plan for roughly 300 MB per release with WAV masters.                                                                                                                                |
+| Component               | Requirement                                                                                                                                                                                                                                                                               |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PHP                     | 8.3 or newer (8.4 and 8.5 are in daily use)                                                                                                                                                                                                                                               |
+| PHP extensions          | `bcmath`, `ctype`, `curl`, `dom`, `fileinfo`, `filter`, `hash`, `iconv`, `intl`, `mbstring`, `openssl`, `pcntl`, `pdo` with the driver of your database, `posix`, `redis`, `session`, `simplexml`, `sockets`, `tokenizer`, `xml`, `xmlreader`, `xmlwriter`, `zip`                         |
+| Optional PHP extensions | `gd` for cover thumbnails, `exif` to honour the rotation of photos                                                                                                                                                                                                                        |
+| Composer                | 2.x                                                                                                                                                                                                                                                                                       |
+| Node.js                 | 22 or newer, with npm (only needed to build the interface)                                                                                                                                                                                                                                |
+| Database                | MySQL 8 or SQLite. PostgreSQL is supported by the framework but not tested with this application.                                                                                                                                                                                         |
+| Redis                   | For the queue. Optional: see "Without Redis" in [Configuration](03-configuration.md).                                                                                                                                                                                                     |
+| ffmpeg                  | Built with `libmp3lame`, for the MP3 playback copies of audio masters. Optional.                                                                                                                                                                                                          |
+| poppler-utils           | `pdftotext` and `pdftoppm`, for reading PDF receipts with an AI service. Optional.                                                                                                                                                                                                        |
+| Outbound HTTPS          | To `api.frankfurter.dev`, which serves the European Central Bank's reference rates for costs in other currencies, and to the services a label connects (Bandcamp, DataForSEO, an AI service). Without it a cost in another currency without a rate you typed shows **no rate**. Optional. |
+| Cron                    | One entry that runs the scheduler every minute.                                                                                                                                                                                                                                           |
+| Mail                    | An SMTP account or a mail service. Sign-in codes and invitations are sent by email.                                                                                                                                                                                                       |
+| Storage                 | Disk space for release files, or an S3-compatible bucket. Masters are large: plan for roughly 300 MB per release with WAV masters.                                                                                                                                                        |
 
 > **Note:** Check the extensions of the PHP version the command line uses as well as the one the web server uses: `php -m`. A server can have several PHP versions installed, and one of them may be missing `pdo_mysql` or `dom`. Every `php artisan` command in this handbook must be run with a complete one, for example `php8.4 artisan …`.
 
@@ -56,11 +57,11 @@ Nobody can register on their own. Accounts are created on the command line:
 php artisan royalties:create-user you@example.com --name="Your Name"
 ```
 
-The command prints the address to sign in at. Enter your email there and you receive a one-time code by email.
+The command prints the address to sign in at. Enter your email there and you receive a one-time code by email. The first account made this way becomes the installation admin, who alone looks after file storage, updates and an AI address on the local network; see [Team, roles and sign-in](40-team-roles-and-sign-in.md). To hand that role to someone else, run `php artisan royalties:hand-over-installation them@example.com`.
 
 > **Note:** Locally, `MAIL_MAILER=log` writes emails to `storage/logs/laravel.log` instead of sending them. Read the code from that file, or set up real mail first.
 
-After the first sign-in you are asked to create your label: its name and its accounting currency. From then on further people are invited in the interface under **Settings → Team**; see [Team, roles and sign-in](40-team-roles-and-sign-in.md).
+After the first sign-in the page **Set up your label** asks for the label's name and its accounting currency. From then on further people are invited in the interface under **Settings → Team**; see [Team, roles and sign-in](40-team-roles-and-sign-in.md).
 
 ### Demo data
 
@@ -85,14 +86,20 @@ creates the user `test@example.com` with the password `password` and a label cal
 
 The application can update itself to each new tagged version of the repository it was cloned from.
 
-- **On demand:** open **Settings → Updates** and click **Update to …**, or run `php artisan royalties:update` on the server.
-- **Automatically:** under **Settings → Updates**, tick **Install new versions automatically** and choose the hour. The check runs once a day at that hour, in server time.
+- **On demand:** open **Settings → Updates** and click **Update to …**, or run `php artisan royalties:update` on the server. **Check again** on the page asks the repository for new tags; `php artisan royalties:update --check` only says whether a newer version exists.
+- **Automatically:** under **Settings → Updates**, tick **Install new versions automatically** and choose the hour in **At** (13:00 unless you change it). The check runs once a day at that hour, in server time, and installs the newest version if there is one. A version that failed is not tried again by itself.
 
-The page **Updates** is shown to admins of the installation only. An update asked for there is carried out by the scheduler within a minute, so the scheduler from [Deployment](04-deployment.md) has to run.
+The page **Updates** is shown to the installation admin only. An update asked for there is carried out by the scheduler within a minute, so the scheduler from [Deployment](04-deployment.md) has to run. The page shows the version that runs, **Up to date** or **{version} is available**, and the result of the last update.
+
+The page says **Cannot update itself**, with the reason, and hides the update buttons and the automatic setting, when the installation is not a git clone of the repository (for example a downloaded ZIP), when it is put in place by a deployment tool, or for one of the other reasons in the list below. Then update by deploying or by hand.
+
+### How often a version appears
+
+A scheduled job on GitHub (`.github/workflows/version.yml`, 02:17 UTC) gives `main` the next version tag once a day, when `main` has changed since the last tag and its tests passed. A day without changes or with failing tests brings no version. An installation with automatic updates can therefore receive at most one new version a day, and none on a day nothing was released; it always installs the newest tag, so several missed days become one update. A tag that has been published is never moved or deleted on GitHub, so a version number always means the same code.
 
 What an update does, in this order:
 
-1. It checks that it can run at all. It refuses when files of the application were changed on the server, when the installation has commits the new version does not contain, when `composer`, `npm` or `bash` is missing, and when the installation is put in place by a deployment tool such as Forge or Envoyer.
+1. It checks that it can run at all. It refuses when the installation is not a git clone, when files of the application were changed on the server, when the installation has commits the new version does not contain, when `composer`, `npm` or `bash` is missing, and when the installation is put in place by a deployment tool such as Forge or Envoyer.
 2. It copies the database to `storage/app/update-backups`. The three newest copies are kept. Without a copy there is no update.
 3. It puts the site in maintenance mode, removes the cached configuration and routes, moves the code to the new version, installs the packages, builds the interface, runs the migrations, has the web server empty its PHP code cache (OPcache) and restarts the background worker.
 4. If any of that fails, it puts the previous version back and opens the site again. A version that failed is not tried again automatically; you can try it again on demand.

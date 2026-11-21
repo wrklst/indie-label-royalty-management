@@ -29,12 +29,12 @@ Open **Catalog → Releases**. The list shows 50 releases per page.
 
 **Filters.**
 
-- **All artists** narrows the list to one artist. It matches the main artist of a release only, not further artist credits.
+- **All artists** narrows the list to one artist. It matches a release when the artist is its main artist, a further artist credit of the release, or on one of its tracks, in any role. This is also how the release count in the artist list is made, and that count links here.
 - **Any status** narrows the list to **To do**, **In progress** or **Done**.
 - **Without contract** shows only releases that have no contract of their own.
 - **Clear filters** appears when any search or filter is set and resets all of them.
 
-**Sorting.** Without a sort the list is ordered by catalog number, with releases that have no catalog number last, then by name. Click a column heading to sort by it, click again to reverse, and a third time to go back to the default order. Every column with a heading text can be sorted.
+**Sorting.** Without a sort the list is ordered by catalog number, with releases that have no catalog number last, then by name. Click a column heading to sort by it, click again to reverse, and a third time to go back to the default order. Every column with a heading text can be sorted, and the sort applies to all pages, not only the one you see.
 
 The **Metadata CSV** button above the list downloads the metadata of all releases; see [Files, audio and delivery](22-files-audio-and-delivery.md).
 
@@ -46,7 +46,7 @@ The **Metadata CSV** button above the list downloads the metadata of all release
 4. In the **Tracks** panel, click **Add track** for each track and enter its title.
 5. Click **Create release**.
 
-You land on the page of the new release. Every new release also gets an item called `[Additionals]`, which carries income and costs you enter by hand; see [Tracks, artists and items](21-tracks-artists-and-items.md).
+You return to the page you opened the form from: the release list with its search and filters when you clicked **New release** there, otherwise the page of the new release. Every new release also gets an item called `[Additionals]`, which carries income and costs you enter by hand; see [Tracks, artists and items](21-tracks-artists-and-items.md).
 
 Example: for the label Example Records you create a release named `Example Release` by `Example Artist` with catalog number `EX001`, add the tracks `Opening` and `Second Track`, and leave everything else empty. The release appears in the list with the status **To do** and the contract **No contract**.
 
@@ -55,9 +55,9 @@ Example: for the label Example Records you create a release named `Example Relea
 1. Open the release and click **Edit**.
 2. Change the fields and click **Save release**.
 
-After you save you return to the page you opened the form from (the release, or the release list with its filters), and to the release itself when you created it.
+After you save you return to the page you opened the form from (usually the release itself; or the release list with its filters, or the Catalog manager). If the form was opened without a page to return to, you land on the release.
 
-To delete, click **Delete** on the edit page and confirm. The dialog is titled **Delete {release name}?** and lists what is removed with the release: its tracks, its items without transactions, its platform links and all its files, which are also removed from storage for good. Its transactions are kept, but they become unassigned. See [Good to know](#good-to-know).
+To delete, click **Delete** in the header of the release page, next to **Edit**; the edit form has no delete button. The dialog is titled **Delete {release name}?** and lists what is removed with the release: its tracks, its items without transactions, its platform links and all its files, which are also removed from storage for good. Its transactions are kept, but they become unassigned. See [Good to know](#good-to-know).
 
 ## Fields: Release
 
@@ -83,19 +83,28 @@ These are the values platforms and distributors ask for. They are shown on the r
 | Status                 | Where the release stands in your own workflow. See [Status](#status).                                                                                    |
 | Format                 | The release type. See [Release types](#release-types).                                                                                                   |
 | Version                | For example `Deluxe Edition` or `The Remixes`. Shown in brackets after the name.                                                                         |
-| Genre, Subgenre        | Free text.                                                                                                                                               |
+| Genre, Subgenre        | Free text. While the label works with Zebralution, the genre field suggests Zebralution's genres; see [Connections](42-connections.md#services).         |
 | Language               | A short language code such as `en`, `de`, or `zxx` for instrumental. At most 8 characters.                                                               |
 | ℗ line                 | The owner of the recordings, for example `2026 Example Records`.                                                                                         |
 | © line                 | The owner of artwork and packaging.                                                                                                                      |
 | Explicit               | **Not explicit** (empty), **Explicit** or **Clean version**.                                                                                             |
+| AI in the artwork      | **Not declared** (empty), **None**, **Partly AI-generated** or **Fully AI-generated**. See [AI declarations](#ai-declarations).                          |
 | Original release date  | For reissues.                                                                                                                                            |
 | Pre-order from         | The date pre-orders start.                                                                                                                               |
 | Link to external files | A web address (`http` or `https`) of a shared folder, if files also live somewhere else.                                                                 |
-| Do not deliver to      | Services that must not get the release, separated by commas, for example `Spotify, Tidal`.                                                               |
+| Do not deliver to      | Platforms that must not get the release, separated by commas, for example `Spotify, Tidal`.                                                              |
 | Blocked territories    | Two-letter country codes separated by commas, for example `RU, IL`. They are stored in upper case; anything that is not exactly two letters is rejected. |
 | Further artist credits | Additional artists on the whole release, each with a role. See [Tracks, artists and items](21-tracks-artists-and-items.md#artist-credits).               |
 
-The blocked services and territories are recorded and exported. The software does not deliver releases itself, so it does not enforce them.
+The blocked platforms and territories are recorded and exported. The software does not deliver releases itself, so it does not enforce them.
+
+### AI declarations
+
+Distributors ask whether AI was used. The release has one declaration, **AI in the artwork**; each track has three, **AI in the recording**, **AI in the composition** and **AI in the lyrics**, edited in the track dialog (see [Tracks, artists and items](21-tracks-artists-and-items.md#ai-declarations)). Each takes **None**, **Partly AI-generated** or **Fully AI-generated**; **Not declared** leaves it empty. The label states what is true; nothing is checked against the files.
+
+- The artwork declaration is shown on the release page under **Release details**.
+- All four are written into the metadata CSV, in the columns `ai_artwork`, `ai_recording`, `ai_composition` and `ai_lyrics` as `none`, `partly` or `all`, and into the Zebralution sheet. The Zebralution ZIP is refused while the release or one of its tracks has an empty declaration; see [Files, audio and delivery](22-files-audio-and-delivery.md#the-zebralution-zip).
+- A track's declarations do not default to the release's, and the release's artwork declaration does not apply to tracks.
 
 ## Fields: Promotion and planning
 
@@ -109,9 +118,9 @@ All three are shown on the release page when filled. Key facts and the press rel
 
 ## Fields: Tracks
 
-Each row is one track with these columns: `#` (track number), **Title**, **Artist**, **ISRC** and **Contract**.
+Each row is one track with these columns: `#` (track number), **Title**, **Main artist**, **ISRC** and **Contract**.
 
-- **Add track** adds a row. The number is prefilled with the next position and the artist with the artist of the release.
+- **Add track** adds a row. The number is prefilled with the next position and the main artist with the artist of the release.
 - A title is required for every row.
 - An ISRC must have 12 letters and digits. Dashes and spaces are ignored, so `DE-A1B-26-00001` and `DEA1B2600001` are the same. It is stored without dashes.
 - Leave **Contract** at **Same as release** unless the track has its own deal.
@@ -121,7 +130,7 @@ These rows are the quick way to add tracks while you create a release. Further t
 
 ## Fields: Mechanicals, PPD and reserves
 
-This panel only appears when at least one of the three tools is switched on for your label under **Settings → Label**. It holds **Mechanicals rate**, **PPD**, **Reserves %** and the checkbox **Account for mechanicals**. See [Mechanicals, PPD and reserves](34-mechanicals-ppd-and-reserves.md).
+This panel only appears when at least one of the three tools is switched on for your label under **Settings → Label** (**Accounting features**). It holds **Mechanicals rate**, **PPD**, **Reserves %** and the checkbox **Account for mechanicals**. See [Mechanicals, PPD and reserves](34-mechanicals-ppd-and-reserves.md).
 
 ## Status
 
@@ -146,7 +155,7 @@ The most specific contract wins: a contract set on a single transaction, then on
 You can set the contract in three places:
 
 - on the release form, in the field **Contract**,
-- per track on the release form or in the track dialogs,
+- per track on the release form or in the track dialog,
 - for many releases and tracks at once in the [Catalog manager](#catalog-manager).
 
 ## The release page
@@ -157,7 +166,8 @@ Click a release name anywhere to open its page. The heading shows the name (with
 
 - **Delivery** downloads the release as a package or as a spreadsheet; see [Files, audio and delivery](22-files-audio-and-delivery.md).
 - **New expense** opens a new expense transaction with this release filled in; type the amount positive. After you save, you are back on this release. See [Transactions](31-transactions.md).
-- **Edit** opens the release form.
+- **Edit** opens the release form; after you save you return to this page.
+- **Delete** opens the dialog **Delete {release name}?**; see [Edit or delete a release](#edit-or-delete-a-release).
 
 **Cover and figures.** Next to the cover there are four tiles:
 
@@ -172,7 +182,7 @@ Example: with 1,250.00 of income and −400.00 of expenses, **Net** shows 850.00
 
 **Tracks.** The table has the columns `#`, **Title**, **Artist**, **ISRC**, **Length**, **Listen**, **Contract**, **Units** and **Income**. Click a heading to sort.
 
-- **Units** and **Income** are the quantity and amount of the income transactions booked on that track.
+- **Units** and **Income** are the units and amount of the income transactions booked on that track.
 - **Contract** shows the track's own contract, **Release contract** when it uses the one of the release, or **No contract**.
 - **Listen** holds the play buttons, or **No audio** when no audio file is attached to the track.
 - The pencil at the end of a row opens the track dialog **Edit {track title}** with all track details, the same one as in the track list and on the track page.
@@ -187,7 +197,7 @@ Example: with 1,250.00 of income and −400.00 of expenses, **Net** shows 850.00
 
 **The report.** How the income of the release developed, which platforms it came from and what each paid per stream, followed by **Tracks by income**; see [Reports and play counts](12-reports-and-play-counts.md).
 
-**Items.** Every name a statement, platform or manual entry used for the release or one of its tracks. Each row says which track it is booked on (or **Whole release**), which sources used the name, its format group, the number of transactions, their amount and, if set, the contract override; see [Tracks, artists and items](21-tracks-artists-and-items.md#items).
+**Items.** Every name a statement, platform or manual entry used for the release or one of its tracks, 25 to a page and sortable. The columns are **Name on statements** (with the sources that used the name and its format group below), **Booked on** (the track, or **Whole release**, with the contract override if set), **Transactions** and **Amount**; see [Tracks, artists and items](21-tracks-artists-and-items.md#items).
 
 **Notes.** Shown when the release has notes.
 
@@ -212,9 +222,9 @@ At most one link per platform is found. The web search is one billed search per 
 
 ### Adding and correcting
 
-- **Add link**: paste the address. The platform is recognised from it; choose one yourself for an address that is not recognised.
+- **Add link** opens the dialog **Add a link**: paste the address under **Link**. The platform is recognised from it (**Automatic**); choose one yourself in **Platform** for an address that is not recognised. Save with **Save link**.
 - The pencil corrects a link. A corrected link counts as your own.
-- Removing a link that was found keeps it out for good: **Find links** does not bring it back. Add it by hand if you want it again.
+- The bin of a link opens the dialog **Delete {platform} link?**. Removing a link that was found keeps it out for good: **Find links** does not bring it back. Add it by hand if you want it again.
 
 Example: for `Example Release` (EX001, UPC 4000000000001), **Find links** adds Deezer and Apple Music by the UPC and the Subvert page `subvert.fm/example-artist/example-release`. The Bandcamp page is not found, because no sale came in through the sync yet, so you paste `https://example.bandcamp.com/album/example-release` with **Add link**.
 
@@ -249,7 +259,7 @@ Example: `Example Release` has no contract and two tracks. The counter shows `2 
 
 ## Good to know
 
-- The **All artists** filter only looks at the main artist. A release where an artist is only a further credit is not found by it, but it is counted in the artist list and listed on the artist's own page.
+- The **All artists** filter and the release count in the artist list use one rule: main artist, further credit, or an artist on one of the tracks. The artist's own page lists the same releases.
 - **Income to date** in the list counts income only. Use the **Net** tile on the release page to see income minus expenses.
 - Amounts are shown in your label currency, using the converted value of each transaction.
 - The track order in the form and on the release page is by track number. The disc number is not shown on the release form; set it in the track dialog.
@@ -257,4 +267,4 @@ Example: `Example Release` has no contract and two tracks. The counter shows `2 
 - Deleting a release deletes its tracks, its files (from storage, for good) and its items without transactions. Its transactions are kept but become unassigned, so they no longer earn for any payee. Items that carry transactions stay behind as unassigned items, and the `[Additionals]` item is renamed to `[Additionals] Example Release`, so you can assign that income to another release on the **Items** page.
 - A release can be saved without tracks. Income can still be booked on the release itself.
 - The Catalog manager shows 50 releases per page. Search and **Without contract** work on the whole catalog, not only the page you are on, and **Clear filters** resets them.
-- The status, the release type and the blocked services and territories are information only. They do not affect statements or payouts.
+- The status, the release type, the AI declarations and the blocked platforms and territories are information only for statements and payouts. They do not affect statements or payouts.

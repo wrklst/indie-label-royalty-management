@@ -12,6 +12,9 @@ How to run Label Office on a production server. The steps are shown for a plain 
 6. Working **mail**.
 7. **ffmpeg**, if audio should be playable.
 8. **Backups** of the database, the files and the `.env` file.
+9. **Outbound HTTPS** to `api.frankfurter.dev` (exchange rates) and to the services the labels connect.
+
+`APP_URL` in `.env` must carry the exact address the site is opened at: the application answers to that host only.
 
 The settings behind each of these are explained in [Configuration](03-configuration.md).
 
@@ -183,6 +186,6 @@ The database copy made before the update is in `storage/app/update-backups`.
 
 ## Good to know
 
-- Building a delivery package, a Subvert ZIP or a Bandcamp ZIP writes to the system's temporary directory first. It needs as much free space as the release is large, and the web server has to allow the request to run for several minutes.
+- Building a delivery package, a Zebralution ZIP, a Subvert ZIP or a Bandcamp ZIP writes to the system's temporary directory first. It needs as much free space as the release is large, and the web server has to allow the request to run for several minutes.
 - Server-side rendering is switched off. The application sits behind a login, so it gains nothing from it, and no Node process has to run in production.
 - Plan a switch-over for a time when you are at your desk. Nothing in it needs a night shift: importing a database dump of a small label takes seconds.

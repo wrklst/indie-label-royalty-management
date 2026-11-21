@@ -16,13 +16,15 @@ An accounting period is the time span you settle with your payees, usually a qua
 2. Enter a **Name** and the dates **From** and **To**. The form suggests the quarter after your latest period, or the last full quarter if you have none.
 3. Choose **Create period**.
 
+The list shows **Period**, **From**, **To**, **Statements**, **Payouts** and **Paid out**, every column sortable, 50 periods to a page.
+
 Rules:
 
 - A transaction counts in the period its **paid date** falls in. See [Transactions](31-transactions.md) for why.
 - Periods may not overlap, because a transaction may only count in one period. They may follow one another without a gap, and a period may be a single day.
 - You can create earlier periods afterwards. Balances always carry forward by date, not by the order in which periods were created.
 
-**Edit** on the period page changes the name and dates. Once a period has payouts, its dates can no longer change.
+**Edit** on the period page changes the name and dates. Once a period has payouts, its dates can no longer change. **Delete** is described under [Deleting](#deleting).
 
 ## Checking a period
 
@@ -49,7 +51,7 @@ These are warnings, not locks. You can generate statements with open issues, but
 
 ## Where the money went
 
-Below the four figures at the top, a period shows the path of its income in one panel, from the label's point of view:
+Below the four figures at the top, the panel **Where the money went** shows the path of the period's income from the label's point of view. Deductions are known only for statements that report them:
 
 | Line                                             | Meaning                                                                             |
 | ------------------------------------------------ | ----------------------------------------------------------------------------------- |
@@ -64,6 +66,8 @@ Below the four figures at the top, a period shows the path of its income in one 
 | **Kept by the label**                            | What remains                                                                        |
 
 Which statements report deductions is listed in [Importing statements](10-importing-statements.md).
+
+Under it the page shows the income report of the period, the same one as on the dashboard and on the artist and track pages: **Income**, **How the income developed**, **Platforms**, **What it was** and **Where it was**. See [Reports and play counts](12-reports-and-play-counts.md).
 
 ## How the figures are calculated
 
@@ -84,7 +88,7 @@ In detail:
 - **Payouts** are the payments recorded for this period.
 - A ledger below zero is **unrecouped**. It is not payable, it carries forward, and it is never set off against the payee's other ledgers.
 
-The columns of the payee table under **2. Statements and payouts** add up the ledgers of each payee:
+The columns of the payee table under **2. Statements and payouts** add up the ledgers of each payee. Every column except the last sorts the table:
 
 | Column           | Meaning                                                                                        |
 | ---------------- | ---------------------------------------------------------------------------------------------- |
@@ -94,7 +98,7 @@ The columns of the payee table under **2. Statements and payouts** add up the le
 | **Payable**      | For each ledger, brought forward + share + transfers; only ledgers above zero are added up.    |
 | **Paid**         | Payouts recorded for this period.                                                              |
 | **Still to pay** | Sum of the ledgers above zero after payouts.                                                   |
-| **Statement**    | **–** (none), **Draft** or **Published**.                                                      |
+| **Statement**    | **–** (none), or a link reading **Draft** or **Published**.                                    |
 
 A payee with a ledger below zero is marked **unrecouped ledger**.
 
@@ -103,10 +107,10 @@ A payee with a ledger below zero is marked **unrecouped ledger**.
 Click a payee's name in the table to open their breakdown for the period. It shows the same content as a statement, but live:
 
 - **Summary**: **Brought forward**, **Share this period**, **Paid out**, **Still payable**, and a table of all ledgers.
-- One tab per ledger: earnings per release and track with **Contract**, **Split**, **Income**, **Expenses**, **Net** and **Share**, followed by how the ledger got from **Balance brought forward** to its **Balance**.
+- One panel per ledger, marked **Unrecouped** when it is below zero: earnings per release and track with **Contract**, **Split**, **Income**, **Expenses**, **Net** and **Share**, followed by how the ledger got from **Balance brought forward** to its **Balance**.
 - **Income**: grouped by release, track and format, with units.
 - **Expenses**: the recoupable costs and the payee's part of each.
-- **Transfers & payouts**: every advance, payback and payout in the period.
+- **Transfers and payouts**: every advance, payback and payout in the period.
 
 Use this view to answer "why is this number what it is" before you generate anything.
 
@@ -115,7 +119,7 @@ Use this view to answer "why is this number what it is" before you generate anyt
 A statement is a frozen copy of a payee's figures for a period. Later imports, edits or contract changes do not alter it.
 
 - **Generate all statements** on the period page creates one for every payee who has earnings, transfers, payouts or a balance up to this period. Payees with nothing at all get none.
-- The icon in a payee's row, or **Generate statement** on their breakdown, creates one for that payee only.
+- The icon in a payee's row, or **Generate statement** on their breakdown, creates one for that payee only. The breakdown also has **Back to period** and **Payee**.
 
 A new statement is a **Draft**: only admins can see it.
 
@@ -128,11 +132,13 @@ Generating again creates a new revision instead of changing the old statement:
 - A statement that replaced an earlier one is marked **Revised** in the list.
 - **Regenerate all statements** also archives the draft of a payee who no longer has anything to state.
 
-**Accounting → Statements** lists the current statements with **Payee**, **Period**, **Status**, **Generated**, **Balance** and **Payable**. Choose a **Period** or a **Payee** to narrow the list, and tick **Archived** to include the history. **Clear filters** resets them. An archived revision cannot be published. The button **My statements** above the list shows what payees see of the published ones.
+**Accounting → Statements** lists the current statements with **Payee**, **Period**, **Status** (**Draft**, **Published**, **Archived**), **Generated**, **Balance** and **Payable**, 50 to a page; all columns but **Status** sort. Choose a **Period** or a **Payee** to narrow the list, and tick **Archived** to include the history. **Clear filters** resets them. An archived revision cannot be published. A statement's page also shows who it is visible to (**Published to payee**, **Draft – not visible to the payee**, **Archived revision**) and links to its **previous revision**.
+
+The button **My statements** above the list opens what payees see, see [My statements for an admin](#my-statements-for-an-admin).
 
 ## Publishing and downloading
 
-Open a statement and choose **Publish to payee**. From then on the payee sees it under **My statements**, in the section of your label (a payee of several labels reads them all on that page), see [Team, roles and sign-in](40-team-roles-and-sign-in.md). **Unpublish** takes it back.
+Open a statement and choose **Publish to payee**. From then on the payee sees it under **My statements**, in the section of your label (a payee of several labels reads them all on that page, each label in its own currency, without switching labels), see [Team, roles and sign-in](40-team-roles-and-sign-in.md). **Unpublish** takes it back.
 
 Publishing sends no email. Tell your payees yourself.
 
@@ -141,18 +147,29 @@ Publishing sends no email. Tell your payees yourself.
 1. the payee, period and currency,
 2. **Summary**: Previous balance, Income, Expenses, Net, Your share, Transfers, Payable, Paid, Balance,
 3. one block per ledger, with a line per release and track, the ledger total, its transfers and payouts,
-4. **Income** by release, track, contract and format with quantity,
+4. **Income** by release, track, contract and format with units,
 5. **Expenses** by release, track, contract and category,
 6. **Transfers and payouts** with date and memo.
 
 Amounts in the file are rounded to four decimals. Payees can download the same file from **My statements**.
 
+### My statements for an admin
+
+**My statements** in the sidebar (and the button on **Accounting → Statements**) is the payees' own area. What you see depends on who you are:
+
+- **Someone who runs the label and is not a payee anywhere** sees **What payees can see**: every published, current statement of the label, 25 to a page, with **Payee**, **Period**, **Published**, **Balance** and **Payable** (all sortable) and the filters **Period** and **Payee**. Each payee only gets their own.
+- **Someone who is only a payee** sees their own statements, overview and payouts, grouped by label.
+- **Someone who runs a label and is also a payee of another one** sees both on the same page: first **Your statements as a payee**, then **What the payees of {label} see**. In the sidebar the first sits in the group **As a payee**, below the label's groups.
+- **An account that has the role but is not connected to a payee** reads **Your access is not linked to a payee yet**, until you link it under **Settings → Team**.
+
+You see no draft and no archived revision here: only what has been published.
+
 ## Payouts
 
 A payout is the record of a payment you have made. Nothing is sent to a bank from here.
 
-1. On the period page, choose the payout icon (**Book payout**) in the payee's row. It only appears when something is still to pay.
-2. Enter the **Amount**, the **Paid date** and an optional **Memo** such as the bank reference.
+1. On the period page, choose the payout icon (**Book payout to {payee}**) in the payee's row. It only appears when something is still to pay.
+2. Enter the **Amount** (in your label currency), the **Paid date** and an optional **Memo** such as the bank reference.
 3. Choose **Book payout**.
 
 Rules:
@@ -162,15 +179,15 @@ Rules:
 - It is booked against the payee's ledgers, largest balance first. Unrecouped ledgers are never touched.
 - An amount already paid on a later period cannot be paid again on an earlier one.
 
-**Accounting → Payouts** lists all payouts with the ledgers they were **Booked to** and who recorded them, 50 to a page. Choose a **Period** or a **Payee** to narrow the list; **Clear filters** resets it.
+**Accounting → Payouts** lists all payouts with **Paid date**, **Payee**, **Period**, the ledgers they were **Booked to**, **Memo**, **Recorded by** and **Amount**, 50 to a page; every column but **Booked to** sorts. Choose a **Period** or a **Payee** to narrow the list; **Clear filters** resets it.
 
 ## Deleting
 
-| What                                      | Effect                                                                                              | Limits                                                                                                              |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| A payout (**Accounting → Payouts**)       | The amount becomes payable again.                                                                   | Statements already generated keep showing it until you regenerate them.                                             |
-| A statement (**Delete** on the statement) | The payee loses access to it. Transactions and payouts are not affected; you can generate it again. | None. Published statements can be deleted too.                                                                      |
-| A period (**Delete** on the period page)  | Its statements are deleted with it. Transactions are not touched.                                   | Not possible while the period has payouts or published statements: the button is disabled and its tooltip says why. |
+| What                                                                    | Effect                                                                                              | Limits                                                                                                              |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| A payout (**Accounting → Payouts**, **Delete payout to {payee}?**)      | The amount becomes payable again.                                                                   | Statements already generated keep showing it until you regenerate them.                                             |
+| A statement (**Delete** on the statement, **Delete {statement name}?**) | The payee loses access to it. Transactions and payouts are not affected; you can generate it again. | None. Published statements can be deleted too.                                                                      |
+| A period (**Delete** on the period page, **Delete {period name}?**)     | Its statements are deleted with it. Transactions are not touched.                                   | Not possible while the period has payouts or published statements: the button is disabled and its tooltip says why. |
 
 ## Worked example: an advance recouped over two periods
 

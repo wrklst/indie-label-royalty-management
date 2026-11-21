@@ -1,6 +1,6 @@
 # Configuration
 
-Everything the server needs to know is in the `.env` file. This page lists each setting, what it is for and an example. Settings a label can change itself are not here: they are in the interface, see [Label settings](41-label-settings.md).
+Everything the server needs to know is in the `.env` file. This page lists each setting, what it is for and an example. Settings a label can change itself are not here: they are in the interface, see [Label settings](41-label-settings.md) and [Connections](42-connections.md).
 
 After changing `.env` on a production server run `php artisan optimize` and restart the queue with `php artisan horizon:terminate`, otherwise the old values stay in use.
 
@@ -13,7 +13,7 @@ APP_DEBUG=false
 APP_URL=https://royalties.example.com
 ```
 
-- `APP_URL` must be the address people open, including `https://`. Links in emails are built from it.
+- `APP_URL` must be the address people open, including `https://`. Links in emails are built from it, and its host is the only host the application answers to: a request for another name is refused. Behind HTTPS the application also sends the usual security headers.
 - `APP_DEBUG` must be `false` on a server anyone else can reach. With `true`, error pages show internals.
 - `APP_ENV` also decides where files go in a shared bucket, see "File storage" below.
 
@@ -60,7 +60,7 @@ REDIS_PASSWORD=null
 
 Keep `php artisan horizon` running at all times. Under `composer dev` it is started for you; on a server a process manager has to keep it alive, see [Deployment](04-deployment.md). When it does not run, nothing is sent, converted or researched: jobs wait until it does.
 
-The Horizon dashboard is at `/horizon`. Locally it is open; elsewhere only to the signed-in users listed here:
+The Horizon dashboard is at `/horizon`. Locally it is open; elsewhere only to signed-in users with a verified address who are listed here:
 
 ```ini
 HORIZON_ALLOWED_EMAILS=you@example.com,colleague@example.com
@@ -78,12 +78,14 @@ One cron entry runs everything that happens on its own:
 * * * * * cd /path/to/label-office && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-| When            | What                                                                  |
-| --------------- | --------------------------------------------------------------------- |
-| Daily, 04:00    | Books recurring label costs that have come due                        |
-| Monday, 05:00   | Fetches new Bandcamp sales for labels with an enabled connection      |
-| Daily, 06:30    | Queues the airplay research for the ten tracks researched longest ago |
-| Every 5 minutes | Records queue metrics for the Horizon dashboard                       |
+| When            | What                                                                                                                          |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Every minute    | Checks whether an update was asked for under **Settings → Updates**, or automatic updates are due, and does nothing otherwise |
+| Every 5 minutes | Records queue metrics for the Horizon dashboard                                                                               |
+| Daily, 03:30    | Cleans up direct uploads of files that were never reported as finished                                                        |
+| Daily, 04:00    | Books recurring label costs that have come due                                                                                |
+| Monday, 05:00   | Fetches new Bandcamp sales for labels that work with Bandcamp and have **Sync automatically every week** ticked               |
+| Daily, 06:30    | Queues the airplay research for the ten tracks researched longest ago                                                         |
 
 Times are in the server's time zone.
 
@@ -125,6 +127,10 @@ php artisan royalties:move-files --to=s3
 ```
 
 The command copies, checks the size of every copy and points the records at the new place. It never deletes the originals; remove them yourself once you have checked the result.
+
+## Exchange rates
+
+A cost or transaction in another currency without a rate you typed is converted at the European Central Bank's reference rate of its day, fetched from `api.frankfurter.dev` over HTTPS. The server therefore needs outbound HTTPS to that address. Only the two currencies and the day are sent. Nothing needs to be configured. If the address cannot be reached, the amount shows **no rate** and stays uncounted until a rate is entered or the address can be reached again; see [Profitability and overheads](33-profitability-and-label-costs.md) and [Troubleshooting](52-troubleshooting.md).
 
 ## Uploads
 
@@ -175,7 +181,7 @@ DATAFORSEO_PASSWORD=your-api-password
 
 ## AI service for reading receipts
 
-Nothing to configure here. Each label chooses its service and enters its key under **Settings → Connections**; see [Connections](42-connections.md). Reading PDF receipts needs `pdftotext` and `pdftoppm` on the server (package `poppler-utils`).
+Nothing to configure here. Each label chooses its service and enters its key under **Settings → Connections**; see [Connections](42-connections.md). A service address on this server or its local network can only be entered by the installation admin. Reading PDF receipts needs `pdftotext` and `pdftoppm` on the server (package `poppler-utils`).
 
 ## Bandcamp
 
@@ -183,23 +189,26 @@ Nothing to configure here. Each label connects its own Bandcamp account from the
 
 ## All settings at a glance
 
-| Setting                                   | Default                 | Purpose                        |
-| ----------------------------------------- | ----------------------- | ------------------------------ |
-| `APP_URL`                                 | `http://localhost:8000` | Public address                 |
-| `DB_*`                                    | SQLite                  | Database connection            |
-| `MAIL_*`                                  | `log`                   | Outgoing mail                  |
-| `QUEUE_CONNECTION`                        | `redis`                 | Where background jobs wait     |
-| `REDIS_*`                                 | local Redis             | Redis connection               |
-| `HORIZON_ALLOWED_EMAILS`                  | empty                   | Who may open `/horizon`        |
-| `ROYALTIES_FILES_DISK`                    | `local`                 | `local` or `s3`                |
-| `AWS_*`                                   | empty                   | Bucket connection              |
-| `RELEASE_UPLOAD_MAX_KB`                   | `1048576`               | Largest release file           |
-| `FFMPEG_BINARY`                           | `ffmpeg`                | Path to ffmpeg                 |
-| `AUDIO_PREVIEW_BITRATE`                   | `320`                   | MP3 bitrate in kbit/s          |
-| `AUDIO_PREVIEW_SAMPLE_RATE`               | `44100`                 | MP3 sample rate in Hz          |
-| `AUDIO_PREVIEW_TIMEOUT`                   | `600`                   | Seconds per conversion         |
-| `AUDIO_PREVIEW_QUEUE`                     | `true`                  | Convert in the background      |
-| `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` | empty                   | Installation-wide search login |
+| Setting                                   | Default                 | Purpose                                                                                           |
+| ----------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------- |
+| `APP_URL`                                 | `http://localhost:8000` | Public address                                                                                    |
+| `DB_*`                                    | SQLite                  | Database connection                                                                               |
+| `MAIL_*`                                  | `log`                   | Outgoing mail                                                                                     |
+| `QUEUE_CONNECTION`                        | `redis`                 | Where background jobs wait                                                                        |
+| `REDIS_*`                                 | local Redis             | Redis connection                                                                                  |
+| `HORIZON_ALLOWED_EMAILS`                  | empty                   | Who may open `/horizon`                                                                           |
+| `ROYALTIES_FILES_DISK`                    | `local`                 | `local` or `s3`                                                                                   |
+| `AWS_*`                                   | empty                   | Bucket connection                                                                                 |
+| `RELEASE_UPLOAD_MAX_KB`                   | `1048576`               | Largest release file                                                                              |
+| `FFMPEG_BINARY`                           | `ffmpeg`                | Path to ffmpeg                                                                                    |
+| `AUDIO_PREVIEW_BITRATE`                   | `320`                   | MP3 bitrate in kbit/s                                                                             |
+| `AUDIO_PREVIEW_SAMPLE_RATE`               | `44100`                 | MP3 sample rate in Hz                                                                             |
+| `AUDIO_PREVIEW_TIMEOUT`                   | `600`                   | Seconds per conversion                                                                            |
+| `AUDIO_PREVIEW_QUEUE`                     | `true`                  | Convert in the background                                                                         |
+| `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` | empty                   | Installation-wide search login                                                                    |
+| `HORIZON_MAX_PROCESSES`                   | `4`                     | Most queue workers Horizon runs                                                                   |
+| `APP_PREVIOUS_KEYS`                       | empty                   | Old application keys, comma-separated, after a key change                                         |
+| `SESSION_COOKIE`, `CACHE_PREFIX`          | from the app name       | Names of the cookie and cache keys; set them when several installations share a domain or a cache |
 
 ## Good to know
 

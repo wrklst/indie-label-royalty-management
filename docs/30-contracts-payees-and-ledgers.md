@@ -20,14 +20,16 @@ A payee earns nothing by existing. They earn through splits on contracts, and a 
 2. Enter a **Name**. **Email**, **Tags** (separated by commas) and **Notes** are optional and only for your reference.
 3. Choose **Create payee**.
 
+The list searches name, email and tags (**Search payees…**) and shows **Name** (with its tags), **Email**, **Splits**, **Statements** and **Payouts**; every one of them sorts, and the list pages 50 at a time. A payee on no contract shows a **no splits** badge. The pencil at the end of a row opens **Edit {payee name}**.
+
 The email on a payee does not give anyone access. Access to **My statements** is granted under **Settings → Team**, see [Team, roles and sign-in](40-team-roles-and-sign-in.md).
 
 Click a payee to open their page. It shows:
 
-- what they earned in the latest period, what is **Payable now** and the balance of each ledger, with a link to the **Full breakdown**,
-- **Splits**: every contract they earn from, with ledger, territory and the releases and tracks it applies to,
+- four figures for the latest period (**Earned in {period}**, **Payable now**, **Paid for {period}** and **Balance across ledgers**) and the **Ledger balances** at the end of it, with an **Unrecouped** badge on a negative one and a link to the **Full breakdown**,
+- **Splits**: every contract they earn from, with share, ledger, territory and the releases and tracks it applies to, sortable,
 - **Statements** and **Payouts**, 25 to a page each and sortable,
-- **Transfers**: advances, paybacks and opening balances, 50 to a page and sortable. **New transfer** opens a new transfer for this payee, see [Transactions](31-transactions.md).
+- **Transfers**: advances, paybacks and opening balances, 25 to a page and sortable. A transfer whose currency has no rate shows an **unconverted** badge instead of an amount. **New transfer** opens a new transfer for this payee, see [Transactions](31-transactions.md).
 
 **Edit** in the header changes the payee. **Delete** is disabled for a payee with transfers, payouts or statements, and its tooltip says why; for any other payee it opens **Delete {payee name}?**, which removes the payee's splits from every contract and unlinks a team member linked to the payee.
 
@@ -46,7 +48,7 @@ A split is a percentage of **net income**: income minus the recoupable expenses 
 
 The form shows the sum as you type, for example "Payees get 60% worldwide, the label keeps 40%." A contract whose splits add up to more than 100% is refused. A contract without splits is allowed: the label keeps everything booked on it.
 
-The contract list shows **Splits**, **Label keeps** and **Used by** for every contract. Tick **Not used anywhere** to find contracts that no release, track, item or prorated contract relies on.
+The contract list shows **Splits**, **Label keeps** and **Used by** for every contract. Search by name (**Search contracts…**), sort by **Contract** or **Used by**, or tick **Unused** to find contracts that no release, track, item or prorated contract relies on. The list pages 50 at a time. A bar shows how the splits divide the contract; a contract without splits shows **no splits**, one that pays out more than 100% shows **over 100%**, and a prorated contract shows **prorated · N contracts** and takes its splits **From child contracts**.
 
 Click a contract name, here or anywhere a contract is named, to open its page. It shows the terms (name and memo), the splits with payee, share, ledger and territory, the contracts a prorated contract is made of or is part of, and the **Releases** and **Tracks** the contract applies to, 25 to a page each and sortable. **Edit** in the header opens the form; after you save you return to the page you came from, the contract's own page when there is none. **Delete** opens **Delete {contract name}?**, which says that the contract's splits go with it and that releases, tracks and items fall back to the next contract up the chain.
 
@@ -89,7 +91,7 @@ A ledger is a running balance for one payee:
 balance = previous balance + share earned + transfers − payouts
 ```
 
-Every payee has a primary ledger automatically. Add another under **Deals → Ledgers** with **New ledger** when a deal's balance must not mix with the payee's other earnings. The usual case is an advance that should be recouped only from the release it was paid for.
+Every payee has a primary ledger automatically. Add another under **Deals → Ledgers** with **New ledger** (the list shows each ledger's **Payees** and where it is **Used in contracts**, sortable; the pencil renames a ledger) when a deal's balance must not mix with the payee's other earnings. The usual case is an advance that should be recouped only from the release it was paid for.
 
 Three rules apply to every ledger:
 
@@ -103,7 +105,7 @@ To recoup an advance on its own:
 2. In the contract of that release, pick this ledger in the payee's split.
 3. Book the advance as a transfer for the payee with the release selected and **Ledger** left on **Automatic**. The transfer then lands on the ledger of the payee's split for that release. You can also pick the ledger by hand.
 
-Deleting a ledger moves its splits and any payouts booked to it to the primary ledger, so balances change.
+Deleting a ledger (**Delete {ledger name}?**) moves its splits and any payouts booked to it to the primary ledger, and a transfer booked to it by hand goes back to **Automatic**, so balances change.
 
 ## Territories and territory splits
 
@@ -117,7 +119,7 @@ A split with a territory only earns from transactions whose **Country** is one o
 
 The 100% rule looks at each country: the worldwide splits plus all territory splits that cover one country may not exceed 100%.
 
-A territory that contract splits still use cannot be deleted: its bin is disabled and the tooltip says why. Change those splits first.
+A territory that contract splits still use cannot be deleted: its bin is disabled and the tooltip says why. Change those splits first. Otherwise the bin opens **Delete {territory name}?**.
 
 ## Prorated contracts for compilations
 

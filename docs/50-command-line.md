@@ -16,6 +16,23 @@ php artisan royalties:create-user you@example.com --name="Your Name"
 
 The person signs in with a code sent by email. Without `--name` the part of the address before the @ is used. Further members of an existing label are invited in the interface instead, under **Settings → Team**.
 
+| Part      | Meaning                                                                       |
+| --------- | ----------------------------------------------------------------------------- |
+| `email`   | The address the person signs in with. Refused when invalid or already in use. |
+| `--name=` | Their name.                                                                   |
+
+The account may create a label. When the installation has no installation admin yet, it becomes one, see [Team, roles and sign-in](40-team-roles-and-sign-in.md#roles-and-security).
+
+### royalties:hand-over-installation
+
+Hands the role of installation admin, which decides file storage, updates and an AI address on the local network, to another account. Only one account has the role: the previous one loses it.
+
+```sh
+php artisan royalties:hand-over-installation new-owner@example.com
+```
+
+The address has to belong to an existing account, otherwise the command says "has no account". The new installation admin sees **Settings → Updates** and the **File storage** card while they are an admin of the label they work in. The account of the installation admin cannot be deleted before the role has been handed over.
+
 ## Importing
 
 ### royalties:import
@@ -30,10 +47,10 @@ php artisan royalties:import statement.csv --label=example-records --paid=2026-1
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `--label=`    | The label to import into                                                                                                          |
 | `--importer=` | Source or importer key: `zebralution`, `bandcamp`, `rightz-audio`, `audio-rights`, `template`. Detected from the file by default. |
-| `--paid=`     | Paid date (`Y-m-d`) for sources without one                                                                                       |
+| `--paid=`     | Paid date (`Y-m-d`) for sources without one; those sources refuse the file without it                                             |
 | `--rate=`     | Conversion rate for lines in another currency                                                                                     |
 
-When possible duplicates are found, nothing is counted and the import waits for your decision under **Importing → Data imports**.
+The file is stored with the other uploaded files and appears under **Importing → Data imports**. When possible duplicates are found, nothing is counted and the import waits for your decision there; the command then ends with a warning and an error status.
 
 ### royalties:sync-bandcamp
 
@@ -43,7 +60,11 @@ Fetches new Bandcamp sales through the Bandcamp API and imports them.
 php artisan royalties:sync-bandcamp --label=example-records
 ```
 
-Without `--label` every label with an enabled connection is synced. Scheduled for Mondays at 05:00.
+| Option     | Meaning                                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------------------------- |
+| `--label=` | Only this label. Without it every label whose Bandcamp connection has its weekly sync ticked is synced. |
+
+With `--label` the label is synced even when its weekly sync is not ticked, as long as it has a Bandcamp connection. A label that switched Bandcamp off under **Settings → Connections** is skipped in both cases. Scheduled for Mondays at 05:00.
 
 ## Catalog and files
 
@@ -56,7 +77,11 @@ php artisan royalties:generate-previews
 php artisan royalties:generate-previews --label=example-records --release=12 --force
 ```
 
-`--force` converts again what already has a copy, for example after changing the bitrate.
+| Option       | Meaning                                                                       |
+| ------------ | ----------------------------------------------------------------------------- |
+| `--label=`   | Only this label                                                               |
+| `--release=` | Only this release, by its id                                                  |
+| `--force`    | Convert again what already has a copy, for example after changing the bitrate |
 
 ### royalties:move-files
 
@@ -66,6 +91,11 @@ Copies release files and statement files to another disk and points their record
 php artisan royalties:move-files --to=s3 --dry-run
 php artisan royalties:move-files --to=s3
 ```
+
+| Option      | Meaning                                                              |
+| ----------- | -------------------------------------------------------------------- |
+| `--to=`     | The disk to copy to, as named in `config/filesystems.php`, e.g. `s3` |
+| `--dry-run` | Only report what would be copied                                     |
 
 Every copy is checked by size. Originals are never deleted. Running it again continues where it stopped.
 
@@ -77,13 +107,13 @@ Queues a web research for tracks that have not been researched lately.
 php artisan royalties:research-airplay --label=example-records --days=31 --limit=10
 ```
 
-| Option     | Default    | Meaning                                                                       |
-| ---------- | ---------- | ----------------------------------------------------------------------------- |
-| `--label=` | all labels | Only this label                                                               |
-| `--days=`  | `31`       | Research tracks whose last research is older than this                        |
-| `--limit=` | `10`       | The most tracks to queue per label; every track costs several billed searches |
+| Option     | Default    | Meaning                                                                           |
+| ---------- | ---------- | --------------------------------------------------------------------------------- |
+| `--label=` | all labels | Only this label                                                                   |
+| `--days=`  | `31`       | Research tracks whose last research is older than this                            |
+| `--limit=` | `10`       | The most tracks to queue per label; every track costs up to three billed searches |
 
-Scheduled daily at 06:30. Labels without a DataForSEO login are skipped.
+Tracks never researched come first. Scheduled daily at 06:30. Labels without a web search login, their own or the server's, are skipped with a warning.
 
 ## Accounting
 
@@ -103,11 +133,35 @@ Loads a complete account export (catalog, contracts, periods, payouts and transa
 
 ```sh
 php artisan royalties:import-infinite-catalog /path/to/export --label=example-records
+php artisan royalties:import-infinite-catalog /path/to/export --label=example-records --rate=GBP=1.16 --timezone=Europe/London
 ```
+
+| Option        | Default         | Meaning                                                                                                           |
+| ------------- | --------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `directory`   |                 | The folder with the exported files, including `transactions.ndjson`                                               |
+| `--label=`    |                 | The label to import into                                                                                          |
+| `--timezone=` | `Europe/Berlin` | The time zone the dates were entered in                                                                           |
+| `--rate=`     |                 | A rate for a currency Infinite Catalog converted itself, written `GBP=1.16`; repeat it for several currencies     |
+| `--fresh`     |                 | Delete everything the label holds before importing. Without it the command refuses a label that already has data. |
+
+> **Warning:** `--fresh` removes the catalog, contracts, transactions and the rest of the label first. Use it only on a label you can lose, or after a backup.
+
+The import runs in one database transaction, and ends with a table of what was imported. It then credits remixers named in track titles, as [royalties:credit-remixers](#royaltiescredit-remixers) does.
 
 ### royalties:compare-infinite-catalog
 
 Checks the calculated period figures against the ones Infinite Catalog reported.
+
+```sh
+php artisan royalties:compare-infinite-catalog /path/to/export --label=example-records --tolerance=0.01 --show=100
+```
+
+| Option         | Default    | Meaning                                                |
+| -------------- | ---------- | ------------------------------------------------------ |
+| `directory`    |            | The folder with the export, including `summaries.json` |
+| `--label=`     |            | The label the export was imported into                 |
+| `--tolerance=` | `0.000001` | The largest difference still counted as equal          |
+| `--show=`      | `40`       | How many differences to list                           |
 
 The export has to be produced from your own account; no export tool is included. This project is not affiliated with Infinite Catalog.
 
@@ -119,7 +173,10 @@ Creates an importer class for a new statement source, or a new layout of an exis
 
 ```sh
 php artisan make:importer ExampleDistributor
+php artisan make:importer Zebralution2027 --source=zebralution --layout="2027 onwards"
 ```
+
+With `--source` the new class is another layout of an existing source, named by `--layout`.
 
 ## Updating
 
@@ -155,6 +212,20 @@ Credits as **Remixer** every artist of your catalog that a track title names, su
 ```sh
 php artisan royalties:credit-remixers
 ```
+
+## What runs by itself
+
+`php artisan schedule:list` shows these and when each is next due. They need the scheduler, see [Configuration](03-configuration.md).
+
+| Command                             | When                                                                |
+| ----------------------------------- | ------------------------------------------------------------------- |
+| `royalties:update --scheduled`      | Every minute; does nothing unless an update was asked for or is due |
+| `royalties:book-recurring-expenses` | Daily at 04:00                                                      |
+| `royalties:research-airplay`        | Daily at 06:30                                                      |
+| `royalties:sync-bandcamp`           | Mondays at 05:00                                                    |
+| `horizon:snapshot`                  | Every five minutes                                                  |
+
+A daily job at 03:30 also removes files that were uploaded straight to a bucket and never reported.
 
 ## Useful framework commands
 

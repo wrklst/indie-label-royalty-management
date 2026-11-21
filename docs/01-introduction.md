@@ -9,22 +9,25 @@ Label Office is royalty accounting and release management for independent record
 - **Closes accounting periods.** A period shows what every payee has earned, what is still unrecouped and what is payable. Statements are frozen snapshots a payee can read under **My statements**.
 - **Keeps the catalog together.** Every release holds its metadata, cover, audio masters and documents. Audio plays in the browser.
 - **Tracks airplay.** Radio plays from neighbouring rights statements are listed per track and can be researched on the web.
+- **Reads play counts.** Streams and plays per track and platform come in from a play counts file and show up on the dashboard and on track and artist pages.
+- **Keeps the label's own costs.** Overheads are entered once or as recurring costs, in any currency, with receipts you can enter by hand or have read by an AI service.
+- **Works with the services you use.** Zebralution, Bandcamp, Subvert and Rightz Audio each have a switch under **Settings → Connections**; a service the label does not work with is hidden.
 
 ## The words used everywhere
 
-| Word                | Meaning                                                                                                                               |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| **Label**           | One tenant of the installation, with its own catalog, contracts, transactions and team. An installation can hold several labels.      |
-| **Admin**           | A user who runs a label and sees everything in it.                                                                                    |
-| **Payee**           | Anyone who is paid a share: an artist, a producer, a publisher, another label. A payee can be given a login to read their statements. |
-| **Release / track** | The catalog. A track belongs to one release; the same recording on several releases is recognised by its ISRC.                        |
-| **Item**            | What is sold: a release or track in a format group (digital, physical, rights …). Transactions are matched to items.                  |
-| **Contract**        | An agreement with percentage splits per payee. It can be set on a release, a track, an item or a single transaction.                  |
-| **Ledger**          | The running balance of a payee under a contract. A negative ledger is unrecouped and carries forward.                                 |
-| **Transaction**     | One line of money: income, an expense, or a transfer such as an advance or a payout.                                                  |
-| **Paid date**       | The day the money reached the label. It decides which period a transaction counts in.                                                 |
-| **Period**          | A span of paid dates you account for, for example a quarter.                                                                          |
-| **Statement**       | What one payee earned in one period, frozen at the moment it was generated.                                                           |
+| Word                | Meaning                                                                                                                                                          |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Label**           | One tenant of the installation, with its own catalog, contracts, transactions and team. An installation can hold several labels.                                 |
+| **Admin**           | A user who runs a label and sees everything in it. The one account that looks after the installation itself is the installation admin.                           |
+| **Payee**           | Anyone who is paid a share: an artist, a producer, a publisher, another label. A payee can be given a login to read their statements, also under several labels. |
+| **Release / track** | The catalog. A track belongs to one release; the same recording on several releases is recognised by its ISRC.                                                   |
+| **Item**            | What is sold: a release or track in a format group (digital, physical, rights …). Transactions are matched to items.                                             |
+| **Contract**        | An agreement with percentage splits per payee. It can be set on a release, a track, an item or a single transaction.                                             |
+| **Ledger**          | The running balance of a payee under a contract. A negative ledger is unrecouped and carries forward.                                                            |
+| **Transaction**     | One line of money: income, an expense, or a transfer such as an advance or a payout.                                                                             |
+| **Paid date**       | The day the money reached the label. It decides which period a transaction counts in.                                                                            |
+| **Period**          | A span of paid dates you account for, for example a quarter.                                                                                                     |
+| **Statement**       | What one payee earned in one period, frozen at the moment it was generated.                                                                                      |
 
 ## How the pieces fit together
 
@@ -40,7 +43,7 @@ The arithmetic is explained with numbers in [Periods, statements and payouts](32
 
 This assumes the software is installed and you can sign in. If not, start with [Installation](02-installation.md).
 
-1. **Create your label.** After the first sign-in you are asked for the label's name and accounting currency. The currency cannot be changed once transactions exist.
+1. **Create your label.** After the first sign-in the page **Set up your label** asks for the label's name and accounting currency. The currency cannot be changed once transactions exist. Only an account made with `royalties:create-user` that has no label yet, and an admin of a label, may open a label; someone who was invited to a label cannot.
 2. **Import a statement.** Open **Importing → Data imports**, choose **Import a statement** and upload a file from your distributor. The source is detected from the columns. See [Importing statements](10-importing-statements.md).
 3. **Look at what was created.** **Catalog → Releases** now lists the releases named in the file. Open one to see its tracks and its income by track and platform.
 4. **Add a payee and a contract.** Under **Deals → Payees** create the artist, then under **Deals → Contracts** a contract that gives them, say, 50%. See [Contracts, payees and ledgers](30-contracts-payees-and-ledgers.md).
@@ -54,6 +57,7 @@ This assumes the software is installed and you can sign in. If not, start with [
 
 - The **?** button in the top bar opens the handbook page for the screen you are on, beside your work.
 - **Handbook** at the top of the sidebar shows every chapter with a search field.
+- The handbook and the **?** button are for label admins. A payee, who only sees **My statements**, has neither.
 - Something not working: see [Troubleshooting](52-troubleshooting.md).
 
 ## Good to know

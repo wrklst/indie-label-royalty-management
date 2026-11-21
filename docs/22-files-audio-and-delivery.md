@@ -11,7 +11,7 @@ Files are stored on the server or in a storage bucket, depending on your setup; 
 ## Upload files to a release
 
 1. Open the release and scroll to the panel **Files**.
-2. Optionally choose a type in the field below the drop area. **Detect type** is the default.
+2. Optionally choose a type in the field **Upload as** below the drop area. **Detect type** is the default; the other choices read **As cover**, **As audio** and so on.
 3. Drop one or more files on the drop area, or click **browse** and select them.
 4. Each file is uploaded as soon as it is added: three at a time when files go straight to the bucket, otherwise one after the other. A finished file leaves the drop area and appears in the list; one that was refused stays, in red, with the reason.
 
@@ -54,11 +54,11 @@ Above the table is one tab per type that has files, each with its number of file
 | Size     | The file size.                                                                                                              |
 | Uploaded | The upload date.                                                                                                            |
 
-The arrow at the end of a row downloads the file exactly as it was uploaded. The bin deletes it after a confirmation.
+Click a column heading to sort the table by it. The arrow at the end of a row downloads the file exactly as it was uploaded. The bin opens the dialog **Delete {file name}?**; confirming removes the file from the server for good.
 
 ### Size limit and refused files
 
-- The limit is per file and is shown next to the upload button. The default is 1024 MB. Your server administrator can change it; see [Configuration](03-configuration.md).
+- The limit is per file and is shown next to the field **Upload as**. The default is 1024 MB. Your server administrator can change it; see [Configuration](03-configuration.md).
 - A file above the limit is skipped with a message, and the other files of the same upload continue.
 - Files ending in `php`, `phtml`, `phar`, `html`, `htm`, `js`, `mjs`, `exe`, `sh`, `bat`, `cmd` or `svg` are refused with **Files of this type cannot be stored here.**
 
@@ -87,7 +87,7 @@ The file table shows the state below each audio file name:
 | Playback copy failed     | The conversion did not work. Hover over the text to read the reason. Click **Convert again** to retry. |
 | No playback copy yet     | No conversion was started for this file. Click **Convert** to start one.                               |
 
-When a copy is made and the track has no length yet, the length of the audio is filled in as the track's duration. An existing length is not changed.
+When a copy is made and the track has no length yet, the length of the audio is filled in as the track's length. An existing length is not changed.
 
 ### Without ffmpeg
 
@@ -178,11 +178,13 @@ release_date, original_release_date, preorder_date, label, genre, subgenre, lang
 explicit, p_line, c_line, status, blocked_services, blocked_territories, disc_number,
 track_number, track_title, track_version, track_artist, featuring, remixers, isrc, iswc,
 duration, duration_seconds, track_explicit, track_language, track_genre, bpm, key,
-composers, lyricists, producers, publishers, track_p_line, preview_start_seconds
+composers, lyricists, producers, publishers, track_p_line, preview_start_seconds, ai_artwork, ai_recording, ai_composition, ai_lyrics
 ```
 
 - `track_artist`, `track_explicit`, `track_language`, `track_genre` and `track_p_line` are filled from the release when the track has no value of its own.
 - `featuring` and `remixers` come from the artist credits of the track. `producers` combines the **Producer** credits with the names in the **Producers** field.
+- `explicit` and `track_explicit` are written as `explicit` or `clean`, empty when not set.
+- The four AI columns hold the declarations of the release (`ai_artwork`) and of the track (`ai_recording`, `ai_composition`, `ai_lyrics`) as `none`, `partly` or `all`; they are empty when nothing is declared. The track columns are not filled from the release. The same declarations go into the Zebralution sheet. See [Releases](20-releases.md#ai-declarations).
 - `duration` is written as minutes and seconds, for example `3:25`; `duration_seconds` as `205`.
 - Text that a spreadsheet program would treat as a formula gets a leading apostrophe.
 
@@ -253,23 +255,23 @@ Example Release - Zebralution.zip
     1-2 Second Track.wav
 ```
 
-- The name of the folder and of the cover is the release's UPC / EAN. Each master is named by disc, track number and title: `1-2 Second Track.wav`. Characters Zebralution does not allow are left out of the title.
+- The name of the folder and of the cover is the release's UPC / EAN as 13 digits: a 12-digit UPC gets a leading zero. Each master is named by disc, track number and title: `1-2 Second Track.wav`. Characters Zebralution does not allow are left out of the title.
 - The sheet is Zebralution's own metadata sheet for music, with one line per track, the columns in its order and under its names. Every cell is filled, because Zebralution reads an empty cell as the one above: what has no value is `-`.
-- What goes into the sheet comes from the release, its tracks and the **Zebralution** card under **Settings → Connections**: the **Zebralution number**, the **Country of origin**, the **Price group** (for tracks and the release alike) and the **Rights in compositions and lyrics**. See [Connections](42-connections.md).
+- What goes into the sheet comes from the release, its tracks and the **Zebralution** card under **Settings → Connections**: the **Zebralution number**, the **Country of origin**, the **Price group** (for tracks and the release alike) and the **Rights in compositions and lyrics**. See [Connections](42-connections.md). The AI declarations of the release and its tracks are written into the sheet as well.
 - Only WAV masters are used; Zebralution asks for 16 bit, 44.1 kHz, stereo. The ZIP is not limited in size.
-- The Zebralution ZIP and the genres Zebralution accepts, offered as suggestions in the genre fields of the release form, are only shown while the label works with Zebralution; see [Connections](42-connections.md#services).
+- The Zebralution ZIP and the genres Zebralution accepts, offered as suggestions in the genre fields of the release form, are only shown while the label works with Zebralution. The same holds for the other ZIPs: **Subvert ZIP** and **Bandcamp ZIP** are in the **Delivery** menu only while their service is switched on under **Settings → Connections**; **Full package** and **Metadata CSV** are always there. See [Connections](42-connections.md#services).
 
 If Zebralution would send the release back, no file is downloaded. A dialog **The Zebralution ZIP cannot be made yet** lists every reason. Besides what the Subvert ZIP needs (a cover, tracks, an audio file for each) these are:
 
-| Reason                                                                      | What to do                                                                   |
-| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| The Zebralution number or the country of origin of the label is missing.    | Enter them on the Zebralution card under **Settings → Connections**.         |
-| The release has no UPC / EAN, main artist, release date, language or genre. | Enter them on the release form. The language is a code such as `en` or `de`. |
-| The © or ℗ line does not start with the year.                               | Write it as `2026 Example Label`.                                            |
-| The release or a track does not say whether it is AI-generated.             | Answer the AI questions on the release form and on the track.                |
-| A genre is not one of Zebralution's.                                        | Pick one of the genres the field suggests.                                   |
-| A track has no ISRC, no length or no lyricist.                              | Enter them, or set the language of an instrumental track to `zxx`.           |
-| The cover is not a square JPEG of at least 3000 × 3000 pixels.              | Upload a cover that is.                                                      |
+| Reason                                                                                  | What to do                                                                                                                                                                                                             |
+| --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The Zebralution number or the country of origin of the label is missing.                | Enter them on the Zebralution card under **Settings → Connections**.                                                                                                                                                   |
+| The release has no UPC / EAN, main artist, release date, language or genre.             | Enter them on the release form. The language is a code such as `en` or `de`. A compilation needs no main artist.                                                                                                       |
+| The © or ℗ line does not start with the year.                                           | Write it as `2026 Example Label`.                                                                                                                                                                                      |
+| The release or a track does not say whether it is AI-generated.                         | Choose a value in **AI in the artwork** on the release form, and in **AI in the recording**, **AI in the composition** and **AI in the lyrics** on every track. See [AI declarations](20-releases.md#ai-declarations). |
+| A genre or subgenre of the release, or a genre of a track, is not one of Zebralution's. | Pick one of the genres the field suggests.                                                                                                                                                                             |
+| A track has no ISRC, no length or no lyricist.                                          | Enter them, or set the language of an instrumental track to `zxx`.                                                                                                                                                     |
+| The cover is not a square JPEG of at least 3000 × 3000 pixels.                          | Upload a cover that is.                                                                                                                                                                                                |
 
 ## The Bandcamp ZIP
 

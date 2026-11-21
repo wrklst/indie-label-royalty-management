@@ -11,6 +11,8 @@ There are two kinds of card:
 - A **service** the label can work with: Zebralution, Bandcamp, Subvert and Rightz Audio. Each has a switch, **The label works with …**, and a **Save** button.
 - A **login** to an outside service: the web search, receipt reading and, for the installation's admin, the file storage.
 
+Each card carries a badge. A service shows **Switched off** when its switch is off; the Bandcamp card otherwise shows **Connected** or **Not connected**, and the other service cards show no badge. A login card shows **Connected**, **Not connected** or, for the web search that the server's environment file already provides, **Set on the server**. The file storage card always says **Connected**.
+
 A login card has two states.
 
 - **Not connected**: a form. **Test and connect** tests what you entered against the service and stores it only when the test passes.
@@ -27,7 +29,7 @@ Secrets are stored encrypted and never shown again.
 
 ## Services
 
-A label that never chose works with all four, so nothing disappears for an existing label. Switching a service off hides what is built for it and keeps everything already imported or entered. The generic delivery package and the metadata CSV are never hidden.
+A label that never chose works with all four, so nothing disappears for an existing label. Each card says what the switch hides in its hint: "Switched off, the label no longer sees its … What is imported stays." Switching a service off hides what is built for it and keeps everything already imported or entered. The generic delivery package (**Full package**) and the **Metadata CSV** are never hidden. Other chapters name the same control "the label works with" the service.
 
 | Service          | Kind           | What the switch shows                                                                                                                                                                                                               |
 | ---------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -36,7 +38,7 @@ A label that never chose works with all four, so nothing disappears for an exist
 | **Subvert**      | Shop           | The **Subvert ZIP** under **Delivery**                                                                                                                                                                                              |
 | **Rightz Audio** | Rights society | Its statement layouts in the source list; its airplay comes in with them                                                                                                                                                            |
 
-A download of a switched-off service answers "not found", and the weekly Bandcamp sync skips the label. A statement of a switched-off service is still recognised when uploaded with **Detect automatically**.
+A download of a switched-off service answers "not found", and the weekly Bandcamp sync skips the label, also when it is started on the command line with `--label`. A statement of a switched-off service is still recognised when uploaded with **Detect automatically**.
 
 ### Zebralution
 
@@ -61,17 +63,21 @@ The airplay research looks tracks up on Google through [DataForSEO](https://data
 
 The login is checked with DataForSEO; one it refuses is not stored.
 
-The same card holds the **Airplay research countries**: two-letter country codes separated by spaces or commas, for example `DE GB US`. Every track is searched once per country, and each search is billed. **Save countries** stores them, and only them. What the research does and costs is described in [Airplay](23-airplay.md).
+While the server's environment file provides the login, the card says so, with **Set on the server**, and **Connect a different login** opens the form for the label's own. The same card holds the **Airplay research countries**: one to ten two-letter country codes separated by spaces or commas, for example `DE GB US`. Every track is searched once per country, and each search is billed. **Save countries** stores them, and only them. What the research does and costs is described in [Airplay](23-airplay.md).
 
 ## Receipt reading
 
 An AI service can read vendor, date, amount and category off the receipts you upload under **Label → Overheads**. Without a service, receipts are stored and booked by hand.
+
+With a service connected, reading is a choice, never automatic. Each upload on **Label → Overheads** offers **Enter by hand** and **Read with AI**; **Enter by hand** is the default and the last choice is remembered in the browser. A receipt that was uploaded can be read afterwards with **Read with AI** on its row, or again with **Read again**. A receipt that is not read is not sent anywhere. What the AI reads is a proposal: it fills the fields of **Book as cost**, and you check and correct them. See [Profitability and overheads](33-profitability-and-label-costs.md).
 
 | Service                                                   | What you enter                                           |
 | --------------------------------------------------------- | -------------------------------------------------------- |
 | **Infomaniak AI Tools**                                   | An API token, your **Product ID** and a **Model**        |
 | **OpenAI**, **Anthropic**, **Mistral**, **Google Gemini** | An API key and a **Model**                               |
 | **Other OpenAI-compatible service**                       | An API key, the **Base URL** and the name of a **Model** |
+
+The **Base URL** is the address the service answers at, up to and without `/chat/completions`. It has to be an `https://` address on the internet. An address on this server or its network, or one that starts with `http://`, for a model you host yourself, can only be entered by the installation admin, see [Roles and security](40-team-roles-and-sign-in.md#roles-and-security).
 
 ### Infomaniak
 
@@ -93,7 +99,7 @@ Choosing a model shows:
 - whether it answers in a fixed format, so the fields arrive reliably,
 - whether it works a document through before answering (slower, more careful) or answers directly (fast).
 
-Names, prices and descriptions come from [models.dev](https://models.dev), a public catalog, fetched once a day. Prices are list prices in US dollars and may differ from your own terms with the service. **Another model…** lets you type a name the list does not have. When the catalog cannot be reached, the field is a plain text field.
+Names, prices and descriptions come from [models.dev](https://models.dev), a public catalog, fetched once a day. Prices are list prices in US dollars and may differ from your own terms with the service. **Another model…** lets you type a name the list does not have. When the catalog cannot be reached, the field is a plain text field; for OpenAI, Anthropic, Mistral and Google Gemini, which have a default model, you can leave it empty to use that one.
 
 ### The test
 
@@ -109,17 +115,19 @@ The card of a connected service has **Change model**. It opens the same list, wi
 
 ### What is sent
 
+Only a receipt you chose to read is sent, and only this:
+
 - An image receipt is sent as the image.
-- A PDF is sent as its text. A scanned PDF, which has no text, is sent as a picture of its first page.
+- A PDF is sent as its text: the text of its first three pages, cut off after 20,000 characters. A scanned PDF, which has no text, is sent as a picture of its first page.
 - Nothing else is sent: no other data of the label goes to the service.
 
-Receipts are billed to your account with the service, per document read. The cross on the card disconnects the service; receipts are then stored unread.
+Receipts are billed to your account with the service, per document read. The cross on the card disconnects the service; receipts are then stored unread. Reading runs in the background, so the queue worker has to run, see [Troubleshooting](52-troubleshooting.md#receipts).
 
 > **Note:** Reading PDFs needs the programs `pdftotext` and `pdftoppm` on the server (package `poppler-utils`). Images work without them.
 
 ## File storage
 
-This card is shown only to the **admin of the installation**: the first account that was created with `php artisan royalties:create-user`. It decides where the files of every label on the installation go.
+This card is shown only to the **admin of the installation**: the account `php artisan royalties:create-user` made first when there was none, or on an older installation the account with the lowest id. The role can be handed to another account with `php artisan royalties:hand-over-installation`, see [Roles and security](40-team-roles-and-sign-in.md#roles-and-security). It decides where the files of every label on the installation go.
 
 While nothing is connected here, the server's `.env` decides, as described in [Configuration](03-configuration.md). The card then shows that connection, marked as coming from the environment file, and offers **Connect a different storage**, which opens the form.
 
@@ -128,11 +136,22 @@ While nothing is connected here, the server's `.env` decides, as described in [C
 | **In an S3-compatible bucket** | New files go to a bucket: Amazon S3, Hetzner Object Storage, Infomaniak, Backblaze B2, MinIO … |
 | **On this server**             | New files go to the server's own disk                                                          |
 
-For a bucket you enter its name, the endpoint (for every provider other than Amazon), the region, and the access key and secret key. **Test and connect** writes, reads and deletes a small test file in the bucket; a bucket that fails this is not stored. The cross on the card hands the decision back to the environment file.
+For a bucket you enter, after choosing **Store new files** → **In an S3-compatible bucket**:
+
+| Field                    | What to enter                                                                                                                           |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Bucket**               | The name of the bucket.                                                                                                                 |
+| **Endpoint**             | For every provider other than Amazon, an `https://` address such as `https://fsn1.your-objectstorage.com`. Other addresses are refused. |
+| **Region**               | The bucket's region.                                                                                                                    |
+| **Access key**           | Required.                                                                                                                               |
+| **Secret key**           | Required. Stored encrypted and not shown again.                                                                                         |
+| **Path-style addresses** | Tick it for storage that needs it, such as a self-hosted MinIO.                                                                         |
+
+**Test and connect** writes, reads and deletes a small test file in the bucket; a bucket that fails this is not stored. For **On this server** the button reads **Use this server**. The cross on the card hands the decision back to the environment file.
 
 ### Direct uploads
 
-With a bucket, the card shows whether **direct uploads** are on.
+With a bucket, the card shows the badge **Direct uploads on** or **Direct uploads off**.
 
 - **Off**: every upload travels to this server first and from there to the bucket. That is limited by what the server accepts in one upload and takes twice the time for a large master.
 - **On**: release files, receipts and statement files go from the browser straight to the bucket. The server only hears where the file went, checks it and files it.

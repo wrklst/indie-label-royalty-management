@@ -16,13 +16,13 @@ Three optional tools calculate mechanical royalties, royalties on the published 
 2. Under **Accounting features**, tick **Mechanicals**, **PPD** and/or **Reserves**.
 3. Set the options that appear (see below) and choose **Save**.
 
-Each tool you switch on adds an entry under **Accounting** in the sidebar and its fields to the release form.
+Each tool you switch on adds an entry under **Accounting** in the sidebar (**Mechanicals**, **PPD**, **Reserves**) and its fields to the release form. The three tools do not depend on the services under **Settings → Connections**.
 
 | Setting                                      | Appears with       | What it does                                                                                                                         |
 | -------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
 | **Include physical sales**                   | Mechanicals        | Counts sold physical copies as units, next to downloads. Leave it off when you enter manufacturing runs instead.                     |
 | **Statutory rate conversion: 1 USD = ? EUR** | Mechanicals        | What one US dollar is worth in your label currency. Needed for tracks without their own rate when the label does not account in USD. |
-| **Ignore negative units**                    | Mechanicals or PPD | Off (default): returns reduce the units. On: lines with a negative quantity count as zero.                                           |
+| **Ignore negative units**                    | Mechanicals or PPD | Off (default): returns reduce the units. On: lines with negative units count as zero.                                                |
 
 ## Running a tool
 
@@ -30,10 +30,10 @@ The steps are the same for all three:
 
 1. Open the tool under **Accounting**.
 2. In **Report**, enter **Paid from** and **Paid until** and choose **Show report**.
-3. Read the report and the notices above it. They tell you what was left out and why.
-4. Choose **Book transactions**, enter the date or dates asked for, and choose **Book**.
+3. Read the report and the notices above it. They tell you what was left out and why: transactions without a converted amount (no rate, see [Currencies and conversion](31-transactions.md#currencies-and-conversion)), transactions without units, and what the tool cannot calculate.
+4. Choose **Book transactions**, enter the date or dates asked for (**Paid date of the transactions**; **Held on** and **Liquidated on** for reserves), and choose **Book**.
 
-The dates you enter in step 4 become the paid dates of the new transactions, so they decide which period the result falls in.
+The dates you enter in step 4 become the paid dates of the new transactions, so they decide which period the result falls in. Each tool page also has a panel **How it is booked** that says in short what the run creates, with a link to the **Items** page where you give those items a contract.
 
 ### The overlap warning
 
@@ -43,11 +43,11 @@ Runs of different tools never overlap with each other.
 
 ### Sorting the report
 
-The tables of a report and of the rates page sort by a click on a heading. The order is only for reading; booking always books the whole report.
+The tables of a report, of **Reserves by release** and of the rates page sort by a click on a heading. The order is only for reading; booking always books the whole report.
 
 ### Undoing a run
 
-Every tool page lists its **Earlier runs**, 25 to a page and sortable, with the paid dates it **Covers**, the **Paid date** it was booked on, the number of **Rows** (transactions), the total and when it was **Uploaded**. Deleting a run there deletes its transactions; periods that included them change accordingly. The same runs appear under **Importing → Data imports**, named after the tool, and can be deleted there as well.
+Every tool page lists its **Earlier runs**, 25 to a page and sortable, with the paid dates it **Covers**, the **Paid date** it was booked on, the number of **Rows** (transactions), the total (**Mechanicals**, **PPD total** or **Reserves held**) and when it was **Uploaded**. Deleting a run there (**Delete run {from} – {to}?**) deletes its transactions; periods that included them change accordingly. The same runs appear under **Importing → Data imports**, named after the tool, and can be deleted there as well.
 
 ## Mechanicals
 
@@ -61,7 +61,7 @@ mechanicals of a track = units × rate
 
 **Units** are, for each track:
 
-- the quantities of income paid in the range with a download format (Download Album, Download Track, Download/Other),
+- the units of income paid in the range with a download format (Download Album, Download Track, Download/Other),
 - plus physical formats if **Include physical sales** is on,
 - plus the copies of any **Manufacturing runs** you enter for the run.
 
@@ -71,13 +71,13 @@ A sale booked on the whole release counts once for each of its tracks that take 
 
 1. the track's own rate,
 2. the release's rate, which applies to each track of the release,
-3. the US statutory rate for the track's duration, from the table you choose for the run.
+3. the US statutory rate for the track's length, from the table you choose for the run.
 
 Rates on tracks and releases are amounts in your label currency and are not converted. The statutory rate is in US dollars and is multiplied by the conversion from the label settings.
 
 ### Where rates are set
 
-On the tool page, under **Rates and tracks**, pick a release and choose **Edit rates**. One page then holds the **Mechanicals rate per unit** of the release, the switch **Account for mechanicals on this release**, and for every track its duration, its setting (**Same as release**, **Account**, **Do not account**) and its own **Rate per unit**. The release form has the same release-level fields in the panel **Mechanicals, PPD and reserves**.
+On the tool page, under **Rates and tracks**, pick a release and choose **Edit rates**. One page then holds the **Mechanicals rate per unit** of the release, the switch **Account for mechanicals on this release**, and for every track its length, its setting (**Same as release**, **Account**, **Do not account**) and its own **Rate per unit**. The release form has the same release-level fields in the panel **Mechanicals, PPD and reserves**.
 
 ### The US statutory rate table
 
@@ -127,14 +127,14 @@ In the last column the income item has a contract that pays Second Payee 100%, i
 PPD is the published price to dealer. Some deals pay a royalty per unit sold based on it, rather than a share of net income.
 
 ```text
-PPD of a release or track = quantity sold × rate per unit
+PPD of a release or track = units sold × rate per unit
 ```
 
 **The rate** is an amount in your label currency per unit, taken from the item the sale was booked on, else its track, else its release. Having a rate is what makes a sale take part: anything without a rate at any of the three levels is ignored. Income of every format counts.
 
 **Where rates are set.** On the tool page, under **Rates**, pick a release and choose **Edit rates**. The page holds the **PPD rate per unit** of the release, a rate per track, and a rate per item for when formats have different dealer prices. The release form also has the field **PPD**.
 
-**The report** can be narrowed with **Artist**, **Release** and **Format**. It lists transactions without a quantity so you can fix them; they are not counted.
+**The report** can be narrowed with **Artist**, **Release** and **Format**. It lists transactions without units (the first 50) so you can enter the units; they are not counted. Income on no release is not counted either, and the report says so.
 
 ### What a run creates
 
@@ -181,7 +181,7 @@ When creating the transactions you enter two dates: **Held on** and **Liquidated
 
 The release earns that much less in the period of the first date and gets it back in the period of the second, for payees and label alike. The item follows the release contract.
 
-The table **Reserves by release** on the tool page shows per release what was **Held**, what was **Liquidated so far** (up to today) and what is **Still held**.
+The table **Reserves by release** on the tool page shows per release what was **Held**, what was **Liquidated so far** (up to today) and what is **Still held**. The report above it shows **Reserves to hold**, **Physical income** and the number of **Releases**; **Reserves %** is set on the release form, not on the tool page.
 
 ### Example
 
@@ -198,8 +198,8 @@ The run calculates 400 × 25% = 100. You hold it on 31 March 2026 and liquidate 
 
 - A tool that is switched off has no page. Switching it off later does not remove transactions it already created.
 - The overlap check only compares dates. Two PPD runs over the same range for two different releases do not double count, but still ask for confirmation.
-- Sales without a quantity or without a conversion rate cannot be used. The report says how many were skipped.
-- A track with neither a duration nor a custom rate cannot be calculated, and neither can a statutory-rate track while the label has no USD conversion and does not account in USD. Both are listed in the mechanicals report.
+- Sales without units or without a conversion rate cannot be used. The report says how many were skipped.
+- A track with neither a length nor a custom rate cannot be calculated, and neither can a statutory-rate track while the label has no USD conversion and does not account in USD. Both are listed in the mechanicals report.
 - A manufacturing run entered for a release on which no track accounts mechanicals adds nothing; the report names the release.
 - Mechanicals and PPD transactions carry the sale date and paid date you choose for the run, not the dates of the underlying sales.
 - **Ignore negative units** does not apply to reserves: returns always lower the reserve.

@@ -17,24 +17,26 @@ Files can be CSV or Excel (`.xlsx`), up to 50 MB. The encoding, the separator an
 
 Bandcamp sales can also be fetched automatically, without uploading anything: see [Bandcamp](11-bandcamp.md). A source that is missing can be added with a small class: see [Extending](51-extending.md).
 
+Zebralution, Bandcamp and Rightz Audio are services the label can switch off under **Settings → Connections**; see [Connections](42-connections.md). A switched-off service is no longer offered as a source on the upload form. A file in its layout is still recognised by automatic detection, and what was imported before stays.
+
 ## Importing a file
 
 1. Open **Importing → Data imports** and choose **Import a statement**.
-2. **Where is the file from?** Leave it on automatic detection, or pick the source. The layout is recognised by the columns of the file, so the two Zebralution layouts are one entry.
-3. **File.** Drop the file on the field or click **browse**. It is sent when you choose **Import**. The name of the import defaults to the file name.
-4. **Dates.** Enter the **Paid date**: the day the money reached your bank account. It decides which accounting period the lines count in. For sources that carry no payment date it is required. Tick **Use this paid date for every line** to override dates the file does contain.
-5. **Options.**
+2. In the panel **1. Where is the file from?** leave it on **Detect automatically**, or pick the source. The layout is recognised by the columns of the file, so the two Zebralution layouts are one entry.
+3. In **2. File** drop the file on the field or click **browse**. It is sent when you choose **Import**. The name of the import defaults to the file name.
+4. In **3. Dates** enter the **Paid date**: the day the money reached your bank account. It decides which accounting period the lines count in. For sources that carry no payment date it is required; for the others it is used for lines without one. Tick **Use this paid date for every line** to override dates the file does contain. The **Sale date** works the same way, for lines without a sale date, with **Use this sale date for every line**.
+5. In **4. Options**:
     - **Conversion rate**: only for lines in a currency other than the label's. Without a rate those lines are imported but not counted until you set one.
-    - **Tags**: free words to find the import again.
+    - **Tags**: free words, separated by commas. They show as badges under the import's name in the list, and the search box of the list finds them.
     - **Skip lines that were already imported**: leave it on. It protects you from uploading the same statement twice.
-6. Submit. The file is checked and imported in one go. If anything stops the import, nothing is saved.
+6. Choose **Import**. The file is checked and imported in one go. If anything stops the import, nothing is saved.
 
 ### Example
 
 Example Records receives its Zebralution statement for the third quarter on 15 November 2026. The file has 4,210 lines.
 
 1. Upload `statement_label_track_2026Q3.csv`, paid date `2026-11-15`.
-2. The import page shows 4,210 lines imported and the total, followed by the report: how the income developed month by month, by platform, by kind of use and by country; see [Reports and play counts](12-reports-and-play-counts.md).
+2. The import page shows 4,210 lines imported and the total, and the toast reads "4,210 transactions imported.". The report follows: how the income developed month by month, by platform, by kind of use and by country; see [Reports and play counts](12-reports-and-play-counts.md).
 3. Two releases in the file were not in the catalog yet. They now exist under **Catalog → Releases**, without a contract. The period for the fourth quarter will point them out as "releases without a contract".
 
 ## What an import creates
@@ -71,13 +73,39 @@ A period continues from there with **Costs**, **Owed to payees** and **Kept by t
 
 "Received without a breakdown" is income from statements that only report the amount paid out: the legacy Zebralution layout, the spreadsheet template, entries made by hand and anything migrated from another system.
 
-## Lines that are left out
+## The import page
 
-The import page lists them under **Lines left out**, with the reason:
+Opening an import shows its status, source, file name, who uploaded it and when, and the paid date. For a finished import there are four tiles:
 
-- lines that were imported before (same source, same line),
-- lines that are not sales, such as a Bandcamp payout to your bank account,
-- Bandcamp physical and merch sales, when the label chose **Skip physical and merch sales** in its settings.
+| Tile                 | Shows                                                                                                                                                                                                                                                                        |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Total imported**   | The sum of the transactions, in the label's currency.                                                                                                                                                                                                                        |
+| **Transactions**     | How many were created, "of N lines in the file".                                                                                                                                                                                                                             |
+| **Skipped**          | Lines not imported: those already imported before, and those left out (payouts to your bank account, lines without an amount, Bandcamp physical and merch sales when **Skip physical and merch sales** is ticked on the **Bandcamp** card under **Settings → Connections**). |
+| **Added to catalog** | New releases / new tracks the file created.                                                                                                                                                                                                                                  |
+
+Below the tiles come the panel **Where the money went** and the report. The notice **To clean up** appears when something needs your hand:
+
+- transactions that could not be matched to a release, with the link **Assign items** (to **Catalog → Items**, filtered to **Unassigned**),
+- transactions in another currency without a conversion rate, which are not counted, with the link **Show them**,
+- lines that could not be read; see below.
+
+When the file created releases, a line points to the catalog manager, where you assign contracts: they have none yet, so their income stays with the label. **View transactions** in the header opens the transactions of this import.
+
+### Statuses
+
+| Status                   | Meaning                                                                                                                           |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Imported**             | Done.                                                                                                                             |
+| **Needs cleanup**        | Done, but the **To clean up** notice has something in it. The dashboard counts these imports under **Needs attention**.           |
+| **Duplicates to review** | Held: nothing is counted until you decide; see below.                                                                             |
+| **Pending**              | Being imported.                                                                                                                   |
+| **Failed**               | Nothing was saved. The page says "Nothing was imported." with the reason and a **Try again** button, which opens the upload form. |
+| **Deleted**              | The import was undone. It stays in the list, without transactions.                                                                |
+
+### Lines left out
+
+Lines that are skipped on purpose (already imported, payouts, no amount) are only counted, in the **Skipped** tile. Lines that could not be read are listed in the panel **Lines left out** with their line number and the problem, up to the first 200; the panel says "Showing the first 200 of N" when there are more. Click a heading to sort.
 
 ## Possible duplicates
 
@@ -88,7 +116,7 @@ Every import is therefore compared with what is booked already. Two things count
 - The lines of the file for one release, type, format group and paid month **add up to** transactions from another source, to the cent.
 - One line has the **same paid date and amount** as an existing transaction of that release.
 
-When something is found, the import stops with the status **Duplicates to review** and nothing is counted yet. For each proposal you choose:
+When something is found, the import stops with the status **Duplicates to review** and a warning toast, "Possible duplicates found. Nothing was imported yet: decide below." The panel **Possible duplicates (N)** shows for each proposal what is already booked next to what is in the file. For each you choose, then **Import with these decisions**:
 
 | Choice                                                                  | Result                                                                                                                                                              |
 | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -116,18 +144,18 @@ On the upload form, choosing the spreadsheet template as the source shows the li
 | `memo`                                 | `Sync fee`                   | Free text                                            |
 | `source`                               | `Publisher`                  | Who paid                                             |
 | `category`, `format`                   | `Master Use License`, `Sync` | From the lists in [Transactions](31-transactions.md) |
-| `quantity`, `price`                    | `1`                          |                                                      |
-| `retailer`                             | `Publisher`                  |                                                      |
+| `quantity`, `price`                    | `1`                          | The units sold and the price per unit                |
+| `retailer`                             | `Publisher`                  | The platform                                         |
 | `external id`                          |                              | The other side's reference                           |
-| `region`                               | `DE`                         | Two-letter country code                              |
+| `region`                               | `DE`                         | The country, as a two-letter code                    |
 
 ## The list of imports
 
-**Importing → Data imports** lists every upload, 50 to a page, with the columns **File**, **Source**, **Status**, **Paid date**, **Rows**, **Transactions**, **Skipped duplicates**, **Total** and **Uploaded**. Click a heading to sort by it. Above the table, search a name or file name, choose a **Source** or a **Status**, and use **Clear filters** to start over. The same columns, with the same name **Uploaded**, are used for the files of [Play counts](12-reports-and-play-counts.md) and the earlier runs of the [royalty tools](34-mechanicals-ppd-and-reserves.md).
+**Importing → Data imports** lists every upload, 50 to a page, with the columns **File**, **Source**, **Status**, **Paid date**, **Rows**, **Transactions**, **Skipped duplicates**, **Total** and **Uploaded**. Click a heading to sort by it. Above the table, search a name, file name or tag, choose a **Source** or a **Status**, and use **Clear filters** to start over. The **Paid date** reads "From file" when you entered none. The files of [Play counts](12-reports-and-play-counts.md) and the earlier runs of the [royalty tools](34-mechanicals-ppd-and-reserves.md) are listed the same way: they share the columns **Rows** and **Uploaded** with this list, and each adds its own.
 
 ## Undoing an import
 
-Choose the bin at the end of a row of the list, or open the import and choose **Delete import**. That removes exactly the transactions the import created, nothing else. Releases and tracks it created stay, because other data may refer to them by now.
+Choose the bin at the end of a row of the list, or open the import and choose **Delete import**. The dialog is titled "Delete {name}?" and says how many transactions go. That removes exactly the transactions the import created, nothing else. Releases and tracks it created stay, because other data may refer to them by now, and statements already generated keep their figures. Airplay entries from a Rightz Audio statement are removed unless you added links or notes to them. The import itself stays in the list as **Deleted**.
 
 To import a corrected file, delete the old import first and upload the new file.
 
@@ -144,6 +172,6 @@ php artisan royalties:import report.xlsx --label=example-records --importer=band
 
 - A transaction counts in the period its **paid date** falls in, not the period it was sold in. Enter the date the money arrived, not the date on the statement.
 - Lines in a foreign currency without a conversion rate are stored but count as zero until a rate is set. A period lists them as "unconverted currencies".
-- By default 1% is taken off each Bandcamp line to cover payout fees. Switch it off under **Settings → Label** if you do not want that.
+- By default 1% is taken off each Bandcamp line to cover payout fees. Tick **Do not deduct 1% from Bandcamp net amounts** on the **Bandcamp** card under **Settings → Connections** if you do not want that.
 - An import runs while you wait. A file with tens of thousands of lines takes a minute or two.
 - Statement files are kept on the configured file storage, so an import can be traced back to the file it came from.

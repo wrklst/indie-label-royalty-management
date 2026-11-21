@@ -12,7 +12,7 @@ Every amount in Label Office is a transaction: a line of income, an expense or a
 
 Most income arrives through imports, see [Importing statements](10-importing-statements.md) and [Bandcamp](11-bandcamp.md). Expenses and transfers are usually entered by hand.
 
-An expense is typed as a positive amount everywhere in the product: here, on a release, under **Overheads**. Label Office stores it as a negative amount and every list and report shows it negative, so a cost always lowers a result. Only a transfer is typed with its sign, because it goes both ways. Statement files you import keep the signs their importer defines; this only concerns what you type.
+An expense is typed as a positive amount everywhere in the product: here, on a release, under **Overheads**. Label Office stores it as a negative amount and every list and report shows it negative, so a cost always lowers a result. Only a transfer is typed with its sign, because it goes both ways. Income is typed as it is: positive for a sale, negative for a return or correction. Statement files you import keep the signs their importer defines; this only concerns what you type.
 
 A **refund or credit** is an expense that comes back to the label, for example a supplier's credit note. Tick **Refund or credit** on the expense: the amount is stored positive and reduces the cost of its release or of the label instead of adding to it.
 
@@ -21,7 +21,7 @@ A **refund or credit** is an expense that comes back to the label, for example a
 An expense has a switch, **Recoup from payees**:
 
 - **On (recoupable).** The cost is deducted from the income of its release or track before the split, so every payee carries their share of it.
-- **Off (borne by the label).** The label pays the cost alone. Payees earn as if it did not exist. The list marks these expenses with the badge **label cost**. Typical cases are one-off payments and buy-outs.
+- **Off (borne by the label).** The label pays the cost alone. Payees earn as if it did not exist. The list marks these expenses with the badge **label cost**. Typical cases are one-off fees and buy-outs.
 
 Example: a release earns 1,000 and has a mastering bill of 200. The artist has a 50% split.
 
@@ -77,9 +77,14 @@ converted amount = total × rate
 
 A transaction in the label currency needs no rate.
 
-When the rate is left empty, the European Central Bank's reference rate of the paid date is used. Statements that are imported are not converted this way: they take the rate given with the import.
+When the rate is left empty, Label Office looks up the reference rate of the **paid date**. The rates are those the European Central Bank publishes, fetched from api.frankfurter.dev. Only the two currencies and the day are sent. The server therefore needs outbound HTTPS to api.frankfurter.dev, see [Configuration](03-configuration.md). A rate you type always wins. The same lookup converts one-off and recurring costs under **Label → Overheads**, see [Profitability and overheads](33-profitability-and-label-costs.md). Statements that are imported are not converted this way: they take the rate given with the import.
 
-A transaction in another currency that ends up without a rate is saved but **not counted anywhere**. The list shows it with a red badge such as `120.00 USD · no rate`, the filter **Unconverted** finds it, and the period page reports it. Open it, enter the rate and save.
+- On a weekend or bank holiday the rate of the last day before it is used.
+- A paid date in the future uses today's rate. Today's rate is published in the afternoon and kept for three hours; the rate of a past day is final and kept for good.
+- The reference rate is what the market paid, not what your bank or card charged. Type your own rate when the difference matters.
+- A currency the bank does not publish, or a server that cannot reach the service within five seconds, gives no rate.
+
+A transaction in another currency that ends up without a rate is saved but **not counted anywhere**. The list shows it with a red badge such as `120.00 USD · no rate`, the filter **Unconverted** finds it, and the period page reports it. Open it, enter the rate and save. See [Troubleshooting](52-troubleshooting.md).
 
 ## Categories and formats
 
@@ -109,13 +114,13 @@ Categories and formats do not change who is paid; contracts do that. Formats mat
 The buttons at the top of **Accounting → Transactions** open the same form with a different starting point: **New income**, **New expense**, **New transfer** and **New label cost** (an expense with **Recoup from payees** switched off).
 
 1. Choose the button for what you want to book.
-2. In **Amount**, enter the **Total** and the **Currency**. Income and expenses are typed positive; for an expense tick **Refund or credit** if the money comes back. A transfer is typed with its sign. Enter the **Rate** if the currency is not your label currency.
+2. In **Amount**, enter the **Total** and the **Currency**. An expense is typed positive; tick **Refund or credit** if the money comes back. Income is typed as it is and a transfer with its sign. Enter the **Rate to EUR** (your label currency) if the currency is a different one, or leave it empty for the reference rate.
 3. Enter the **Sale date** (or **Date**) and the **Paid date**.
 4. Pick a **Category**.
 5. Fill in the second panel:
     - Income or expense: pick the **Release**, and a **Track** if it belongs to one track only. Leave **Track** on **Whole release** otherwise. For an expense, set **Recoup from payees** and optionally **Paid to**.
     - Transfer: pick the **Payee** (required), optionally a **Ledger** and a **Release**.
-6. Under **Details** you can add **Source** and **Memo**, and for income also **Format**, **Units**, **Unit price**, **Platform**, **Country** and **External ID**.
+6. Under **Details** you can add **Paid by** (on an expense it is called **Supplier**) and **Memo**; for income also **Format**, **Units**, **Unit price**, **Platform** and **External ID**; and for income and expenses **Country**.
 7. Choose **Create income**, **Create expense** or **Create transfer**.
 
 Notes on single fields:
@@ -123,21 +128,22 @@ Notes on single fields:
 - **Release** on income or an expense: without a release the amount stays with the label and is reported as unassigned.
 - **Contract override**: only for a transaction that follows a different deal than its track or release.
 - **Paid to** on an expense is for your reference only, for example the designer who received a label cost. It does not change that payee's balance.
-- **Country** is a two-letter code such as `DE`. Territory splits use it.
+- **Country** is a two-letter code such as `DE`. Territory splits use it, on an expense too: without a country, payees whose split is limited to a territory are not charged their share of it.
 - **Memo** is shown to the payee on their statement.
-- **Source** is set to "Manual" when left empty.
+- **Paid by** (income and transfers) or **Supplier** (expenses) names who paid you or whom you paid. It is set to "Manual" when left empty.
+- **Track** is offered once you have chosen a release and lists that release's tracks.
 
 After you save, you return to the page you opened the form from: the filtered list, the release (**New expense** on a release page) or the payee (**New transfer** on a payee page). When there is no such page, you land on the list.
 
-To change a transaction, use the edit button in its row. An expense shows the positive amount it was entered as; an expense that is stored positive (a credit, or one that came from an import) shows **Refund or credit** ticked. An imported transaction additionally shows **Original statement line**: the line exactly as it was in the file. To delete, use the delete button; its title names the transaction, and it is removed from every period and balance it counted in.
+To change a transaction, use the edit button in its row. Changing the **Type** in the form keeps the amount you see as the amount you mean: from an expense to a transfer the cost is shown as money paid out (negative, unless it was a refund or credit), and any change to an expense shows the positive amount. Check the amount after changing the type. An expense shows the positive amount it was entered as; an expense that is stored positive (a credit, or one that came from an import) shows **Refund or credit** ticked. An imported transaction additionally shows **Original statement line**: the line exactly as it was in the file. To delete, use the delete button (**Delete expense of {paid date}?**); the transaction is removed from every period and balance it counted in.
 
 ## The transaction list
 
-The list shows 100 transactions per page with the columns **Sold**, **Paid date**, **Type**, **Release / track**, **Platform**, **Format / category**, **Country**, **Units** and **Amount**. Most headings sort the list. Above the table, **Matching**, **Units** and **Total** summarise everything that matches the filters, not only the current page.
+The list shows 100 transactions per page with the columns **Sold**, **Paid date**, **Type**, **Release / track**, **Platform**, **Format / category**, **Country**, **Units** and **Amount**. Most headings sort the list; a page beyond the last shows the last. A transaction on no release shows **Unassigned**, or **Overhead** when it is a label cost. Above the table, **Matching**, **Units** and **Total** summarise everything that matches the filters, not only the current page.
 
 | Filter                                                | What it does                                                                                                                       |
 | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Search field                                          | Finds text in the memo, platform or category, in the track name, release name or catalog number, an ISRC, or an exact external ID. |
+| **Search memo, platform, track, release, ISRC…**      | Finds text in the memo, platform or category, in the track name, release name or catalog number, an ISRC, or an exact external ID. |
 | **All types**                                         | Income, expense or transfer.                                                                                                       |
 | **All releases**                                      | One release.                                                                                                                       |
 | **All platforms**                                     | One platform; "Apple" and "Apple/iTunes" are one choice.                                                                           |
@@ -168,7 +174,7 @@ Ten thousand lines of 0.0033 are therefore worth 33.00, not 0.00.
 
 - Without a paid date inside a period, a transaction is in no period. Check the paid date first when income seems to be missing.
 - An expense is typed positive and stored negative. A transaction that is stored as a positive expense lowers no cost: it is a credit, and the form shows **Refund or credit** ticked for it.
-- Choosing a **Track** sets the release to that track's release.
+- A transaction on a **Track** always belongs to that track's release.
 - A transaction entered by hand is booked on the release's "[Additionals]" item. An imported transaction keeps the item it was imported on unless you move it to another release or track. Items are explained in [Tracks, artists and items](21-tracks-artists-and-items.md).
 - Editing or deleting a transaction changes the live figures of its period immediately. Statements already generated keep their figures until you regenerate them.
 - The **Unassigned** filter leaves out transfers and label-borne expenses, because neither needs a release.

@@ -11,7 +11,7 @@ with its metadata, cover and audio.
 Label Office comes from the management of
 [Never Not Now](https://nevernotnow.net), an independent label in Berlin,
 Germany, and is the software the label runs on: its royalty accounting, its
-catalogue and its release files are kept in it, in production. It was built
+catalog and its release files are kept in it, in production. It was built
 for the day-to-day work of an indie label and is used for exactly that.
 
 Self-hosted, open source (MIT), built with Laravel, Inertia and React.
@@ -53,24 +53,31 @@ included; see [Command line](docs/50-command-line.md#migrating-from-infinite-cat
 
 - Several labels in one installation, each with its own catalog, contracts,
   transactions and team. Label admins see everything; payees only their own
-  published statements and payouts.
+  published statements and payouts, for every label they are paid by, under
+  My statements.
 - Contracts with percentage splits per payee, optional separate ledgers (to
   recoup an advance on its own), territory splits and prorated contracts for
   compilations. A track can have its own contract, e.g. for a remix.
 - Income, expenses and transfers (advances, paybacks) at full precision:
   streaming lines worth fractions of a cent are never rounded away.
 - Expenses can be recouped from payees or borne by the label alone.
+- Costs and transactions in other currencies, converted at a rate you enter or,
+  when you leave it empty, at the European Central Bank's reference rate of the day
+  (fetched from api.frankfurter.dev; the server needs outbound HTTPS to it).
 - Accounting periods with a check for unassigned income, releases without a
   contract and unconverted currencies; statements as frozen snapshots with
   revisions; payouts that cannot exceed what is payable.
 - A profitability report: what the label keeps per release after payee
   shares and its own costs.
 - Overheads, the label costs that belong to no release, entered once or as
-  recurring costs, with receipts uploaded, matched to costs and, with an AI
-  service of your choice (Infomaniak, OpenAI, Anthropic, Mistral, Gemini or any
-  OpenAI-compatible one), read automatically.
+  recurring costs, with receipts uploaded and matched to costs. You enter a
+  receipt by hand, or have an AI service of your choice (Infomaniak, OpenAI,
+  Anthropic, Mistral, Gemini or any OpenAI-compatible one) read it; what it
+  reads is a proposal you check.
 - Optional tools for mechanicals, PPD and reserves.
 - My statements for payees, with passwordless sign-in by emailed one-time code.
+- Each service the label works with (Zebralution, Bandcamp, Subvert, Rightz
+  Audio) has a switch; what a label does not work with is hidden.
 
 **Importing statements**
 
@@ -82,24 +89,27 @@ included; see [Command line](docs/50-command-line.md#migrating-from-infinite-cat
   skipped.
 - Every import is compared with what is booked already. Possible duplicates
   are shown with a proposal to merge before anything is counted.
+- Play counts files, such as Zebralution's analytics export, are imported on
+  their own and shown beside the income on the dashboard and on track and
+  artist pages.
 - Bandcamp sales can be fetched automatically through the Bandcamp API.
 - Buyer names, emails and addresses in Bandcamp reports are never stored.
 
 **Release management**
 
 - Full release and track metadata: versions, credits, ISRC/ISWC, UPC, genre,
-  language, ℗/© lines, pre-order and original release dates, blocked services
-  and territories, press release, key facts and to-dos.
+  language, ℗/© lines, pre-order and original release dates, platforms not to
+  deliver to and territories, declarations on the use of AI in artwork,
+  recording, composition and lyrics, press release, key facts and to-dos.
 - Files per release (cover, audio masters, artwork, documents), on the server
   or in an S3-compatible bucket, served only to signed-in admins of the label.
 - An audio player that keeps playing while you work: play a track, a whole
   release, or build a queue. Masters are kept exactly as uploaded; an MP3
   copy is made for listening.
-- The pages of every release and track on streaming services, shops and
-  platforms, found by UPC, ISRC, Bandcamp sales and web search, or added by hand.
+- The pages of every release and track on platforms, found by UPC, ISRC, Bandcamp sales and web search, or added by hand.
 - Export of all metadata as a CSV sheet, a delivery package per release, a
-  ZIP for [Subvert](https://subvert.fm)'s uploader and one with everything
-  to put a release on Bandcamp.
+  ZIP for Zebralution, a ZIP for [Subvert](https://subvert.fm)'s uploader and
+  one with everything to put a release on Bandcamp.
 
 **Airplay**
 
@@ -241,15 +251,27 @@ script, and how to move an installation to another server:
 [docs/04-deployment.md](docs/04-deployment.md).
 
 The application updates itself to each new tagged version, on demand under
-**Settings → Updates** or automatically. It backs up the database first and
-goes back to the previous version when a step fails:
-[docs/02-installation.md](docs/02-installation.md#updating).
+**Settings → Updates** (for the installation admin) or automatically once a
+day. It backs up the database first and goes back to the previous version when
+a step fails. GitHub tags `main` with the next version once a day when it has
+changed and its tests passed, so an installation can receive at most one new
+version a day: [docs/02-installation.md](docs/02-installation.md#updating).
 
 ## Configuration
 
 `.env` holds only the basic connections of the server: database, Redis, mail
 and file storage. Everything a label can change is in the interface under
-**Settings**: the Bandcamp connection, the DataForSEO login for the airplay research, the AI service that reads receipts, the file storage, the research countries, the accounting tools and territories.
+**Settings**:
+
+- **Label**: name, currency, contact, logo and signet, accounting features and
+  territories.
+- **Team**: who has access to the label, and in which role.
+- **Connections**: a switch and the options for Zebralution, Bandcamp, Subvert
+  and Rightz Audio, the Bandcamp account, the DataForSEO login and research
+  countries for the airplay research, the AI service that reads receipts and,
+  for the installation admin, the file storage.
+- **Updates** (installation admin only), **Profile**, **Security** and
+  **Appearance**.
 
 The settings you are most likely to touch:
 
@@ -267,7 +289,7 @@ Every setting with examples: [docs/03-configuration.md](docs/03-configuration.md
 ## Documentation
 
 The handbook lives in [`docs/`](docs) and is the same text the application
-shows in its help panel.
+shows in its help panel, to label admins.
 
 **Setup**
 
@@ -282,6 +304,16 @@ shows in its help panel.
 - [Bandcamp](docs/11-bandcamp.md)
 - [Reports and play counts](docs/12-reports-and-play-counts.md)
 
+**Accounting**
+
+- [Transactions](docs/31-transactions.md)
+- [Periods, statements and payouts](docs/32-periods-statements-and-payouts.md)
+- [Mechanicals, PPD and reserves](docs/34-mechanicals-ppd-and-reserves.md)
+
+**Deals**
+
+- [Contracts, payees and ledgers](docs/30-contracts-payees-and-ledgers.md)
+
 **Catalog**
 
 - [Releases](docs/20-releases.md)
@@ -289,13 +321,9 @@ shows in its help panel.
 - [Files, audio and delivery](docs/22-files-audio-and-delivery.md)
 - [Airplay](docs/23-airplay.md)
 
-**Accounting**
+**Label**
 
-- [Contracts, payees and ledgers](docs/30-contracts-payees-and-ledgers.md)
-- [Transactions](docs/31-transactions.md)
-- [Periods, statements and payouts](docs/32-periods-statements-and-payouts.md)
 - [Profitability and overheads](docs/33-profitability-and-label-costs.md)
-- [Mechanicals, PPD and reserves](docs/34-mechanicals-ppd-and-reserves.md)
 
 **People and settings**
 
@@ -319,6 +347,7 @@ php artisan royalties:generate-previews
 php artisan royalties:move-files --to=s3 --dry-run
 php artisan royalties:research-airplay --label=example-records
 php artisan royalties:update --check
+php artisan royalties:hand-over-installation new-admin@example.com
 ```
 
 All commands and options: [docs/50-command-line.md](docs/50-command-line.md).
