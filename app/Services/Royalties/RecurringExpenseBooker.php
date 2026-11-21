@@ -18,6 +18,8 @@ class RecurringExpenseBooker
     /** Stops a mistyped start date from flooding the ledger in one go. */
     private const int MAX_PER_RUN = 600;
 
+    public function __construct(private readonly ExchangeRates $rates) {}
+
     /**
      * Book every payment that has come due up to the given day.
      *
@@ -67,7 +69,8 @@ class RecurringExpenseBooker
     private function book(RecurringExpense $expense, Label $label, CarbonImmutable $date): void
     {
         $total = Decimal::sub('0', $expense->amount);
-        $rate = $expense->currency === $label->currency ? '1' : Decimal::parse($expense->conversion_rate);
+        // Without a rate of its own, each payment is converted at the rate of its day.
+        $rate = $this->rates->for($expense->currency, $label->currency, $expense->conversion_rate, $date);
 
         Transaction::query()->create([
             'label_id' => $label->id,

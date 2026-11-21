@@ -224,7 +224,7 @@ export default function TransactionForm({
                                 label={`Rate to ${labelCurrency}`}
                                 htmlFor="conversion_rate"
                                 error={errors.conversion_rate}
-                                hint={`1 ${form.data.currency.toUpperCase()} = ? ${labelCurrency}. Without a rate the transaction is not counted.`}
+                                hint={`1 ${form.data.currency.toUpperCase()} = ? ${labelCurrency}. Leave empty to use the European Central Bank's rate of the date paid.`}
                                 className="md:col-span-3 md:max-w-xs"
                             >
                                 <Input

@@ -165,7 +165,7 @@ function AmountFields({
                     label={`Rate to ${labelCurrency}`}
                     htmlFor="conversion_rate"
                     error={errors.conversion_rate}
-                    hint={`1 ${currency} = ? ${labelCurrency}. Without a rate the cost is not counted.`}
+                    hint={`1 ${currency} = ? ${labelCurrency}. Leave empty to use the European Central Bank's rate of the day of each payment.`}
                 >
                     <Input
                         id="conversion_rate"

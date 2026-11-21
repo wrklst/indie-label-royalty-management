@@ -9,6 +9,7 @@ use App\Models\Receipt;
 use App\Models\RecurringExpense;
 use App\Models\Transaction;
 use App\Services\Receipts\AiConnection;
+use App\Services\Royalties\ExchangeRates;
 use App\Services\Royalties\RecurringExpenseBooker;
 use App\Support\CurrentLabel;
 use App\Support\Decimal;
@@ -25,7 +26,7 @@ use Inertia\Response;
  */
 class LabelCostController extends Controller
 {
-    public function __construct(private readonly CurrentLabel $currentLabel, private readonly RecurringExpenseBooker $booker) {}
+    public function __construct(private readonly CurrentLabel $currentLabel, private readonly RecurringExpenseBooker $booker, private readonly ExchangeRates $rates) {}
 
     public function index(): Response
     {
@@ -88,7 +89,7 @@ class LabelCostController extends Controller
 
         $currency = strtoupper($validated['currency']);
         $total = Decimal::sub('0', Decimal::parse($validated['amount']));
-        $rate = $currency === $label->currency ? '1' : Decimal::parse($validated['conversion_rate'] ?? null);
+        $rate = $this->rates->for($currency, $label->currency, $validated['conversion_rate'] ?? null, $validated['paid_on']);
 
         $cost = Transaction::query()->create([
             'type' => TransactionType::Expense,

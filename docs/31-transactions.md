@@ -74,7 +74,9 @@ converted amount = total × rate
 
 A transaction in the label currency needs no rate.
 
-A transaction in another currency without a rate is saved but **not counted anywhere**. The list shows it with a red badge such as `120.00 USD · no rate`, the filter **Unconverted** finds it, and the period page reports it. Open it, enter the rate and save.
+When the rate is left empty, the European Central Bank's reference rate of the date paid is used. Statements that are imported are not converted this way: they take the rate given with the import.
+
+A transaction in another currency that ends up without a rate is saved but **not counted anywhere**. The list shows it with a red badge such as `120.00 USD · no rate`, the filter **Unconverted** finds it, and the period page reports it. Open it, enter the rate and save.
 
 ## Categories and formats
 

@@ -15,6 +15,7 @@ use App\Services\Royalties\ProfitabilityReport;
 use App\Services\Royalties\RecurringExpenseBooker;
 use App\Services\Royalties\RoyaltyCalculator;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
@@ -40,7 +41,7 @@ test('a one-time cost is booked as an expense the label bears alone', function (
     expect(Transaction::query()->withoutGlobalScopes()->sole()->converted_total)->toBe('-120.000000000000000');
 });
 
-test('a cost in another currency needs a rate to be counted', function () {
+test('a cost in another currency is not counted when no rate is typed and none can be had', function () {
     $this->post(route('label-costs.store'), ['name' => 'Example Tool', 'amount' => '10', 'currency' => 'USD', 'paid_on' => '2026-03-01']);
     $this->post(route('label-costs.store'), ['name' => 'Example Tool', 'amount' => '10', 'currency' => 'USD', 'conversion_rate' => '0.9', 'paid_on' => '2026-03-02']);
 
@@ -223,4 +224,34 @@ test('label costs lower the label result as overheads and leave royalties untouc
         ->and($royalties['payees'][0]['totals']['payee_share'])->toBe('50.000000000000000')
         ->and($royalties['audit']['unassigned'])->toBe(0)
         ->and($royalties['totals']['label_costs'])->toBe('-30.000000000000000');
+});
+
+test('a cost in another currency without a typed rate takes the reference rate of the day it was paid', function () {
+    Http::fake(['api.frankfurter.dev/v1/2026-03-01*' => Http::response(['base' => 'USD', 'date' => '2026-02-27', 'rates' => ['EUR' => 0.8]])]);
+
+    $this->post(route('label-costs.store'), ['name' => 'Example Tool', 'amount' => '10', 'currency' => 'USD', 'paid_on' => '2026-03-01'])->assertSessionHasNoErrors();
+    $this->post(route('label-costs.store'), ['name' => 'Example Tool', 'amount' => '10', 'currency' => 'USD', 'conversion_rate' => '0.9', 'paid_on' => '2026-03-01']);
+
+    expect(Transaction::query()->withoutGlobalScopes()->orderBy('id')->pluck('converted_total')->all())->toBe(['-8.000000000000000', '-9.000000000000000']);
+
+    // The rate of a past day is asked for once.
+    Http::assertSentCount(1);
+});
+
+test('a recurring cost in another currency converts each payment at the rate of its day, unless it has a rate of its own', function () {
+    Http::fake([
+        'api.frankfurter.dev/v1/2026-01-15*' => Http::response(['rates' => ['EUR' => 0.9]]),
+        'api.frankfurter.dev/v1/2026-02-15*' => Http::response(['rates' => ['EUR' => 0.8]]),
+        'api.frankfurter.dev/v1/2026-03-15*' => Http::response(['message' => 'not found'], 404),
+    ]);
+    $shared = ['label_id' => $this->label->id, 'amount' => '10', 'currency' => 'USD', 'interval' => 'monthly', 'starts_on' => '2026-01-15'];
+    $daily = RecurringExpense::factory()->create([...$shared, 'conversion_rate' => null]);
+    $fixed = RecurringExpense::factory()->create([...$shared, 'conversion_rate' => '0.5']);
+
+    app(RecurringExpenseBooker::class)->bookDue($this->label, CarbonImmutable::parse('2026-03-20'));
+
+    $converted = fn (RecurringExpense $expense): array => Transaction::query()->withoutGlobalScopes()->where('recurring_expense_id', $expense->id)->orderBy('paid_timestamp')->pluck('converted_total')->all();
+
+    expect($converted($daily))->toBe(['-9.000000000000000', '-8.000000000000000', null])
+        ->and($converted($fixed))->toBe(['-5.000000000000000', '-5.000000000000000', '-5.000000000000000']);
 });

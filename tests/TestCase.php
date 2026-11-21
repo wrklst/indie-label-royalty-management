@@ -3,6 +3,7 @@
 namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\Features;
 
@@ -20,6 +21,9 @@ abstract class TestCase extends BaseTestCase
         // Real masters live on both: no test may ever reach the server's disk or the bucket.
         Storage::fake('local');
         Storage::fake('s3');
+
+        // No test may call an outside service: one that needs an answer fakes it.
+        Http::preventStrayRequests();
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

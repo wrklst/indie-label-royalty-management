@@ -90,7 +90,7 @@ The page shows the costs paid in the current and the previous year, what the rec
 
 1. Choose **One-time cost**.
 2. Fill in **What is it for**, the **Amount** as a positive number, the **Currency** and the date **Paid on**.
-3. If the currency is not your label currency, enter the **Rate**. Without a rate the cost is not counted.
+3. If the currency is not your label currency, enter the **Rate**, or leave it empty: the cost is then converted at the European Central Bank's reference rate of the day it was paid.
 4. Optionally pick a **Category** (Subscriptions, Software, Hosting, Accounting, Legal, Bank Fees, Insurance, Office, Travel, Marketing, Fee, Other) and add a **Note**.
 5. Choose **Book cost**.
 
@@ -162,8 +162,9 @@ Deleting a cost does not delete its receipt: the receipt goes back to the list. 
 - Label costs also reduce **Label keeps** on the period page, in the period their paid date falls in. They never reach a payee's balance or statement.
 - With an artist selected in the profitability report, the rows **Label overheads** and **Not assigned to a release** disappear, because they belong to no artist.
 - Transactions without a conversion rate are left out of the report. A notice above the figures says how many.
-- A recurring cost in a foreign currency uses the rate stored on the cost for every payment. Update the rate with **Change** when it has moved; payments already booked keep the old one.
-- A recurring cost in a foreign currency without a rate is booked, but not counted until you enter a rate on each booked payment.
+- A recurring cost in a foreign currency without a rate converts each payment at the European Central Bank's reference rate of its day, so a subscription in USD is converted anew every month. With a **Rate** entered, every payment uses that rate; payments already booked keep theirs.
+- The reference rate is what the market paid, not what your bank or card charged. When the exact amount matters, open the booked payment under **Transactions** and enter the rate from your bank statement.
+- When the reference rate cannot be had (no connection, or a currency the bank does not quote), the payment is booked without a rate and not counted until you enter one.
 - Without the scheduler, recurring costs are only booked when someone opens the label costs page. The result is the same, just later.
 - The report applies today's contracts to all dates. Changing a contract changes the payee share of past ranges in this report as well.
 - The report shows what payees earned in the range. It does not know about unrecouped balances: a payee share of 800 that only recoups an advance is still shown as 800.

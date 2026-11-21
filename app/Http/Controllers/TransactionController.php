@@ -10,6 +10,7 @@ use App\Models\Release;
 use App\Models\Track;
 use App\Models\Transaction;
 use App\Services\Imports\Identifiers;
+use App\Services\Royalties\ExchangeRates;
 use App\Support\CurrentLabel;
 use App\Support\Decimal;
 use App\Support\Formats;
@@ -197,7 +198,7 @@ class TransactionController extends Controller
                 ->value('id');
         }
 
-        $rate = $attributes['currency'] === $label->currency ? '1' : Decimal::parse($attributes['conversion_rate'] ?? null);
+        $rate = app(ExchangeRates::class)->for($attributes['currency'], $label->currency, $attributes['conversion_rate'] ?? null, $attributes['paid_timestamp'] ?? $attributes['timestamp'] ?? null);
         $total = Decimal::parse($attributes['total']);
 
         if (array_key_exists('format', $attributes)) {
