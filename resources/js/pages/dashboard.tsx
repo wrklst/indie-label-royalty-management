@@ -4,11 +4,12 @@ import { Link } from '@inertiajs/react';
 import { Upload } from 'lucide-react';
 import { Amount } from '@/components/amount';
 import { SelectInput } from '@/components/field';
-import { EmptyState, Page, Panel, Stat } from '@/components/page';
+import { IncomeReport, MoversPanel } from '@/components/income-report';
+import type { Movers, Report } from '@/components/income-report';
+import { EmptyState, Page, Stat } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useFilters } from '@/hooks/use-filters';
-import { country, month, quantity } from '@/lib/format';
 import { dashboard } from '@/routes';
 import { index as catalog } from '@/routes/catalog';
 import {
@@ -16,19 +17,14 @@ import {
     index as imports,
 } from '@/routes/data-imports';
 import { index as items } from '@/routes/items';
-import { show as showRelease } from '@/routes/releases';
 import { index as transactions } from '@/routes/transactions';
-import type { Breakdown } from '@/types';
 
 type Props = {
     filters: { from: string; to: string; date: 'sold' | 'paid' };
     totals: { income: string; expense: string; transactions: number };
     flow: Flow;
-    months: { label: string; total: string }[];
-    retailers: Breakdown[];
-    formats: Breakdown[];
-    regions: Breakdown[];
-    releases: (Breakdown & { id: number })[];
+    report: Report;
+    movers: Movers;
     attention: {
         unassigned_items: number;
         releases_without_contract: number;
@@ -38,69 +34,16 @@ type Props = {
     hasData: boolean;
 };
 
-function BreakdownList({
-    rows,
-    render,
-}: {
-    rows: Breakdown[];
-    render?: (row: Breakdown) => React.ReactNode;
-}) {
-    const max = Math.max(...rows.map((row) => Number(row.total)), 0);
-
-    if (rows.length === 0) {
-        return (
-            <p className="text-sm text-muted-foreground">
-                No income in this range.
-            </p>
-        );
-    }
-
-    return (
-        <ul className="grid gap-2.5">
-            {rows.map((row, position) => (
-                <li
-                    key={`${row.label}-${position}`}
-                    className="grid gap-1 text-sm"
-                >
-                    <div className="flex items-baseline justify-between gap-3">
-                        <span className="min-w-0 truncate">
-                            {render ? render(row) : (row.label ?? 'Unknown')}
-                        </span>
-                        <span className="flex shrink-0 items-baseline gap-3">
-                            <span className="text-xs text-muted-foreground tabular-nums">
-                                {quantity(row.quantity)}
-                            </span>
-                            <Amount value={row.total} />
-                        </span>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                        <div
-                            className="h-full rounded-full bg-chart-1"
-                            style={{
-                                width: `${max > 0 ? Math.max((Number(row.total) / max) * 100, 0) : 0}%`,
-                            }}
-                        />
-                    </div>
-                </li>
-            ))}
-        </ul>
-    );
-}
-
 export default function Dashboard({
     filters,
     totals,
     flow,
-    months,
-    retailers,
-    formats,
-    regions,
-    releases,
+    report,
+    movers,
     attention,
     hasData,
 }: Props) {
     const { apply } = useFilters(dashboard.url(), filters);
-    const peak = Math.max(...months.map((row) => Number(row.total)), 0);
     const todo = [
         attention.unassigned_items > 0 && {
             text: `${attention.unassigned_items} item${attention.unassigned_items === 1 ? '' : 's'} not assigned to a release`,
@@ -224,70 +167,13 @@ export default function Dashboard({
 
             <MoneyFlow flow={flow} />
 
-            <Panel title="Income by month">
-                {months.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                        No income in this range.
-                    </p>
-                ) : (
-                    <div className="flex h-44 items-end gap-2">
-                        {months.map((row) => (
-                            <div
-                                key={row.label}
-                                className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1"
-                                title={`${row.label}: ${Number(row.total).toFixed(2)}`}
-                            >
-                                <span className="text-[10px] whitespace-nowrap text-muted-foreground tabular-nums">
-                                    {Number(row.total).toLocaleString('en-GB', {
-                                        maximumFractionDigits:
-                                            peak >= 100 ? 0 : 2,
-                                    })}
-                                </span>
-                                <div
-                                    className="w-full rounded-t bg-chart-1"
-                                    style={{
-                                        height: `${peak > 0 ? Math.max((Number(row.total) / peak) * 100, 0) * 0.8 : 0}%`,
-                                        minHeight: 2,
-                                    }}
-                                />
-                                <span className="text-[10px] whitespace-nowrap text-muted-foreground">
-                                    {month(row.label)}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </Panel>
+            <IncomeReport report={report} empty="No income in this range." />
 
-            <div className="grid gap-6 lg:grid-cols-2">
-                <Panel title="Top releases">
-                    <BreakdownList
-                        rows={releases}
-                        render={(row) => (
-                            <Link
-                                href={showRelease(
-                                    (row as Breakdown & { id: number }).id,
-                                )}
-                                className="underline decoration-muted-foreground/40 underline-offset-4"
-                            >
-                                {row.label}
-                            </Link>
-                        )}
-                    />
-                </Panel>
-                <Panel title="Retailers">
-                    <BreakdownList rows={retailers} />
-                </Panel>
-                <Panel title="Formats">
-                    <BreakdownList rows={formats} />
-                </Panel>
-                <Panel title="Countries">
-                    <BreakdownList
-                        rows={regions}
-                        render={(row) => country(row.label)}
-                    />
-                </Panel>
-            </div>
+            <MoversPanel
+                movers={movers}
+                to="release"
+                title="Releases that earned most"
+            />
         </Page>
     );
 }

@@ -15,6 +15,7 @@ use App\Http\Controllers\PayeeController;
 use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\PeriodController;
 use App\Http\Controllers\PlatformLinkController;
+use App\Http\Controllers\PlayCountController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ReleaseController;
 use App\Http\Controllers\Settings\ConnectionsController;
@@ -87,6 +88,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('data-imports/template', [DataImportController::class, 'template'])->name('data-imports.template');
             Route::post('data-imports/{data_import}/resolve', [DataImportController::class, 'resolve'])->name('data-imports.resolve');
             Route::resource('data-imports', DataImportController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
+
+            Route::get('play-counts/template', [PlayCountController::class, 'template'])->name('play-counts.template');
+            Route::get('play-counts', [PlayCountController::class, 'index'])->name('play-counts.index');
+            Route::post('play-counts', [PlayCountController::class, 'store'])->name('play-counts.store');
+            Route::delete('play-counts/{batch}', [PlayCountController::class, 'destroy'])->name('play-counts.destroy');
 
             Route::resource('periods', PeriodController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
             Route::get('periods/{period}/payees/{payee}', [PeriodController::class, 'payee'])->name('periods.payee');

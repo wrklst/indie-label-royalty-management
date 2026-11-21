@@ -9,6 +9,7 @@ use App\Models\AirplayFinding;
 use App\Models\AirplaySearch;
 use App\Models\Artist;
 use App\Models\Contract;
+use App\Models\PlayCount;
 use App\Models\Release;
 use App\Models\Track;
 use App\Models\Transaction;
@@ -17,6 +18,7 @@ use App\Services\Airplay\WebSearch;
 use App\Services\Imports\Identifiers;
 use App\Services\Releases\ArtistCredits;
 use App\Services\Releases\PlayableAudio;
+use App\Services\Reports\IncomeReport;
 use App\Support\Options;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
@@ -114,10 +116,8 @@ class TrackController extends Controller
             'income' => [
                 'total' => (string) ((clone $income)->sum('converted_total') ?: '0'),
                 'transactions' => (clone $income)->count(),
-                'byRetailer' => (clone $income)->selectRaw('retailer, COUNT(*) as transactions, SUM(converted_total) as total')
-                    ->groupBy('retailer')->orderByDesc('total')->limit(8)->toBase()->get()
-                    ->map(fn ($row): array => ['label' => $row->retailer ?? 'Unknown', 'transactions' => (int) $row->transactions, 'total' => (string) $row->total]),
             ],
+            'report' => IncomeReport::of(clone $income, PlayCount::query()->whereIn('track_id', $ids)),
             'releases' => Track::query()->whereIn('id', $ids)->with('release:id,name,catalog_number')->orderBy('id')->get()
                 ->filter(fn (Track $entry): bool => $entry->release !== null)
                 ->map(fn (Track $entry): array => [

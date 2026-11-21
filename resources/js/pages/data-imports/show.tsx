@@ -3,11 +3,12 @@ import type { Flow } from '@/components/money-flow';
 import { Form, Link } from '@inertiajs/react';
 import DataImportController from '@/actions/App/Http/Controllers/DataImportController';
 import { Amount } from '@/components/amount';
+import { IncomeReport } from '@/components/income-report';
+import type { Report } from '@/components/income-report';
 import { DeleteButton } from '@/components/delete-button';
 import { SelectInput } from '@/components/field';
 import InputError from '@/components/input-error';
 import { Page, Panel, Stat } from '@/components/page';
-import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -17,20 +18,12 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { useTableSort } from '@/hooks/use-table-sort';
-import { date, month, quantity } from '@/lib/format';
+import { date } from '@/lib/format';
 import { index as catalog } from '@/routes/catalog';
 import { create, index } from '@/routes/data-imports';
 import { index as items } from '@/routes/items';
 import { index as transactions } from '@/routes/transactions';
 import { ImportStatusBadge } from './index';
-
-type Row = {
-    label: string;
-    transactions: number;
-    quantity: string;
-    total: string;
-};
 
 type Props = {
     import: {
@@ -61,9 +54,7 @@ type Props = {
     };
     unassignedItems: number;
     flow: Flow;
-    byRetailer: Row[];
-    byFormat: Row[];
-    byMonth: Row[];
+    report: Report;
 };
 
 type Duplicate = {
@@ -188,92 +179,11 @@ function DuplicateReview({
     );
 }
 
-const BREAKDOWN_COLUMNS = {
-    label: (row: Row) => row.label,
-    transactions: (row: Row) => row.transactions,
-    quantity: (row: Row) => row.quantity,
-    total: (row: Row) => row.total,
-};
-
-function Breakdown({
-    title,
-    rows,
-    format,
-}: {
-    title: string;
-    rows: Row[];
-    format?: (label: string) => string;
-}) {
-    const { rows: sortedRows, sorter } = useTableSort(rows, BREAKDOWN_COLUMNS);
-
-    return (
-        <Panel title={title} flush>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <SortableHead column="label" sorter={sorter}>
-                            {title
-                                .replace('By ', '')
-                                .replace(/^./, (letter) =>
-                                    letter.toUpperCase(),
-                                )}
-                        </SortableHead>
-                        <SortableHead
-                            column="transactions"
-                            sorter={sorter}
-                            first="desc"
-                            className="text-right"
-                        >
-                            Lines
-                        </SortableHead>
-                        <SortableHead
-                            column="quantity"
-                            sorter={sorter}
-                            first="desc"
-                            className="text-right"
-                        >
-                            Units
-                        </SortableHead>
-                        <SortableHead
-                            column="total"
-                            sorter={sorter}
-                            first="desc"
-                            className="text-right"
-                        >
-                            Total
-                        </SortableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {sortedRows.map((row) => (
-                        <TableRow key={row.label}>
-                            <TableCell>
-                                {format ? format(row.label) : row.label}
-                            </TableCell>
-                            <TableCell className="text-right text-muted-foreground tabular-nums">
-                                {row.transactions.toLocaleString('en-GB')}
-                            </TableCell>
-                            <TableCell className="text-right text-muted-foreground tabular-nums">
-                                {quantity(row.quantity)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                                <Amount value={row.total} precise />
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </Panel>
-    );
-}
-
 export default function ShowDataImport({
     import: dataImport,
     unassignedItems,
     flow,
-    byRetailer,
-    byFormat,
-    byMonth,
+    report,
 }: Props) {
     const failed = dataImport.status === 'failed';
     const review = dataImport.status === 'review';
@@ -479,15 +389,7 @@ export default function ShowDataImport({
                         </p>
                     )}
 
-                    <div className="grid items-start gap-6 lg:grid-cols-2 2xl:grid-cols-3">
-                        <Breakdown title="By retailer" rows={byRetailer} />
-                        <Breakdown title="By format" rows={byFormat} />
-                        <Breakdown
-                            title="By month"
-                            rows={byMonth}
-                            format={month}
-                        />
-                    </div>
+                    <IncomeReport report={report} />
 
                     {(dataImport.errors?.length ?? 0) > 0 && (
                         <Panel

@@ -4,6 +4,8 @@ import { Link, router } from '@inertiajs/react';
 import { Banknote, FileText, Pencil } from 'lucide-react';
 import PeriodController from '@/actions/App/Http/Controllers/PeriodController';
 import { Amount } from '@/components/amount';
+import { IncomeReport } from '@/components/income-report';
+import type { Report } from '@/components/income-report';
 import { DeleteButton } from '@/components/delete-button';
 import { Field } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
@@ -59,6 +61,7 @@ type Props = {
         string
     >;
     flow: Flow;
+    report: Report;
     audit: {
         transactions: number;
         unassigned: number;
@@ -95,6 +98,7 @@ export default function ShowPeriod({
     currency,
     totals,
     flow,
+    report,
     audit,
     payees,
 }: Props) {
@@ -228,6 +232,8 @@ export default function ShowPeriod({
                     label_share: totals.label_share,
                 }}
             />
+
+            <IncomeReport report={report} />
 
             <Panel
                 title="1. Check the data"

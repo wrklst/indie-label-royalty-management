@@ -14,6 +14,7 @@ use App\Services\Imports\Importers\TemplateImporter;
 use App\Services\Imports\ImportException;
 use App\Services\Imports\ImportRunner;
 use App\Services\Imports\Readers\ReaderFactory;
+use App\Services\Reports\IncomeReport;
 use App\Services\Royalties\MoneyFlow;
 use App\Support\CurrentLabel;
 use App\Support\Sorting;
@@ -171,15 +172,7 @@ class DataImportController extends Controller
             ],
             'flow' => MoneyFlow::of(clone $transactions),
             'unassignedItems' => Item::query()->where('data_import_id', $dataImport->id)->whereNull('release_id')->count(),
-            'byRetailer' => (clone $transactions)->selectRaw('retailer, COUNT(*) as transactions, SUM(quantity) as quantity, SUM(converted_total) as total')
-                ->groupBy('retailer')->orderByDesc('total')->toBase()->get()
-                ->map(fn ($row): array => ['label' => $row->retailer ?? 'Unknown', 'transactions' => (int) $row->transactions, 'quantity' => (string) $row->quantity, 'total' => (string) $row->total]),
-            'byFormat' => (clone $transactions)->selectRaw('format, COUNT(*) as transactions, SUM(quantity) as quantity, SUM(converted_total) as total')
-                ->groupBy('format')->orderByDesc('total')->toBase()->get()
-                ->map(fn ($row): array => ['label' => $row->format ?? 'Unknown', 'transactions' => (int) $row->transactions, 'quantity' => (string) $row->quantity, 'total' => (string) $row->total]),
-            'byMonth' => (clone $transactions)->selectRaw('timestamp, COUNT(*) as transactions, SUM(quantity) as quantity, SUM(converted_total) as total')
-                ->groupBy('timestamp')->orderBy('timestamp')->toBase()->get()
-                ->map(fn ($row): array => ['label' => substr((string) $row->timestamp, 0, 7), 'transactions' => (int) $row->transactions, 'quantity' => (string) $row->quantity, 'total' => (string) $row->total]),
+            'report' => IncomeReport::of(clone $transactions),
         ]);
     }
 

@@ -91,7 +91,7 @@ Example: `Opening` with the ISRC `ZZEXA2600001` is on the single `Opening` (EX00
 
 **Airplay.** Where the track was played: **Station**, **Known from** (a neighbouring rights statement, a web search, or entered by hand), **Played**, **Earned** and **Links**. **Manage airplay and findings** opens the Airplay page filtered to this track; see [Airplay](23-airplay.md).
 
-**Income by retailer.** The eight retailers with the most income, with the number of transactions and the total. Shown only when there is income.
+**The report.** How the income of the recording developed, which platforms it came from and what each paid per stream; see [Reports and play counts](12-reports-and-play-counts.md). Shown only when there is income or a play count.
 
 **Research log.** The last 20 web searches run for the recording, with their result. Shown only when there are any.
 

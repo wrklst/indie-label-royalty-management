@@ -41,7 +41,7 @@ test('a track page shows where the track belongs, what it earned and where it wa
             ->where('track.release.id', $release->id)
             ->where('income.transactions', 2)
             ->where('income.total', fn (string $total): bool => (float) $total === 5.0)
-            ->where('income.byRetailer.0.label', 'Example Shop')
+            ->where('report.platforms.0.name', 'Example Shop')
             ->has('airplays', 1)
             ->where('airplays.0.id', $airplay->id)
             ->where('airplays.0.origin', 'statement')

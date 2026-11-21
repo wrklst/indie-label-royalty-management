@@ -4,6 +4,8 @@ import { Link, router } from '@inertiajs/react';
 import { ExternalLink, Radar } from 'lucide-react';
 import AirplayResearchController from '@/actions/App/Http/Controllers/AirplayResearchController';
 import { Amount } from '@/components/amount';
+import { IncomeReport } from '@/components/income-report';
+import type { Report } from '@/components/income-report';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
 import { TrackActions } from '@/components/player/track-actions';
 import { RecordLink } from '@/components/record-link';
@@ -63,10 +65,10 @@ type Props = {
         research_state: 'queued' | 'running' | 'failed' | null;
         research_step: string | null;
     };
+    report: Report;
     income: {
         total: string;
         transactions: number;
-        byRetailer: { label: string; transactions: number; total: string }[];
     };
     releases: {
         track_id: number;
@@ -116,6 +118,7 @@ function Fact({
 export default function ShowTrack({
     track,
     income,
+    report,
     releases,
     airplays,
     openFindings,
@@ -456,38 +459,7 @@ export default function ShowTrack({
                 )}
             </Panel>
 
-            {income.byRetailer.length > 0 && (
-                <Panel title="Income by retailer" flush>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Retailer</TableHead>
-                                <TableHead className="text-right">
-                                    Transactions
-                                </TableHead>
-                                <TableHead className="text-right">
-                                    Total
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {income.byRetailer.map((row) => (
-                                <TableRow key={row.label}>
-                                    <TableCell>{row.label}</TableCell>
-                                    <TableCell className="text-right text-muted-foreground tabular-nums">
-                                        {row.transactions.toLocaleString(
-                                            'en-GB',
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Amount value={row.total} />
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </Panel>
-            )}
+            <IncomeReport report={report} />
 
             {searches.length > 0 && (
                 <Panel

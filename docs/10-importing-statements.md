@@ -34,7 +34,7 @@ Bandcamp sales can also be fetched automatically, without uploading anything: se
 Example Records receives its Zebralution statement for the third quarter on 15 November 2026. The file has 4,210 lines.
 
 1. Upload `statement_label_track_2026Q3.csv`, paid date `2026-11-15`.
-2. The import page shows 4,210 lines imported and the total, broken down **By retailer**, **By format** and **By month**.
+2. The import page shows 4,210 lines imported and the total, followed by the report: how the income developed month by month, by platform, by kind of use and by country; see [Reports and play counts](12-reports-and-play-counts.md).
 3. Two releases in the file were not in the catalog yet. They now exist under **Catalog → Releases**, without a contract. The period for the fourth quarter will point them out as "releases without a contract".
 
 ## What an import creates

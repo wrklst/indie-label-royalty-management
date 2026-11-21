@@ -280,6 +280,7 @@ shows in its help panel.
 
 - [Importing statements](docs/10-importing-statements.md)
 - [Bandcamp](docs/11-bandcamp.md)
+- [Reports and play counts](docs/12-reports-and-play-counts.md)
 
 **Catalog**
 

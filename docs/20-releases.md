@@ -182,7 +182,7 @@ Example: with 1,250.00 of income and −400.00 of expenses, **Net** shows 850.00
 
 **To do, Key facts, Press release.** Each is shown only when it has text.
 
-**Income by retailer.** The 15 retailers with the most income for this release, with units and amount. Lines without a retailer are listed as `Unknown`.
+**The report.** How the income of the release developed, which platforms it came from and what each paid per stream, followed by **Tracks by income**; see [Reports and play counts](12-reports-and-play-counts.md).
 
 **Items.** Every name a statement, shop or manual entry used for the release or one of its tracks. Each row says which track it is booked on (or **Whole release**), which sources used the name, its format group, the number of bookings, their amount and, if set, the contract override; see [Tracks, artists and items](21-tracks-artists-and-items.md#items).
 

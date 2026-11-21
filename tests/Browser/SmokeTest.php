@@ -49,6 +49,7 @@ test('every page of a label with data renders without browser errors', function 
         '/data-imports/create' => 'Detect automatically',
         '/transactions' => 'Example Track',
         '/transactions/create?type=transfer' => 'New transfer',
+        '/play-counts' => 'No play counts yet',
         '/periods' => '2026 Q1',
         "/periods/{$scenario['period']->id}" => 'Example Payee',
         "/periods/{$scenario['period']->id}/payees/{$scenario['payee']->id}" => 'Primary ledger',
@@ -125,7 +126,7 @@ test('a period draws who the income goes to and a contract draws its splits', fu
 
     visit("/periods/{$scenario['period']->id}")
         ->assertSee('Where the money went')
-        ->assertAttribute('[data-segmented-bar] [role="img"]', 'aria-label', 'Owed to payees 50%, Kept by the label 50%')
+        ->assertAttribute('section:has([data-money-flow]) [data-segmented-bar] [role="img"]', 'aria-label', 'Owed to payees 50%, Kept by the label 50%')
         ->assertNoJavaScriptErrors();
 
     visit('/contracts')

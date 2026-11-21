@@ -6,6 +6,7 @@ import { DeleteButton } from '@/components/delete-button';
 import { Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { Panel } from '@/components/page';
+import { PlatformIcon } from '@/components/platform-icon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -178,7 +179,11 @@ export function PlatformLinks({
                             key={link.id}
                             className="flex items-center gap-3 px-4 py-2 text-sm"
                         >
-                            <span className="w-32 shrink-0 font-medium">
+                            <span className="flex w-40 shrink-0 items-center gap-2 font-medium">
+                                <PlatformIcon
+                                    platform={link.platform}
+                                    name={link.platform_name}
+                                />
                                 {link.platform_name}
                             </span>
                             <a

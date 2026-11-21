@@ -4,6 +4,8 @@ import { Link } from '@inertiajs/react';
 import { Pencil, Plus } from 'lucide-react';
 import TrackController from '@/actions/App/Http/Controllers/TrackController';
 import { Amount } from '@/components/amount';
+import { IncomeReport, MoversPanel } from '@/components/income-report';
+import type { Movers, Report } from '@/components/income-report';
 import { ArtistCreditRows } from '@/components/artist-credit-rows';
 import type { ArtistCredit } from '@/components/artist-credit-rows';
 import { DeliveryMenu } from '@/components/delivery-menu';
@@ -126,7 +128,8 @@ type Props = {
         transactions: number;
         release_level_income: string;
     };
-    retailers: { retailer: string; total: string; quantity: string }[];
+    report: Report;
+    movers: Movers;
     artistOptions: Option[];
     contractOptions: Option[];
     fileKinds: { value: string; label: string }[];
@@ -434,7 +437,8 @@ export default function ShowRelease({
     platformLinks,
     release,
     totals,
-    retailers,
+    report,
+    movers,
     artistOptions,
     contractOptions,
     fileKinds,
@@ -878,30 +882,11 @@ export default function ShowRelease({
                 includesTracks
             />
 
-            <div className="grid gap-6 xl:grid-cols-2">
-                <Panel title="Income by retailer" flush>
-                    {retailers.length === 0 ? (
-                        <p className="p-4 text-sm text-muted-foreground">
-                            No income yet.
-                        </p>
-                    ) : (
-                        <Table>
-                            <TableBody>
-                                {retailers.map((row) => (
-                                    <TableRow key={row.retailer}>
-                                        <TableCell>{row.retailer}</TableCell>
-                                        <TableCell className="text-right text-muted-foreground tabular-nums">
-                                            {quantity(row.quantity)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Amount value={row.total} />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    )}
-                </Panel>
+            <IncomeReport report={report} />
+
+            <MoversPanel movers={movers} to="track" title="Tracks by income" />
+
+            <div className="grid gap-6">
                 <Panel
                     title="Items"
                     description="Every name a statement, shop or manual entry used for this release or one of its tracks. A line with that name is booked on the track shown, and counts for that track's contract."

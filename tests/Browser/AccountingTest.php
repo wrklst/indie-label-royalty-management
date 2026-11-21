@@ -18,7 +18,8 @@ test('a statement file is uploaded, recognised and summarised', function () {
         ->assertSee('67 transactions imported.')
         ->assertSee('Zebralution (track statement, 2024 Q1 onwards)')
         ->assertSee('new releases / tracks')
-        ->assertSee('By retailer')
+        ->assertSee('How the income developed')
+        ->assertPresent('[data-platform="spotify"]')
         ->assertNoJavaScriptErrors();
 });
 

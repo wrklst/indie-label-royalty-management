@@ -16,6 +16,7 @@ use App\Models\Transaction;
 use App\Services\Imports\Identifiers;
 use App\Services\Releases\ArtistCredits;
 use App\Services\Releases\PlayableAudio;
+use App\Services\Reports\IncomeReport;
 use App\Support\Options;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
@@ -113,8 +114,6 @@ class ReleaseController extends Controller
             ->selectRaw('track_id, SUM(converted_total) as total, SUM(quantity) as quantity')->groupBy('track_id')->get()->keyBy('track_id');
         $byType = Transaction::query()->where('release_id', $release->id)
             ->selectRaw('type, SUM(converted_total) as total, COUNT(*) as transactions')->groupBy('type')->get()->keyBy(fn ($row) => $row->type->value);
-        $byRetailer = Transaction::query()->where('release_id', $release->id)->where('type', 'income')
-            ->selectRaw('retailer, SUM(converted_total) as total, SUM(quantity) as quantity')->groupBy('retailer')->orderByDesc('total')->limit(15)->get();
 
         $bookedByItem = Transaction::query()->whereIn('item_id', $release->items->modelKeys())
             ->selectRaw('item_id, importer_source, COUNT(*) as transactions, SUM(converted_total) as total')
@@ -170,9 +169,8 @@ class ReleaseController extends Controller
                 'transactions' => (int) $byType->sum('transactions'),
                 'release_level_income' => (string) ($incomeByTrack->get('')->total ?? '0'),
             ],
-            'retailers' => $byRetailer->map(fn ($row): array => [
-                'retailer' => $row->retailer ?? 'Unknown', 'total' => (string) $row->total, 'quantity' => (string) $row->quantity,
-            ]),
+            'report' => IncomeReport::of(Transaction::query()->where('release_id', $release->id)),
+            'movers' => IncomeReport::movers(Transaction::query()->where('release_id', $release->id), 'track_id', 30),
             'platformLinks' => PlatformLinkController::props($release),
             'artistOptions' => Options::artists(),
             'contractOptions' => Options::contracts(),

@@ -13,14 +13,15 @@ export type Segment = {
 const THEMED = 8;
 
 /** Grey belongs to the remainder alone, so no party is ever mistaken for it. */
-const GREY = 'color-mix(in oklab, var(--muted-foreground) 45%, transparent)';
+export const GREY =
+    'color-mix(in oklab, var(--muted-foreground) 45%, transparent)';
 
 /**
  * The colour of the party at a position. The first eight are the theme's
  * chart colours; further ones step around the colour wheel by the golden
  * angle, so no two parties of one bar ever share a colour.
  */
-function colourAt(position: number): string {
+export function colourAt(position: number): string {
     return position < THEMED
         ? `var(--chart-${position + 1})`
         : `oklch(${position % 2 === 0 ? 0.6 : 0.72} 0.14 ${Math.round((20 + (position - THEMED) * 137.508) % 360)})`;
@@ -106,7 +107,7 @@ export function SegmentedBar({
                         onMouseEnter={() => point(part.position)}
                         onMouseLeave={() => point(null)}
                         className={cn(
-                            'flex min-w-0.5 items-center justify-center overflow-hidden text-xs font-medium text-white transition-opacity',
+                            'flex min-w-0.5 items-center justify-center overflow-hidden text-xs font-medium text-white transition-[width,opacity] duration-500 ease-out motion-reduce:transition-none',
                             dimmed(part.position),
                         )}
                         style={{

@@ -7,10 +7,12 @@ use App\Http\Requests\ArtistRequest;
 use App\Models\Artist;
 use App\Models\Contract;
 use App\Models\ContractSplit;
+use App\Models\PlayCount;
 use App\Models\Release;
 use App\Models\Track;
 use App\Models\Transaction;
 use App\Services\Releases\PlayableAudio;
+use App\Services\Reports\IncomeReport;
 use App\Support\Decimal;
 use App\Support\Options;
 use App\Support\Sorting;
@@ -122,6 +124,8 @@ class ArtistController extends Controller
                         ? Decimal::parse($incomeByRelease[$release->id] ?? 0) ?? '0'
                         : $tracks->where('release_id', $release->id)->reduce(fn (string $sum, Track $track): string => Decimal::add($sum, Decimal::parse($incomeByTrack[$track->id] ?? 0) ?? '0'), '0'),
                 ]),
+            'report' => IncomeReport::of($booked(), PlayCount::query()->whereIn('track_id', $tracks->modelKeys())),
+            'movers' => IncomeReport::movers($booked(), 'release_id'),
             'contracts' => $contracts->map(fn (Contract $contract): array => [
                 ...$contract->only(['id', 'name']),
                 'splits' => $contract->splits->map(fn (ContractSplit $split): array => [

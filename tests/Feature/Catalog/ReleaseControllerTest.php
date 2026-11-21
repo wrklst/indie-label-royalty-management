@@ -231,12 +231,14 @@ test('the release page totals income and expenses and breaks income down by trac
             ->where('totals.expense', $equals('-15'))
             ->where('totals.transactions', 4)
             ->where('totals.release_level_income', $equals('20'))
-            ->has('retailers', 2)
-            ->where('retailers.0.retailer', 'Example Store')
-            ->where('retailers.0.total', $equals('20'))
-            ->where('retailers.1.retailer', 'Example Stream')
-            ->where('retailers.1.total', $equals('10'))
-            ->where('retailers.1.quantity', $equals('5')));
+            ->has('report.platforms', 2)
+            ->where('report.platforms.0.name', 'Example Store')
+            ->where('report.platforms.0.total', 20)
+            ->where('report.platforms.1.name', 'Example Stream')
+            ->where('report.platforms.1.total', 10)
+            ->where('report.platforms.1.other_units', 5)
+            ->where('movers.rows.0.id', $first->id)
+            ->where('movers.rows.0.total', 10));
 });
 
 test('the release page says for each item where it is booked, how often, how much and by which source', function () {

@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import {
     ArrowLeftRight,
+    AudioLines,
     Banknote,
     BookMarked,
     BookOpenText,
@@ -44,6 +45,7 @@ import { index as ledgers } from '@/routes/ledgers';
 import { index as payees } from '@/routes/payees';
 import { index as payouts } from '@/routes/payouts';
 import { index as periods } from '@/routes/periods';
+import { index as playCounts } from '@/routes/play-counts';
 import { index as portal } from '@/routes/portal';
 import { index as profitability } from '@/routes/profitability';
 import { index as releases } from '@/routes/releases';
@@ -66,6 +68,7 @@ const adminGroups: NavGroup[] = [
         title: 'Royalties',
         items: [
             { title: 'Data imports', href: dataImports(), icon: Upload },
+            { title: 'Play counts', href: playCounts(), icon: AudioLines },
             {
                 title: 'Transactions',
                 href: transactions(),

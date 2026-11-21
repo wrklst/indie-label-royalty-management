@@ -3,6 +3,8 @@ import { EmptyState, Page, Panel, Stat } from '@/components/page';
 import type { PlayerTrack } from '@/components/player/player-store';
 import { ReleaseActions } from '@/components/player/track-actions';
 import { RecordLink } from '@/components/record-link';
+import { IncomeReport, MoversPanel } from '@/components/income-report';
+import type { Movers, Report } from '@/components/income-report';
 import { SegmentedBar } from '@/components/segmented-bar';
 import {
     Table,
@@ -38,6 +40,8 @@ type Props = {
         income: string;
         player_tracks: PlayerTrack[];
     }[];
+    report: Report;
+    movers: Movers;
     contracts: {
         id: number;
         name: string;
@@ -61,6 +65,8 @@ export default function ShowArtist({
     totals,
     releases,
     contracts,
+    report,
+    movers,
     tracks,
 }: Props) {
     return (
@@ -138,6 +144,14 @@ export default function ShowArtist({
                     />
                 </Panel>
             )}
+
+            <IncomeReport report={report} />
+
+            <MoversPanel
+                movers={movers}
+                to="release"
+                title="Releases by income"
+            />
 
             <Panel title="Releases" flush>
                 {releases.length === 0 ? (
