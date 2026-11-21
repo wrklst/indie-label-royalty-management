@@ -10,6 +10,7 @@ import {
 } from '@/components/player/player-store';
 import type { PlayerTrack } from '@/components/player/player-store';
 import { Button } from '@/components/ui/button';
+import { plural } from '@/lib/format';
 
 /**
  * "Play now" and "Add to queue" for one track. When the track is the one in
@@ -116,10 +117,8 @@ export function ReleaseActions({
                 type="button"
                 variant={compact ? 'ghost' : 'outline'}
                 size={compact ? 'icon' : 'sm'}
-                title={compact ? 'Add release to queue' : undefined}
-                aria-label={
-                    compact ? `Add release ${name} to queue` : undefined
-                }
+                title={compact ? 'Queue release' : undefined}
+                aria-label={compact ? `Queue release ${name}` : undefined}
                 onClick={() => {
                     const added = enqueue(tracks);
 
@@ -127,7 +126,7 @@ export function ReleaseActions({
                         toast.info('These tracks are already in the queue.');
                     } else {
                         toast.success(
-                            `${added} ${added === 1 ? 'track' : 'tracks'} added to the queue.`,
+                            `${plural(added, 'track', 'tracks')} added to the queue.`,
                         );
                     }
                 }}

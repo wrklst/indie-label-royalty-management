@@ -51,17 +51,17 @@ These are warnings, not locks. You can generate statements with open issues, but
 
 Below the four figures at the top, a period shows the path of its income in one panel, from the label's point of view:
 
-| Line                                         | Meaning                                                                             |
-| -------------------------------------------- | ----------------------------------------------------------------------------------- |
-| **Paid by customers**                        | What shops and buyers paid, for the lines whose statement reports it                |
-| **Kept by distributors, shops and agencies** | The distributor's share, Bandcamp's revenue share, a collecting agency's commission |
-| **Kept by payment providers**                | Payment fees, where reported                                                        |
-| **Other deductions**                         | Taxes, shipping, mechanicals passed on and payout fees                              |
-| **Received without a breakdown**             | Income whose statement does not say what was deducted before                        |
-| **Received by the label**                    | The income of the period                                                            |
-| **Costs**                                    | Expenses paid in the period, recoupable ones and the label's own                    |
-| **Owed to payees**                           | Their shares under the contracts, before earlier balances and payouts               |
-| **Kept by the label**                        | What remains                                                                        |
+| Line                                             | Meaning                                                                             |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| **Paid by customers**                            | What platforms and buyers paid, for the lines whose statement reports it            |
+| **Kept by distributors, platforms and agencies** | The distributor's share, Bandcamp's revenue share, a collecting agency's commission |
+| **Kept by payment providers**                    | Payment fees, where reported                                                        |
+| **Other deductions**                             | Taxes, shipping, mechanicals passed on and payout fees                              |
+| **Received without a breakdown**                 | Income whose statement does not say what was deducted before                        |
+| **Received by the label**                        | The income of the period                                                            |
+| **Costs**                                        | Expenses paid in the period, recoupable ones and the label's own                    |
+| **Owed to payees**                               | Their shares under the contracts, before earlier balances and payouts               |
+| **Kept by the label**                            | What remains                                                                        |
 
 Which statements report deductions is listed in [Importing statements](10-importing-statements.md).
 
@@ -94,7 +94,7 @@ The columns of the payee table under **2. Statements and payouts** add up the le
 | **Payable**      | For each ledger, brought forward + share + transfers; only ledgers above zero are added up.    |
 | **Paid**         | Payouts recorded for this period.                                                              |
 | **Still to pay** | Sum of the ledgers above zero after payouts.                                                   |
-| **Statement**    | **None**, **Draft** or **Published**.                                                          |
+| **Statement**    | **–** (none), **Draft** or **Published**.                                                      |
 
 A payee with a ledger below zero is marked **unrecouped ledger**.
 
@@ -128,11 +128,11 @@ Generating again creates a new revision instead of changing the old statement:
 - A statement that replaced an earlier one is marked **Revised** in the list.
 - **Regenerate all statements** also archives the draft of a payee who no longer has anything to state.
 
-**Royalties → Statements** lists the current statements with **Payee**, **Period**, **Status**, **Generated**, **Balance** and **Payable**. Tick **Include archived revisions** to see the history. An archived revision cannot be published.
+**Royalties → Statements** lists the current statements with **Payee**, **Period**, **Status**, **Generated**, **Balance** and **Payable**. Tick **Include archived revisions** to see the history. An archived revision cannot be published. The button **My statements** above the list shows what payees see of the published ones.
 
 ## Publishing and downloading
 
-Open a statement and choose **Publish to payee**. From then on the payee sees it in their portal, see [Team, roles and sign-in](40-team-roles-and-sign-in.md). **Unpublish** takes it back.
+Open a statement and choose **Publish to payee**. From then on the payee sees it under **My statements**, see [Team, roles and sign-in](40-team-roles-and-sign-in.md). **Unpublish** takes it back.
 
 Publishing sends no email. Tell your payees yourself.
 
@@ -145,20 +145,20 @@ Publishing sends no email. Tell your payees yourself.
 5. **Expenses** by release, track, contract and category,
 6. **Transfers and payouts** with date and memo.
 
-Amounts in the file are rounded to four decimals. Payees can download the same file from their portal.
+Amounts in the file are rounded to four decimals. Payees can download the same file from **My statements**.
 
 ## Payouts
 
 A payout is the record of a payment you have made. Nothing is sent to a bank from here.
 
-1. On the period page, choose the payout icon (**Record payout**) in the payee's row. It only appears when something is still to pay.
-2. Enter the **Amount**, the date **Paid on** and an optional **Memo** such as the bank reference.
-3. Choose **Record payout**.
+1. On the period page, choose the payout icon (**Book payout**) in the payee's row. It only appears when something is still to pay.
+2. Enter the **Amount**, the **Paid date** and an optional **Memo** such as the bank reference.
+3. Choose **Book payout**.
 
 Rules:
 
 - **A payout cannot exceed what is payable.** The form shows "Up to … is payable." A higher amount is refused. Amounts have at most two decimals.
-- **A payout is deducted in the period it settles**, which is the period you record it on, not the period of its **Paid on** date. A payment made in April for the first quarter is recorded on the first-quarter period and reduces that period's **Still to pay**.
+- **A payout is deducted in the period it settles**, which is the period you record it on, not the period of its **Paid date**. A payment made in April for the first quarter is recorded on the first-quarter period and reduces that period's **Still to pay**.
 - It is booked against the payee's ledgers, largest balance first. Unrecouped ledgers are never touched.
 - An amount already paid on a later period cannot be paid again on an earlier one.
 
@@ -182,12 +182,12 @@ Example Records accounts in EUR. Example Release (EX001) has the contract "EX001
 
 ### Period "2026 Q1" (1 January to 31 March 2026)
 
-| Paid date | Transaction                                                   | Amount |
-| --------- | ------------------------------------------------------------- | ------ |
-| 15 Jan    | Transfer "Advance" to Example Artist, release EX001           | −1,000 |
-| 10 Feb    | Expense "Mastering", recouped from payees                     | −400   |
-| 12 Feb    | Expense "Artwork/Design", one-time payment borne by the label | −300   |
-| 20 Mar    | Income                                                        | 2,000  |
+| Paid date | Transaction                                             | Amount |
+| --------- | ------------------------------------------------------- | ------ |
+| 15 Jan    | Transfer "Advance" to Example Artist, release EX001     | −1,000 |
+| 10 Feb    | Expense "Mastering", recouped from payees               | −400   |
+| 12 Feb    | Expense "Artwork/Design", label cost borne by the label | −300   |
+| 20 Mar    | Income                                                  | 2,000  |
 
 Net is 2,000 − 400 = 1,600. The artwork is not part of it.
 
@@ -198,7 +198,7 @@ Net is 2,000 − 400 = 1,600. The artwork is not part of it.
 
 The period page shows **Income** 2,000 with **Expenses** −400, **Payee share** 960, **Label keeps** 340 after 300 own costs (1,600 − 960 − 300), and **Payable** 160.
 
-You generate and publish both statements. Example Artist's statement shows a share of 800 and a balance of −200. On 15 April you pay Second Payee and record a payout of 160 on "2026 Q1". **Still to pay** drops to 0.
+You generate and publish both statements. Example Artist's statement shows a share of 800 and a balance of −200. On 15 April you pay Second Payee and book a payout of 160 on "2026 Q1". **Still to pay** drops to 0.
 
 ### Period "2026 Q2" (1 April to 30 June 2026)
 
@@ -224,8 +224,8 @@ In the next period Example Artist starts with 50 carried over and Second Payee w
 
 ## Good to know
 
-- Figures on the period page are live. They change when you import, edit a transaction, change a contract or record a payout, also for past periods. Only statements are frozen.
-- A payout recorded after a statement was generated is not in that statement. The payee portal shows it separately as paid since. Regenerate and publish to include it.
+- Figures on the period page are live. They change when you import, edit a transaction, change a contract or book a payout, also for past periods. Only statements are frozen.
+- A payout recorded after a statement was generated is not in that statement. **My statements** shows it separately as paid since. Regenerate and publish to include it.
 - A transaction whose paid date lies in a gap between two periods appears in no period's income and in none of the checks, but it still flows into the balance brought forward of every later period. Keep periods contiguous.
 - Transactions without a conversion rate are missing from every figure on this page until they have one.
 - The check counts transactions paid in this period only. Unassigned income from earlier periods is not listed again.

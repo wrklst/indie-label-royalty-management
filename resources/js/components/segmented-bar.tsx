@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
+import { percent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export type Segment = {
@@ -84,8 +85,7 @@ export function SegmentedBar({
         return null;
     }
 
-    const share = (value: number) =>
-        `${((value / total) * 100).toLocaleString('en-GB', { maximumFractionDigits: 1 })}%`;
+    const share = (value: number) => percent(value / total, 1);
 
     return (
         <div data-segmented-bar className={cn('grid gap-2', className)}>

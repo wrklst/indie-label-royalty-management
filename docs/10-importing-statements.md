@@ -1,6 +1,6 @@
 # Importing statements
 
-Most money enters the books through an import: you upload the statement a distributor, shop or collecting society sent, and every line becomes a transaction. This page covers the supported sources, the upload form, the check for duplicates and how to undo an import.
+Most money enters the books through an import: you upload the statement a distributor, platform or collecting society sent, and every line becomes a transaction. This page covers the supported sources, the upload form, the check for duplicates and how to undo an import.
 
 ## Supported sources
 
@@ -39,7 +39,7 @@ Example Records receives its Zebralution statement for the third quarter on 15 N
 
 ## What an import creates
 
-- A **transaction** for each line, with its amount at full precision, the retailer, the country and the format.
+- A **transaction** for each line, with its amount at full precision, the platform, the country and the format.
 - **Releases, tracks and artists** that the file names and the catalog does not have yet. They are matched by UPC, catalog number and ISRC first, by name after that.
 - **Items**: the release or track in a format group (digital, physical, rights). See [Tracks, artists and items](21-tracks-artists-and-items.md).
 - For Rightz Audio statements, an entry under **Catalog → Airplay** for each line: see [Airplay](23-airplay.md).
@@ -50,18 +50,18 @@ The original line of the file is kept with every transaction, without personal d
 
 A statement reports what the label receives. Some also say what was paid in the first place and who kept what on the way. Where a file says so, every transaction keeps three more figures:
 
-| Figure                                       | Zebralution                                                | Bandcamp                                                 | Rightz Audio                             |
-| -------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------- |
-| **Paid by customers**                        | "Amount Distributable": what the shop paid the distributor | "item total": what the buyer paid, with shipping and tax | Your amount plus the agency's commission |
-| **Kept by distributors, shops and agencies** | The part the contract share leaves to Zebralution          | Bandcamp's revenue share                                 | "Total RightzAudio"                      |
-| **Kept by payment providers**                | not reported                                               | The payment provider's fee                               | not reported                             |
+| Figure                                           | Zebralution                                                    | Bandcamp                                                 | Rightz Audio                             |
+| ------------------------------------------------ | -------------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------- |
+| **Paid by customers**                            | "Amount Distributable": what the platform paid the distributor | "item total": what the buyer paid, with shipping and tax | Your amount plus the agency's commission |
+| **Kept by distributors, platforms and agencies** | The part the contract share leaves to Zebralution              | Bandcamp's revenue share                                 | "Total RightzAudio"                      |
+| **Kept by payment providers**                    | not reported                                                   | The payment provider's fee                               | not reported                             |
 
 The import page, every period and the dashboard add these up in the panel **Where the money went**:
 
 | Line                                                                   | Example    |
 | ---------------------------------------------------------------------- | ---------- |
 | Paid by customers                                                      | 100.00     |
-| Kept by distributors, shops and agencies                               | −20.00     |
+| Kept by distributors, platforms and agencies                           | −20.00     |
 | Kept by payment providers                                              | −4.00      |
 | Other deductions (taxes, shipping, mechanicals passed on, payout fees) | −6.00      |
 | Received without a breakdown                                           | 30.00      |
@@ -85,16 +85,16 @@ The same money sometimes reaches the books twice in different shapes: you entere
 
 Every import is therefore compared with what is booked already. Two things count as a possible duplicate:
 
-- The lines of the file for one release, type, format group and paid month **add up to** bookings from another source, to the cent.
-- One line has the **same paid date and amount** as an existing booking of that release.
+- The lines of the file for one release, type, format group and paid month **add up to** transactions from another source, to the cent.
+- One line has the **same paid date and amount** as an existing transaction of that release.
 
 When something is found, the import stops with the status **Duplicates to review** and nothing is counted yet. For each proposal you choose:
 
-| Choice                                                              | Result                                                                                                                                                      |
-| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Merge: keep the lines of this file, remove the existing booking** | The detailed lines replace the earlier booking. If that booking had a contract, payee or ledger of its own, the lines take those over. This is the default. |
-| **Leave these lines of the file out, keep the existing booking**    | The file's lines for this release are not imported.                                                                                                         |
-| **Not a duplicate: keep both**                                      | Both stay. Use it when two payments really were the same amount.                                                                                            |
+| Choice                                                                  | Result                                                                                                                                                              |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Merge: keep the lines of this file, remove the existing transaction** | The detailed lines replace the earlier transaction. If that transaction had a contract, payee or ledger of its own, the lines take those over. This is the default. |
+| **Leave these lines of the file out, keep the existing transaction**    | The file's lines for this release are not imported.                                                                                                                 |
+| **Not a duplicate: keep both**                                          | Both stay. Use it when two payments really were the same amount.                                                                                                    |
 
 The decisions are kept on the import page under **Duplicates decided at import**.
 

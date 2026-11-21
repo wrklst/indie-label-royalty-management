@@ -16,7 +16,7 @@ import {
 import { useFilters } from '@/hooks/use-filters';
 import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
-import { date } from '@/lib/format';
+import { count, date } from '@/lib/format';
 import { create, index, show } from '@/routes/data-imports';
 import type { Paginated } from '@/types';
 
@@ -188,22 +188,16 @@ export default function DataImports({
                                             : 'From file'}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {dataImport.transactions_count.toLocaleString(
-                                            'en-GB',
-                                        )}
+                                        {count(dataImport.transactions_count)}
                                     </TableCell>
                                     <TableCell className="text-right text-muted-foreground tabular-nums">
-                                        {dataImport.duplicates_count.toLocaleString(
-                                            'en-GB',
-                                        )}
+                                        {count(dataImport.duplicates_count)}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Amount value={dataImport.total} />
                                     </TableCell>
                                     <TableCell className="whitespace-nowrap text-muted-foreground">
-                                        {date(
-                                            dataImport.created_at.slice(0, 10),
-                                        )}
+                                        {date(dataImport.created_at)}
                                         {dataImport.user && (
                                             <span className="block text-xs">
                                                 {dataImport.user}

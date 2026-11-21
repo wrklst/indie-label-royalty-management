@@ -6,7 +6,7 @@ import { DeleteButton } from '@/components/delete-button';
 import { CheckField, Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { RecordLink } from '@/components/record-link';
-import { EmptyState, Page, Panel } from '@/components/page';
+import { EmptyState, Notice, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,7 @@ import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
 import { index } from '@/routes/items';
 import type { Option, Paginated, TrackOption } from '@/types';
+import { count, plural } from '@/lib/format';
 
 type Item = {
     id: number;
@@ -166,21 +167,22 @@ export default function Items({
             description="An item is one sellable thing as it appears in statements: a track or release in a format group. Imports book transactions on items; assigning an item to a release moves all its transactions with it."
         >
             {unassignedCount > 0 && !filters.unassigned && (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-                    <span>
-                        {unassignedCount} item
-                        {unassignedCount === 1 ? ' is' : 's are'} not assigned
-                        to a release. Their income stays with the label until
-                        you assign them.
-                    </span>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => apply({ unassigned: true })}
-                    >
-                        Show unassigned
-                    </Button>
-                </div>
+                <Notice
+                    action={
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => apply({ unassigned: true })}
+                        >
+                            Show unassigned
+                        </Button>
+                    }
+                >
+                    {plural(unassignedCount, 'item')}{' '}
+                    {unassignedCount === 1 ? 'is' : 'are'} not assigned to a
+                    release. Their income stays with the label until you assign
+                    them.
+                </Notice>
             )}
 
             <div className="flex flex-wrap items-center gap-3">
@@ -325,9 +327,7 @@ export default function Items({
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {item.transactions_count.toLocaleString(
-                                            'en-GB',
-                                        )}
+                                        {count(item.transactions_count)}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Amount value={item.total} />
@@ -337,7 +337,7 @@ export default function Items({
                                             <div className="flex justify-end">
                                                 <FormDialog
                                                     title="Assign item"
-                                                    description={`${item.transactions_count.toLocaleString('en-GB')} transaction(s) follow the item to the release and track you choose.`}
+                                                    description={`${plural(item.transactions_count, 'transaction')} will follow the item to the release and track you choose.`}
                                                     form={ItemController.update.form(
                                                         item.id,
                                                     )}

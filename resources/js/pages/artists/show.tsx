@@ -1,3 +1,4 @@
+import { setLayoutProps } from '@inertiajs/react';
 import { Amount } from '@/components/amount';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
 import type { PlayerTrack } from '@/components/player/player-store';
@@ -14,7 +15,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { date, percent } from '@/lib/format';
+import { count, date, percent, plural } from '@/lib/format';
 import { index } from '@/routes/artists';
 
 type Props = {
@@ -69,10 +70,17 @@ export default function ShowArtist({
     movers,
     tracks,
 }: Props) {
+    setLayoutProps({
+        breadcrumbs: [
+            { title: 'Artists', href: index() },
+            { title: artist.name, href: '#' },
+        ],
+    });
+
     return (
         <Page
             title={artist.name}
-            description={`${releases.length} release(s), ${tracks.length} track(s)`}
+            description={`${plural(releases.length, 'release')}, ${plural(tracks.length, 'track')}.`}
         >
             {(artist.alias_of || artist.aliases.length > 0) && (
                 <p className="text-sm text-muted-foreground">
@@ -104,7 +112,7 @@ export default function ShowArtist({
                 <Stat
                     label="Income to date"
                     value={<Amount value={totals.income} />}
-                    hint={`${Number(totals.units).toLocaleString('en-GB', { maximumFractionDigits: 0 })} units in ${totals.transactions.toLocaleString('en-GB')} transactions`}
+                    hint={`${count(totals.units)} units in ${count(totals.transactions)} transactions`}
                 />
                 <Stat
                     label="Expenses to date"
@@ -117,7 +125,7 @@ export default function ShowArtist({
                 />
                 <Stat
                     label="Airplay"
-                    value={totals.airplays.toLocaleString('en-GB')}
+                    value={count(totals.airplays)}
                     hint="Plays known across all tracks"
                 />
             </div>
@@ -311,7 +319,7 @@ export default function ShowArtist({
                                         {track.isrc ?? '–'}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {track.airplays_count}
+                                        {count(track.airplays_count)}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Amount value={track.income} />
@@ -325,10 +333,3 @@ export default function ShowArtist({
         </Page>
     );
 }
-
-ShowArtist.layout = {
-    breadcrumbs: [
-        { title: 'Artists', href: index() },
-        { title: 'Artist', href: '#' },
-    ],
-};

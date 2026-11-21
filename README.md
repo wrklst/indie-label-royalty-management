@@ -65,12 +65,12 @@ included; see [Command line](docs/50-command-line.md#migrating-from-infinite-cat
   revisions; payouts that cannot exceed what is payable.
 - A profitability report: what the label keeps per release after payee
   shares and its own costs.
-- Label costs that belong to no release, entered once or as recurring costs,
-  with receipts uploaded, matched to costs and, with an AI service of your
-  choice (Infomaniak, OpenAI, Anthropic, Mistral, Gemini or any
+- Overheads, the label costs that belong to no release, entered once or as
+  recurring costs, with receipts uploaded, matched to costs and, with an AI
+  service of your choice (Infomaniak, OpenAI, Anthropic, Mistral, Gemini or any
   OpenAI-compatible one), read automatically.
 - Optional tools for mechanicals, PPD and reserves.
-- A payee portal with passwordless sign-in by emailed one-time code.
+- My statements for payees, with passwordless sign-in by emailed one-time code.
 
 **Importing statements**
 
@@ -294,7 +294,7 @@ shows in its help panel.
 - [Contracts, payees and ledgers](docs/30-contracts-payees-and-ledgers.md)
 - [Transactions](docs/31-transactions.md)
 - [Periods, statements and payouts](docs/32-periods-statements-and-payouts.md)
-- [Profitability and label costs](docs/33-profitability-and-label-costs.md)
+- [Profitability and overheads](docs/33-profitability-and-label-costs.md)
 - [Mechanicals, PPD and reserves](docs/34-mechanicals-ppd-and-reserves.md)
 
 **People and settings**

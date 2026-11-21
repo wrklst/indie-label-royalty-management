@@ -68,7 +68,8 @@ test('a ledger is renamed', function () {
         ->from(route('ledgers.index'))
         ->put(route('ledgers.update', $ledger->id), ['name' => 'Renamed Ledger'])
         ->assertSessionHasNoErrors()
-        ->assertRedirect(route('ledgers.index'));
+        ->assertRedirect(route('ledgers.index'))
+        ->assertInertiaFlash('toast.message', 'Ledger saved.');
 
     $this->assertDatabaseHas('ledgers', ['id' => $ledger->id, 'name' => 'Renamed Ledger']);
 });

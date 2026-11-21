@@ -44,7 +44,7 @@ class ResearchAirplay extends Command
 
             $trackIds->each(fn (int $trackId) => ResearchTrackAirplay::dispatch($trackId));
 
-            $this->info("{$label->name}: {$trackIds->count()} track(s) queued.");
+            $this->info("{$label->name}: ".trans_choice(':count track queued.|:count tracks queued.', $trackIds->count()));
         }
 
         return self::SUCCESS;

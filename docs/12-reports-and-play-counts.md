@@ -27,7 +27,7 @@ Point at a month to read its figures, and at a platform to follow it through the
 | **Counted by the platform** | Plays from the platform's own figures, once you imported some (see below).       |
 | **On statements**           | Streams the statements report for the same months, and their share of the count. |
 
-Statements name platforms in many ways. `Apple` and `Apple/iTunes` are one row, **Apple Music**. A shop the application does not know keeps the name the statement uses.
+Statements name platforms in many ways. `Apple` and `Apple/iTunes` are one row, **Apple Music**. A platform the application does not know keeps the name the statement uses.
 
 **What it was.** Income by kind of use: streams, downloads, use in videos (such as on TikTok or Facebook), records and merchandise, rights and licences.
 
@@ -67,7 +67,7 @@ By hand: in its analytics, set the date filter to the months you want and remove
 
 **Tracks** puts the ISRC on each line, which is what a line is matched by. **DSP** names the platform, so each count is held against that platform's statement lines. **Datum** gives the days, so a later export replaces exactly the days it covers.
 
-With **DSP** ticked the export takes only the kind of figure that is active in the analytics view, so have streams showing there. If the export does not let **DSP** be combined with **Tracks**, tick **Tracks** and **Datum** only: the file then has all platforms in one count and is listed as **Not named**. Country and playlist are not stored: ticking them only makes the file longer. An export filtered to one country or playlist would replace the full figures of those days with partial ones.
+With **DSP** ticked the export takes only the kind of figure that is active in the analytics view, so have streams showing there. If the export does not let **DSP** be combined with **Tracks**, tick **Tracks** and **Datum** only: the file then has all platforms in one count and is listed as **Unknown**. Country and playlist are not stored: ticking them only makes the file longer. An export filtered to one country or playlist would replace the full figures of those days with partial ones.
 
 ### Importing a file
 
@@ -75,7 +75,7 @@ With **DSP** ticked the export takes only the kind of figure that is active in t
 2. Choose the file: CSV or Excel.
 3. **Import play counts**.
 
-Nothing else is asked. The platform is the one the lines name, otherwise the one in the file name (`spotify-songs.csv`), otherwise the one the columns give away. A file that names none, such as a distributor's export of all platforms together, is listed as **Not named**. So is a platform the application has no name for. A file without dates counts as the total up to the day it is imported and replaces every earlier count of its tracks on that platform.
+Nothing else is asked. The platform is the one the lines name, otherwise the one in the file name (`spotify-songs.csv`), otherwise the one the columns give away. A file that names none, such as a distributor's export of all platforms together, is listed as **Unknown**. So is a platform the application has no name for. A file without dates counts as the total up to the day it is imported and replaces every earlier count of its tracks on that platform.
 
 The file is read by what its columns are called, not by where it comes from:
 
@@ -90,7 +90,7 @@ The file is read by what its columns are called, not by where it comes from:
 
 A line is matched to a track by its ISRC, otherwise by its name. Punctuation does not matter: `Example Track - Example Remix` is the track `Example Track (Example Remix)`. Where several recordings share a name, the artist column decides. A recording on several releases is counted once.
 
-Lines whose track is not in the catalogue are kept and listed under the file as **Not in the catalogue under that name**. They count for the label as a whole, not for a track.
+Lines whose track is not in the catalog are kept and listed under the file as **Not in the catalog under that name**. They count for the label as a whole, not for a track.
 
 A newer file replaces earlier counts of the same track and platform for the days it covers, so nothing is counted twice. **Delete** removes everything one file brought; statements and income are not touched.
 

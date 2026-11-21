@@ -49,8 +49,8 @@ class ProfileController extends Controller
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $changedEmail
-            ? __('Profile updated. Confirm the new address with the link we sent to it.')
-            : __('Profile updated.')]);
+            ? __('Profile saved. Confirm the new address with the link we sent to it.')
+            : __('Profile saved.')]);
 
         return to_route('profile.edit');
     }

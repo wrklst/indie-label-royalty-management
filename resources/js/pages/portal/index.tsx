@@ -191,7 +191,7 @@ function PayoutsSection({ payouts }: { payouts: Payout[] }) {
                                 sorter={sorter}
                                 first="desc"
                             >
-                                Paid on
+                                Paid date
                             </SortableHead>
                             <SortableHead column="period" sorter={sorter}>
                                 For period
@@ -294,7 +294,7 @@ function StatementsTable({ statements }: { statements: Statement[] }) {
 }
 
 export default function Portal({ view, overview, payouts, statements }: Props) {
-    const title = view === 'admin' ? 'My statements' : 'Overview';
+    const title = 'My statements';
 
     setLayoutProps({ breadcrumbs: [{ title, href: index() }] });
 
@@ -307,7 +307,7 @@ export default function Portal({ view, overview, payouts, statements }: Props) {
                 {statements.length === 0 ? (
                     <EmptyState
                         title="No statements yet"
-                        description="Statements appear here, and in the payee's portal, as soon as you publish them."
+                        description="Statements appear here, and in My statements of the payee, as soon as you publish them."
                     />
                 ) : (
                     <Panel flush>
@@ -350,7 +350,7 @@ export default function Portal({ view, overview, payouts, statements }: Props) {
             {statements.length > 0 && (
                 <Panel
                     flush
-                    title="My statements"
+                    title="Published statements"
                     description="Open a statement for the full breakdown per release and track."
                 >
                     <StatementsTable statements={statements} />
@@ -360,4 +360,4 @@ export default function Portal({ view, overview, payouts, statements }: Props) {
     );
 }
 
-Portal.layout = { breadcrumbs: [{ title: 'Overview', href: index() }] };
+Portal.layout = { breadcrumbs: [{ title: 'My statements', href: index() }] };

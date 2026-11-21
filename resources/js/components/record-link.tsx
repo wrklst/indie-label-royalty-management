@@ -8,6 +8,10 @@ import { show as showPayee } from '@/routes/payees';
 import { show as showRelease } from '@/routes/releases';
 import { show as showTrack } from '@/routes/tracks';
 
+/** How the name of a record looks as a link, also for a plain `Link` to its page. */
+export const recordLinkClass =
+    'underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-current';
+
 const PAGES = {
     artist: showArtist,
     contract: editContract,
@@ -38,13 +42,7 @@ export function RecordLink({
     }
 
     return (
-        <Link
-            href={PAGES[to](id)}
-            className={cn(
-                'underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-current',
-                className,
-            )}
-        >
+        <Link href={PAGES[to](id)} className={cn(recordLinkClass, className)}>
             {children}
         </Link>
     );

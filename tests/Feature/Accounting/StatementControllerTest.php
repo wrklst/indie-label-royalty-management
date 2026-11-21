@@ -176,7 +176,7 @@ test('the csv download lists the summary, ledgers, income, expenses, transfers a
         Transfers,-10.0000,Payouts,5.0000
 
         Income
-        Release,Track,Contract,Format,Quantity,Income,"Split %","Your share"
+        Release,Track,Contract,Format,Units,Income,"Split %","Your share"
         "Example Release",,"Example Contract","Download Track",4.00,100.0000,50.0000,50.0000
 
         Expenses

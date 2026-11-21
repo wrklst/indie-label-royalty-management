@@ -17,7 +17,7 @@ Most income arrives through imports, see [Importing statements](10-importing-sta
 An expense has a switch, **Recoup from payees**:
 
 - **On (recoupable).** The cost is deducted from the income of its release or track before the split, so every payee carries their share of it.
-- **Off (borne by the label).** The label pays the cost alone. Payees earn as if it did not exist. The list marks these expenses with the badge **label cost**. Typical cases are one-time payments and buy-outs.
+- **Off (borne by the label).** The label pays the cost alone. Payees earn as if it did not exist. The list marks these expenses with the badge **label cost**. Typical cases are one-off payments and buy-outs.
 
 Example: a release earns 1,000 and has a mastering bill of 200. The artist has a 50% split.
 
@@ -29,7 +29,7 @@ Example: a release earns 1,000 and has a mastering bill of 200. The artist has a
 
 Only an expense can be switched off this way. Income and transfers ignore the switch.
 
-A label-borne expense on a release counts against that release in the profitability report. One without a release is a label overhead; those are easier to enter under **Royalties → Label costs**. See [Profitability and label costs](33-profitability-and-label-costs.md).
+A label-borne expense on a release counts against that release in the profitability report. One without a release is an overhead; those are easier to enter under **Royalties → Overheads**. See [Profitability and overheads](33-profitability-and-label-costs.md).
 
 ### Transfers
 
@@ -74,7 +74,7 @@ converted amount = total × rate
 
 A transaction in the label currency needs no rate.
 
-When the rate is left empty, the European Central Bank's reference rate of the date paid is used. Statements that are imported are not converted this way: they take the rate given with the import.
+When the rate is left empty, the European Central Bank's reference rate of the paid date is used. Statements that are imported are not converted this way: they take the rate given with the import.
 
 A transaction in another currency that ends up without a rate is saved but **not counted anywhere**. The list shows it with a red badge such as `120.00 USD · no rate`, the filter **Unconverted** finds it, and the period page reports it. Open it, enter the rate and save.
 
@@ -82,12 +82,12 @@ A transaction in another currency that ends up without a rate is saved but **not
 
 **Category** says what kind of income, cost or transfer it is. The list offered depends on the type:
 
-| Type             | Categories                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Income           | 3rd Party License, Album License, Artist Copies, Direct to Fan/Show, Direct to Fan/Webstore, Distribution, Grant Funding, Master Use License, Master/Sync License (all in), Mechanicals, PPD, Publishing Royalties, Publishing Sync License, Refund, Reserves, Rights, Sample Usage License, Sub-Label, Ticket Sales/Show Fee, Wholesale                                                                   |
-| Expense          | Advertising, Artwork/Design, Bio, Distribution Fee, Event, Fee, License Fee, Manufacturing (CD), Manufacturing (LP), Manufacturing (Misc.), Marketing, Mastering, Mechanicals, Mixing, Photos, PR, Radio, Recording - Mixing, Recording - Musician, Recording - Producer, Recording - Studio, Remix, Return Processing Fee, Rights, Shipping/Freight, Storage Fee, Studio, Ticket Buy, Tour Support, Video |
-| Transfer         | Advance, Artist Merch Given, Artist Payback to Label, Event, Legal Services, Mastering, Mechanicals, Payout, Previous Balance, Studio, Tour Support                                                                                                                                                                                                                                                        |
-| Label costs page | Subscriptions, Software, Hosting, Accounting, Legal, Bank Fees, Insurance, Office, Travel, Marketing, Fee, Other                                                                                                                                                                                                                                                                                           |
+| Type           | Categories                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Income         | 3rd Party License, Album License, Artist Copies, Direct to Fan/Show, Direct to Fan/Webstore, Distribution, Grant Funding, Master Use License, Master/Sync License (all in), Mechanicals, PPD, Publishing Royalties, Publishing Sync License, Refund, Reserves, Rights, Sample Usage License, Sub-Label, Ticket Sales/Show Fee, Wholesale                                                                   |
+| Expense        | Advertising, Artwork/Design, Bio, Distribution Fee, Event, Fee, License Fee, Manufacturing (CD), Manufacturing (LP), Manufacturing (Misc.), Marketing, Mastering, Mechanicals, Mixing, Photos, PR, Radio, Recording - Mixing, Recording - Musician, Recording - Producer, Recording - Studio, Remix, Return Processing Fee, Rights, Shipping/Freight, Storage Fee, Studio, Ticket Buy, Tour Support, Video |
+| Transfer       | Advance, Artist Merch Given, Artist Payback to Label, Event, Legal Services, Mastering, Mechanicals, Payout, Previous Balance, Studio, Tour Support                                                                                                                                                                                                                                                        |
+| Overheads page | Subscriptions, Software, Hosting, Accounting, Legal, Bank Fees, Insurance, Office, Travel, Marketing, Fee, Other                                                                                                                                                                                                                                                                                           |
 
 **Format** says how the music was sold. The form offers it for income. Every format belongs to one group:
 
@@ -103,7 +103,7 @@ Categories and formats do not change who is paid; contracts do that. Formats mat
 
 ## Entering a transaction by hand
 
-The buttons at the top of **Royalties → Transactions** open the same form with a different starting point: **Income**, **Expense**, **Transfer** and **One-time payment** (an expense with **Recoup from payees** switched off).
+The buttons at the top of **Royalties → Transactions** open the same form with a different starting point: **New income**, **New expense**, **New transfer** and **New label cost** (an expense with **Recoup from payees** switched off).
 
 1. Choose the button for what you want to book.
 2. In **Amount**, enter the **Total** with the right sign and the **Currency**. Enter the **Rate** if the currency is not your label currency.
@@ -112,14 +112,14 @@ The buttons at the top of **Royalties → Transactions** open the same form with
 5. Fill in the second panel:
     - Income or expense: pick the **Release**, and a **Track** if it belongs to one track only. Leave **Track** on **Whole release** otherwise. For an expense, set **Recoup from payees** and optionally **Paid to**.
     - Transfer: pick the **Payee** (required), optionally a **Ledger** and a **Release**.
-6. Under **Details** you can add **Source** and **Memo**, and for income also **Format**, **Quantity**, **Unit price**, **Retailer**, **Country** and **External ID**.
+6. Under **Details** you can add **Source** and **Memo**, and for income also **Format**, **Units**, **Unit price**, **Platform**, **Country** and **External ID**.
 7. Choose **Create income**, **Create expense** or **Create transfer**.
 
 Notes on single fields:
 
 - **Release** on income or an expense: without a release the amount stays with the label and is reported as unassigned.
 - **Contract override**: only for a transaction that follows a different deal than its track or release.
-- **Paid to** on an expense is for your reference only, for example the designer who received a one-time payment. It does not change that payee's balance.
+- **Paid to** on an expense is for your reference only, for example the designer who received a label cost. It does not change that payee's balance.
 - **Country** is a two-letter code such as `DE`. Territory splits use it.
 - **Memo** is shown to the payee on their statement.
 - **Source** is set to "Manual" when left empty.
@@ -128,14 +128,14 @@ To change a transaction, use the edit button in its row. An imported transaction
 
 ## The transaction list
 
-The list shows 100 transactions per page with the columns **Sold**, **Paid**, **Type**, **Release / track**, **Retailer**, **Format / category**, **Region**, **Units** and **Amount**. Most headings sort the list. Above the table, **Matching**, **Units** and **Total** summarise everything that matches the filters, not only the current page.
+The list shows 100 transactions per page with the columns **Sold**, **Paid date**, **Type**, **Release / track**, **Platform**, **Format / category**, **Country**, **Units** and **Amount**. Most headings sort the list. Above the table, **Matching**, **Units** and **Total** summarise everything that matches the filters, not only the current page.
 
 | Filter                                          | What it does                                                                                                                       |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Search field                                    | Finds text in the memo, retailer or category, in the track name, release name or catalog number, an ISRC, or an exact external ID. |
+| Search field                                    | Finds text in the memo, platform or category, in the track name, release name or catalog number, an ISRC, or an exact external ID. |
 | **All types**                                   | Income, expense or transfer.                                                                                                       |
 | **All releases**                                | One release.                                                                                                                       |
-| **All retailers**                               | One retailer.                                                                                                                      |
+| **All platforms**                               | One platform; "Apple" and "Apple/iTunes" are one choice.                                                                           |
 | **All imports**                                 | The transactions of one data import (the latest 100 imports are offered).                                                          |
 | **Sale date** / **Paid date**, **From**, **To** | A date range on the chosen date.                                                                                                   |
 | **Unassigned**                                  | Income and recoupable expenses without a release.                                                                                  |
@@ -145,7 +145,7 @@ The list shows 100 transactions per page with the columns **Sold**, **Paid**, **
 
 ### The track filter
 
-The list can also be limited to one track, but there is no control for it in the filter bar. You reach it from the track: open the track under **Catalog → Tracks** and follow the link **… transaction(s)** under **Income**. The address then ends in `?track=` followed by the track's number.
+The list can also be limited to one track, but there is no control for it in the filter bar. You reach it from the track: open the track under **Catalog → Tracks** and follow the link **… transactions** under **Income**. The address then ends in `?track=` followed by the track's number.
 
 The track filter includes every track that shares the same ISRC, so a recording that appears on a single and on an album is shown together. It can be combined with the other filters.
 

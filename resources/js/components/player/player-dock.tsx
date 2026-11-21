@@ -35,6 +35,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { show as showFile } from '@/routes/release-files';
 import { show as showRelease } from '@/routes/releases';
+import { plural } from '@/lib/format';
 
 function clock(seconds: number): string {
     const whole = Math.max(0, Math.floor(seconds));
@@ -175,7 +176,7 @@ function Queue({ onClose }: { onClose: () => void }) {
                 <h2 className="text-sm font-semibold">
                     Queue{' '}
                     <span className="font-normal text-muted-foreground">
-                        {queue.length} {queue.length === 1 ? 'track' : 'tracks'}
+                        {plural(queue.length, 'track')}
                     </span>
                 </h2>
                 <div className="flex items-center gap-1">

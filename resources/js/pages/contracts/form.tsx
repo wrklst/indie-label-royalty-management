@@ -1,4 +1,4 @@
-import { Link, useForm } from '@inertiajs/react';
+import { Link, setLayoutProps, useForm } from '@inertiajs/react';
 import { Plus, X } from 'lucide-react';
 import ContractController from '@/actions/App/Http/Controllers/ContractController';
 import { DeleteButton } from '@/components/delete-button';
@@ -11,6 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { index } from '@/routes/contracts';
 import { show as showRelease } from '@/routes/releases';
 import type { Option } from '@/types';
+import { percent } from '@/lib/format';
+import { recordLinkClass } from '@/components/record-link';
 
 type Split = {
     payee_id: number | '';
@@ -103,6 +105,13 @@ export default function ContractForm({
         }
     };
 
+    setLayoutProps({
+        breadcrumbs: [
+            { title: 'Contracts', href: index() },
+            { title: contract ? contract.name : 'New contract', href: '#' },
+        ],
+    });
+
     return (
         <Page
             title={contract ? contract.name : 'New contract'}
@@ -155,7 +164,7 @@ export default function ContractForm({
                     description={
                         prorated
                             ? 'Ignored while this contract has child contracts below.'
-                            : `Payees get ${worldTotal.toLocaleString('en-GB', { maximumFractionDigits: 4 })}% worldwide, the label keeps ${(100 - worldTotal).toLocaleString('en-GB', { maximumFractionDigits: 4 })}%.`
+                            : `Payees get ${percent(worldTotal / 100)} worldwide, the label keeps ${percent((100 - worldTotal) / 100)}.`
                     }
                     actions={
                         <Button
@@ -382,7 +391,11 @@ export default function ContractForm({
                                     </div>
                                     <span className="text-sm text-muted-foreground tabular-nums">
                                         {weightTotal > 0
-                                            ? `${(((Number(child.weight) || 0) / weightTotal) * 100).toLocaleString('en-GB', { maximumFractionDigits: 2 })}%`
+                                            ? percent(
+                                                  (Number(child.weight) || 0) /
+                                                      weightTotal,
+                                                  2,
+                                              )
                                             : '–'}
                                     </span>
                                     <Button
@@ -445,7 +458,7 @@ export default function ContractForm({
                                     </span>
                                     <Link
                                         href={showRelease(release.id)}
-                                        className="underline decoration-muted-foreground/40 underline-offset-4"
+                                        className={recordLinkClass}
                                     >
                                         {release.name}
                                     </Link>
@@ -458,7 +471,7 @@ export default function ContractForm({
                                     </span>
                                     <Link
                                         href={showRelease(track.release_id)}
-                                        className="underline decoration-muted-foreground/40 underline-offset-4"
+                                        className={recordLinkClass}
                                     >
                                         {track.name}
                                     </Link>
@@ -477,7 +490,7 @@ export default function ContractForm({
                                         href={ContractController.edit.url(
                                             parent.id,
                                         )}
-                                        className="underline decoration-muted-foreground/40 underline-offset-4"
+                                        className={recordLinkClass}
                                     >
                                         {parent.name}
                                     </Link>
@@ -490,10 +503,3 @@ export default function ContractForm({
         </Page>
     );
 }
-
-ContractForm.layout = {
-    breadcrumbs: [
-        { title: 'Contracts', href: index() },
-        { title: 'Contract', href: '#' },
-    ],
-};

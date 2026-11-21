@@ -5,15 +5,13 @@ import MechanicalsController from '@/actions/App/Http/Controllers/RoyaltyTools/M
 import RatesController from '@/actions/App/Http/Controllers/RoyaltyTools/RatesController';
 import { Amount } from '@/components/amount';
 import { Field, SelectInput } from '@/components/field';
-import { Page, Panel, Stat } from '@/components/page';
+import { EmptyState, Notice, Page, Panel, Stat } from '@/components/page';
 import { RecordLink } from '@/components/record-link';
 import {
     CreateTransactions,
-    Notice,
     OverlapNotice,
     RunsPanel,
     plain,
-    today,
 } from '@/components/royalty-tool';
 import type { ToolRun } from '@/components/royalty-tool';
 import { Button } from '@/components/ui/button';
@@ -27,7 +25,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { quantity } from '@/lib/format';
+import { quantity, today } from '@/lib/format';
 import { index as items } from '@/routes/items';
 import { edit as labelSettings } from '@/routes/label-settings';
 import { index } from '@/routes/royalty-tools/mechanicals';
@@ -90,7 +88,7 @@ const SOURCE = {
     statutory: 'statutory',
 };
 
-const cents = (dollars: string) => plain((Number(dollars) * 100).toFixed(4));
+const toCents = (dollars: string) => plain((Number(dollars) * 100).toFixed(4));
 
 export default function Mechanicals({
     currency,
@@ -273,9 +271,9 @@ export default function Mechanicals({
                             >
                                 {rateTables.map((table) => (
                                     <option key={table.key} value={table.key}>
-                                        {table.key}: {cents(table.per_work)}¢
-                                        per work, {cents(table.per_minute)}¢ per
-                                        minute over 5:00
+                                        {table.key}: {toCents(table.per_work)}¢
+                                        per work, {toCents(table.per_minute)}¢
+                                        per minute over 5:00
                                     </option>
                                 ))}
                             </SelectInput>
@@ -507,10 +505,10 @@ export default function Mechanicals({
                         flush
                     >
                         {report.rows.length === 0 ? (
-                            <p className="p-4 text-sm text-muted-foreground">
-                                No units were found for tracks that account
-                                mechanicals in this range.
-                            </p>
+                            <EmptyState
+                                compact
+                                title="No units were found for tracks that account mechanicals in this range."
+                            />
                         ) : (
                             <Table>
                                 <TableHeader>

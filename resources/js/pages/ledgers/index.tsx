@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/table';
 import { useTableSort } from '@/hooks/use-table-sort';
 import { index } from '@/routes/ledgers';
+import { plural } from '@/lib/format';
 
 type Ledger = {
     id: number;
@@ -143,7 +144,7 @@ export default function Ledgers({ ledgers }: { ledgers: Ledger[] }) {
                                                     ledger.id,
                                                 )}
                                                 title={`Delete ${ledger.name}?`}
-                                                description={`${ledger.splits_count} split(s) and any payouts booked to this ledger move to the primary ledger. Balances will change.`}
+                                                description={`${plural(ledger.splits_count, 'split')} and any payouts booked to this ledger move to the primary ledger. Balances will change.`}
                                             />
                                         </div>
                                     </TableCell>

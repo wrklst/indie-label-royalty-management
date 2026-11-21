@@ -14,10 +14,10 @@ Everything a label decides for itself is under **Settings → Label**, open to a
 
 Two images of the label, each uploaded by dropping a file on its field or choosing one. PNG, JPEG or WebP, up to 4 MB.
 
-| Image      | Where it is shown                                                |
-| ---------- | ---------------------------------------------------------------- |
-| **Logo**   | At the top of statements, for you and for payees in their portal |
-| **Signet** | The small square mark in the sidebar, next to the label's name   |
+| Image      | Where it is shown                                                     |
+| ---------- | --------------------------------------------------------------------- |
+| **Logo**   | At the top of statements, for you and for payees in **My statements** |
+| **Signet** | The small square mark in the sidebar, next to the label's name        |
 
 Dropping a new file replaces the stored image. The bin removes it. A transparent PNG works on light and dark backgrounds. SVG files are not accepted.
 

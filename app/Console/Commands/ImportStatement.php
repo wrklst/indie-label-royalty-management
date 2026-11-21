@@ -72,7 +72,7 @@ class ImportStatement extends Command
         ]), $label);
 
         if ($import->status === ImportStatus::Review) {
-            $this->warn('Nothing was imported: '.count($import->metadata['duplicates'] ?? []).' possible duplicate(s) of existing bookings. Decide about them under Data imports → '.$import->name.'.');
+            $this->warn('Nothing was imported: '.trans_choice(':count possible duplicate of an existing transaction.|:count possible duplicates of existing transactions.', count($import->metadata['duplicates'] ?? [])).' Decide about them under Data imports → '.$import->name.'.');
 
             return self::FAILURE;
         }

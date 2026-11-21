@@ -8,7 +8,7 @@ import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { date } from '@/lib/format';
+import { date, money } from '@/lib/format';
 import { edit as editBandcamp } from '@/routes/bandcamp';
 import { edit } from '@/routes/connections';
 
@@ -70,8 +70,7 @@ type Props = {
     } | null;
 };
 
-const dollars = (amount: number) =>
-    `$${amount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const dollars = (amount: number) => money(amount, 'USD');
 
 function WebSearch({ search }: { search: Props['search'] }) {
     // A login from the environment is in use until an own one is asked for.
@@ -284,9 +283,9 @@ function ModelPicker({
                         )}
                     </ul>
                     <p className="text-xs text-muted-foreground">
-                        These are the catalogue&apos;s figures. Connecting has
-                        the model read a sample receipt and tells you how it did
-                        and how long it took.
+                        These are the catalog&apos;s figures. Connecting has the
+                        model read a sample receipt and tells you how it did and
+                        how long it took.
                     </p>
                 </div>
             )}
@@ -378,7 +377,7 @@ function ReceiptReading({ ai }: { ai: Props['ai'] }) {
             <Heading
                 variant="small"
                 title="Receipt reading"
-                description="An AI service reads vendor, date, amount and category off receipts you upload under Label costs. The receipts are sent to the service you choose and billed to your account there. Without a service, receipts are stored and booked by hand."
+                description="An AI service reads vendor, date, amount and category off receipts you upload under Overheads. The receipts are sent to the service you choose and billed to your account there. Without a service, receipts are stored and booked by hand."
             />
             {ai.connected ? (
                 <ConnectionCard
@@ -396,8 +395,8 @@ function ReceiptReading({ ai }: { ai: Props['ai'] }) {
                     note={
                         ai.trial
                             ? ai.trial.missed.length === 0
-                                ? `Tested ${date(ai.trial.at.slice(0, 10))}: read the sample receipt correctly in ${ai.trial.seconds} seconds.`
-                                : `Tested ${date(ai.trial.at.slice(0, 10))}: got ${ai.trial.missed.join(', ')} wrong on the sample receipt (${ai.trial.seconds} seconds). Another model may read better.`
+                                ? `Tested ${date(ai.trial.at)}: read the sample receipt correctly in ${ai.trial.seconds} seconds.`
+                                : `Tested ${date(ai.trial.at)}: got ${ai.trial.missed.join(', ')} wrong on the sample receipt (${ai.trial.seconds} seconds). Another model may read better.`
                             : undefined
                     }
                     disconnect={ConnectionsController.destroyAi.url()}

@@ -2,7 +2,7 @@ import { Link, setLayoutProps, useForm } from '@inertiajs/react';
 import RatesController from '@/actions/App/Http/Controllers/RoyaltyTools/RatesController';
 import { CheckField, Field, SelectInput } from '@/components/field';
 import InputError from '@/components/input-error';
-import { Page, Panel } from '@/components/page';
+import { EmptyState, Page, Panel } from '@/components/page';
 import { RecordLink } from '@/components/record-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -214,7 +214,7 @@ export default function Rates({
                                     <TableHead>Track</TableHead>
                                     {isMechanicals && (
                                         <>
-                                            <TableHead>Duration</TableHead>
+                                            <TableHead>Length</TableHead>
                                             <TableHead>Mechanicals</TableHead>
                                         </>
                                     )}
@@ -312,10 +312,10 @@ export default function Rates({
                         flush
                     >
                         {items.length === 0 ? (
-                            <p className="p-4 text-sm text-muted-foreground">
-                                This release has no items yet. They appear with
-                                the first import.
-                            </p>
+                            <EmptyState
+                                compact
+                                title="This release has no items yet. They appear with the first import."
+                            />
                         ) : (
                             <Table>
                                 <TableHeader>

@@ -75,6 +75,20 @@ test('a newer file replaces counts of the same track and platform for the days i
         ->and($other->fresh())->not->toBeNull();
 });
 
+test('a file with songs the catalog does not have is a warning, one that matches completely is a success', function () {
+    $label = Label::factory()->create();
+    Track::factory()->create(['label_id' => $label->id, 'name' => 'Example Track']);
+
+    $this->actingAs(labelAdmin($label))->post(route('play-counts.store'), [
+        'file' => playCountFile("song,listeners,streams,saves\nExample Track,40,120,3\nUnknown Song,1,2,0\n"),
+    ])->assertInertiaFlash('toast.type', 'warning')
+        ->assertInertiaFlash('toast.message', '2 play counts imported, 1 of them for tracks the catalog does not have under that name.');
+
+    $this->post(route('play-counts.store'), [
+        'file' => playCountFile("song,listeners,streams,saves\nExample Track,40,120,3\n", 'other-plays.csv'),
+    ])->assertInertiaFlash('toast.type', 'success');
+});
+
 test('a file that names neither platform nor dates is the total up to today and replaces what was counted before', function () {
     $this->travelTo('2026-02-10 12:00:00');
     $label = Label::factory()->create();
@@ -96,7 +110,7 @@ test('a file that names neither platform nor dates is the total up to today and 
         ->and($spotify->fresh())->not->toBeNull();
 
     $this->get(route('play-counts.index'))->assertInertia(fn (Assert $page) => $page
-        ->where('files.0.platforms', [['key' => 'unknown', 'name' => 'Not named']]));
+        ->where('files.0.platforms', [['key' => 'unknown', 'name' => 'Unknown']]));
 });
 
 test('a file that cannot be read as play counts is refused and nothing is stored', function (string $content, array $fields, string $message) {

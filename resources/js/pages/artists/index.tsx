@@ -1,4 +1,4 @@
-import { RecordLink } from '@/components/record-link';
+import { RecordLink, recordLinkClass } from '@/components/record-link';
 import { Link } from '@inertiajs/react';
 import { Pencil, Plus } from 'lucide-react';
 import ArtistController from '@/actions/App/Http/Controllers/ArtistController';
@@ -26,6 +26,7 @@ import type { SortDirection } from '@/hooks/use-table-sort';
 import { index } from '@/routes/artists';
 import { index as releases } from '@/routes/releases';
 import type { Option, Paginated } from '@/types';
+import { count } from '@/lib/format';
 
 type Artist = {
     id: number;
@@ -249,9 +250,9 @@ export default function Artists({
                                                         artist: artist.id,
                                                     },
                                                 })}
-                                                className="underline decoration-muted-foreground/40 underline-offset-4"
+                                                className={recordLinkClass}
                                             >
-                                                {artist.releases_count}
+                                                {count(artist.releases_count)}
                                             </Link>
                                         ) : (
                                             <span className="text-muted-foreground">
@@ -260,10 +261,10 @@ export default function Artists({
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {artist.tracks_count}
+                                        {count(artist.tracks_count)}
                                     </TableCell>
                                     <TableCell className="max-w-xs truncate text-muted-foreground">
-                                        {artist.notes}
+                                        {artist.notes ?? '–'}
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex justify-end">

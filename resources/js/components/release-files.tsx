@@ -17,10 +17,11 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useTableSort } from '@/hooks/use-table-sort';
-import { date } from '@/lib/format';
+import { date, fileSize } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { previews, show } from '@/routes/release-files';
 import type { Option } from '@/types';
+import { EmptyState } from '@/components/page';
 
 export type ReleaseFile = {
     id: number;
@@ -141,18 +142,6 @@ function PlaybackCopyNote({
             </button>
         </span>
     );
-}
-
-function fileSize(bytes: number): string {
-    if (bytes >= 1024 * 1024 * 1024) {
-        return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
-    }
-
-    if (bytes >= 1024 * 1024) {
-        return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-    }
-
-    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
 /**
@@ -287,12 +276,10 @@ export function ReleaseFiles({
             )}
 
             {files.length === 0 ? (
-                <p className="p-4 text-sm text-muted-foreground">
-                    No files yet. Upload the cover, the audio masters and
-                    anything else that belongs to the release. Audio named like
-                    the track, or starting with its number, is attached to that
-                    track.
-                </p>
+                <EmptyState
+                    compact
+                    title="No files yet. Upload the cover, the audio masters and anything else that belongs to the release. Audio named like the track, or starting with its number, is attached to that track."
+                />
             ) : (
                 <>
                     <div

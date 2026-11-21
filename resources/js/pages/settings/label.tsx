@@ -88,14 +88,14 @@ export default function LabelSettings({
 
     return (
         <>
-            <Head title="Label settings" />
-            <h1 className="sr-only">Label settings</h1>
+            <Head title="Label" />
+            <h1 className="sr-only">Label</h1>
 
             <div className="space-y-6">
                 <Heading
                     variant="small"
                     title="Label"
-                    description="Name, accounting currency and how imports behave for this label"
+                    description="Name, accounting currency and how imports behave for this label."
                 />
 
                 <div className="grid gap-6 sm:grid-cols-2">
@@ -526,5 +526,5 @@ export default function LabelSettings({
 }
 
 LabelSettings.layout = {
-    breadcrumbs: [{ title: 'Label settings', href: edit() }],
+    breadcrumbs: [{ title: 'Label', href: edit() }],
 };

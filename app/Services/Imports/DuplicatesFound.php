@@ -15,6 +15,6 @@ class DuplicatesFound extends RuntimeException
      */
     public function __construct(public readonly array $proposals)
     {
-        parent::__construct('The file holds possible duplicates of existing bookings.');
+        parent::__construct('The file holds possible duplicates of existing transactions.');
     }
 }

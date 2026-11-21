@@ -1,12 +1,11 @@
 import { Link } from '@inertiajs/react';
-import { TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import DataImportController from '@/actions/App/Http/Controllers/DataImportController';
 import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
 import { CheckField } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
-import { Panel } from '@/components/page';
+import { EmptyState, Notice, Panel } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -32,21 +31,6 @@ export type ToolRun = {
 /** Drop trailing zeros from a decimal string: "0.131000" becomes "0.131". */
 export const plain = (value: string) =>
     value.includes('.') ? value.replace(/\.?0+$/, '') : value;
-
-// The local date: toISOString() is UTC and gives yesterday shortly after midnight.
-export const today = () => new Date().toLocaleDateString('sv-SE');
-
-export function Notice({ children }: { children: ReactNode }) {
-    return (
-        <div
-            role="status"
-            className="flex gap-2.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
-        >
-            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-            <div className="min-w-0 space-y-1">{children}</div>
-        </div>
-    );
-}
 
 export function OverlapNotice({ overlaps }: { overlaps: ToolRun[] }) {
     if (overlaps.length === 0) {
@@ -95,13 +79,13 @@ export function CreateTransactions({
 }) {
     return (
         <FormDialog
-            title="Create transactions"
+            title="Book transactions"
             description={description}
             form={form}
-            submitLabel="Create"
+            submitLabel="Book"
             trigger={
                 <Button data-test="create-transactions">
-                    Create transactions
+                    Book transactions
                 </Button>
             }
         >
@@ -163,9 +147,10 @@ export function RunsPanel({
             flush
         >
             {runs.length === 0 ? (
-                <p className="p-4 text-sm text-muted-foreground">
-                    Nothing has been booked with this tool yet.
-                </p>
+                <EmptyState
+                    compact
+                    title="Nothing has been booked with this tool yet."
+                />
             ) : (
                 <Table>
                     <TableHeader>

@@ -103,7 +103,7 @@ class PayeeController extends Controller
     {
         $payee->update($request->validated());
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Payee updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Payee saved.')]);
 
         return back();
     }

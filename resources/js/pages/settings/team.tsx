@@ -98,7 +98,7 @@ export default function Team({
                 <Heading
                     variant="small"
                     title="Team"
-                    description={`Who can sign in to ${label?.name ?? 'this label'}`}
+                    description={`Who can sign in to ${label?.name ?? 'this label'}.`}
                 />
 
                 <ul className="divide-y rounded-lg border text-sm">

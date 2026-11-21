@@ -12,7 +12,7 @@ test('a one-time payment entered in the form lowers the label result of its rele
         ->assertNoJavaScriptErrors();
 
     visit('/transactions')
-        ->click('One-time payment')
+        ->click('New label cost')
         ->assertSee('New expense')
         ->assertNotChecked('#recoupable')
         ->assertSee('the label bears the cost alone')
@@ -64,16 +64,16 @@ test('a recurring label cost is added in a dialog and shows up as overheads', fu
     $this->actingAs($scenario['admin']);
 
     visit('/label-costs')
-        ->assertSee('No label costs booked yet')
+        ->assertSee('No overheads booked yet')
         ->click('Recurring cost')
         ->fill('name', 'Example Subscription')
         ->fill('amount', '10')
         ->fill('starts_on', now()->subMonths(2)->toDateString())
-        ->press('Add recurring cost')
+        ->press('Create recurring cost')
         ->assertSee('3 past payments booked')
         ->assertSee('per month')
         ->assertSee('3×')
         ->assertNoJavaScriptErrors();
 
-    visit('/profitability')->assertSee('Label overheads')->assertNoJavaScriptErrors();
+    visit('/profitability')->assertSee('Overheads')->assertNoJavaScriptErrors();
 });

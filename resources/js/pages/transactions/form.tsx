@@ -1,10 +1,11 @@
-import { Link, useForm, usePage } from '@inertiajs/react';
+import { Link, setLayoutProps, useForm, usePage } from '@inertiajs/react';
 import TransactionController from '@/actions/App/Http/Controllers/TransactionController';
 import { CheckField, Field, SelectInput } from '@/components/field';
 import { Page, Panel } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { today } from '@/lib/format';
 import { index } from '@/routes/transactions';
 import type { Option, TrackOption } from '@/types';
 
@@ -63,7 +64,6 @@ const numberOrBlank = (value: string): number | '' =>
 const trim = (value: string | null | undefined): string =>
     value ? value.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1') : '';
 // The local date: toISOString() is UTC and gives yesterday shortly after midnight.
-const today = () => new Date().toLocaleDateString('sv-SE');
 
 export default function TransactionForm({
     transaction,
@@ -132,17 +132,26 @@ export default function TransactionForm({
         }
     };
 
+    const title = transaction ? `Edit ${transaction.type}` : `New ${type}`;
+
+    setLayoutProps({
+        breadcrumbs: [
+            { title: 'Transactions', href: index() },
+            { title, href: '#' },
+        ],
+    });
+
     return (
         <Page
-            title={transaction ? `Edit ${transaction.type}` : `New ${type}`}
+            title={title}
             description={
                 type === 'transfer'
                     ? 'A transfer moves money between the label and a payee outside of royalties: an advance, a payback, an opening balance.'
                     : type === 'expense'
                       ? form.data.recoupable
                           ? 'An expense reduces the net income of its release or track before the split, so the payee carries their share of it.'
-                          : 'A one-time payment or other cost the label bears alone. It does not reduce what payees earn and counts against the release in the profitability report.'
-                      : 'Income entered by hand, for example a sync fee or a shop sale that is not in any statement.'
+                          : 'A label cost: an expense the label bears alone. It does not reduce what payees earn and counts against the release in the profitability report.'
+                      : 'Income entered by hand, for example a sync fee or a sale on a platform that is not in any statement.'
             }
         >
             <form onSubmit={submit} className="grid max-w-4xl gap-6">
@@ -224,7 +233,7 @@ export default function TransactionForm({
                                 label={`Rate to ${labelCurrency}`}
                                 htmlFor="conversion_rate"
                                 error={errors.conversion_rate}
-                                hint={`1 ${form.data.currency.toUpperCase()} = ? ${labelCurrency}. Leave empty to use the European Central Bank's rate of the date paid.`}
+                                hint={`1 ${form.data.currency.toUpperCase()} = ? ${labelCurrency}. Leave empty to use the European Central Bank's rate of the paid date.`}
                                 className="md:col-span-3 md:max-w-xs"
                             >
                                 <Input
@@ -387,7 +396,7 @@ export default function TransactionForm({
                                     label="Paid to"
                                     htmlFor="payee_id"
                                     error={errors.payee_id}
-                                    hint="Optional. For your reference only, e.g. the remixer or designer who received a one-time payment."
+                                    hint="Optional. For your reference only, e.g. the remixer or designer who received a label cost."
                                 >
                                     <SelectInput
                                         id="payee_id"
@@ -519,7 +528,7 @@ export default function TransactionForm({
                                     </SelectInput>
                                 </Field>
                                 <Field
-                                    label="Quantity"
+                                    label="Units"
                                     htmlFor="quantity"
                                     error={errors.quantity}
                                 >
@@ -555,7 +564,7 @@ export default function TransactionForm({
                                     />
                                 </Field>
                                 <Field
-                                    label="Retailer"
+                                    label="Platform"
                                     htmlFor="retailer"
                                     error={errors.retailer}
                                 >
@@ -614,7 +623,7 @@ export default function TransactionForm({
                             </Field>
                         )}
                         <Field
-                            label="Source"
+                            label={type === 'expense' ? 'Supplier' : 'Source'}
                             htmlFor="source"
                             error={errors.source}
                             hint={
@@ -689,10 +698,3 @@ export default function TransactionForm({
         </Page>
     );
 }
-
-TransactionForm.layout = {
-    breadcrumbs: [
-        { title: 'Transactions', href: index() },
-        { title: 'Transaction', href: '#' },
-    ],
-};

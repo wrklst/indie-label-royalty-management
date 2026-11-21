@@ -22,7 +22,7 @@ import {
 import { useFilters } from '@/hooks/use-filters';
 import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
-import { percent } from '@/lib/format';
+import { percent, plural } from '@/lib/format';
 import { create, edit, index } from '@/routes/contracts';
 import type { Paginated } from '@/types';
 
@@ -336,13 +336,25 @@ export default function Contracts({
                                                 ? 'Not used'
                                                 : [
                                                       contract.releases_count &&
-                                                          `${contract.releases_count} release${contract.releases_count === 1 ? '' : 's'}`,
+                                                          plural(
+                                                              contract.releases_count,
+                                                              'release',
+                                                          ),
                                                       contract.tracks_count &&
-                                                          `${contract.tracks_count} track${contract.tracks_count === 1 ? '' : 's'}`,
+                                                          plural(
+                                                              contract.tracks_count,
+                                                              'track',
+                                                          ),
                                                       contract.items_count &&
-                                                          `${contract.items_count} item${contract.items_count === 1 ? '' : 's'}`,
+                                                          plural(
+                                                              contract.items_count,
+                                                              'item',
+                                                          ),
                                                       contract.parents_count &&
-                                                          `${contract.parents_count} prorated contract${contract.parents_count === 1 ? '' : 's'}`,
+                                                          plural(
+                                                              contract.parents_count,
+                                                              'prorated contract',
+                                                          ),
                                                   ]
                                                       .filter(Boolean)
                                                       .join(', ')}

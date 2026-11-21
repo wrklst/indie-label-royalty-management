@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 export default function CreateLabel({ isFirst }: { isFirst: boolean }) {
     return (
         <Page
-            title={isFirst ? 'Set up your label' : 'Add a label'}
+            title={isFirst ? 'Set up your label' : 'New label'}
             description="Each label keeps its own catalog, contracts, transactions and statements. You can switch between labels from the sidebar."
         >
             <Panel className="max-w-xl">

@@ -20,14 +20,14 @@ A payee earns nothing by existing. They earn through splits on contracts, and a 
 2. Enter a **Name**. **Email**, **Tags** (separated by commas) and **Notes** are optional and only for your reference.
 3. Choose **Create payee**.
 
-The email on a payee does not give anyone access. Portal access is granted under **Settings → Team**, see [Team, roles and sign-in](40-team-roles-and-sign-in.md).
+The email on a payee does not give anyone access. Access to **My statements** is granted under **Settings → Team**, see [Team, roles and sign-in](40-team-roles-and-sign-in.md).
 
 Click a payee to open their page. It shows:
 
 - what they earned in the latest period, what is **Payable now** and the balance of each ledger, with a link to the **Full breakdown**,
 - **Splits**: every contract they earn from, with ledger, territory and the releases and tracks it applies to,
 - **Statements** and **Payouts**,
-- **Transfers**: advances, paybacks and opening balances. **Advance or transfer** opens a new transfer for this payee, see [Transactions](31-transactions.md).
+- **Transfers**: advances, paybacks and opening balances. **New transfer** opens a new transfer for this payee, see [Transactions](31-transactions.md).
 
 A payee with transfers, payouts or statements cannot be deleted. Deleting any other payee removes them from every contract.
 
@@ -66,7 +66,7 @@ Typical uses:
 - Release: the normal album or single deal.
 - Track: one track has a different deal, such as a remix.
 - Item: one product has its own deal, such as a licensed vinyl run. The mechanicals and PPD tools also rely on this, see [Mechanicals, PPD and reserves](34-mechanicals-ppd-and-reserves.md).
-- Transaction: a single booking follows a different deal than its track or release.
+- Transaction: a single transaction follows a different deal than its track or release.
 
 **Catalog → Catalog manager** lists every release with its tracks and lets you assign release and track contracts in one place. Changes there save immediately.
 

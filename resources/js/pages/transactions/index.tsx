@@ -22,7 +22,7 @@ import {
 import { useFilters } from '@/hooks/use-filters';
 import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
-import { date, quantity } from '@/lib/format';
+import { count, date, money, quantity } from '@/lib/format';
 import { create, edit, index } from '@/routes/transactions';
 import type { Option, Paginated } from '@/types';
 
@@ -68,7 +68,7 @@ type Props = {
     summary: { transactions: number; total: string; quantity: string };
     filters: Filters;
     releaseOptions: Option[];
-    retailerOptions: string[];
+    platformOptions: { id: string; name: string }[];
     importOptions: Option[];
 };
 
@@ -79,7 +79,7 @@ export default function Transactions({
     summary,
     filters,
     releaseOptions,
-    retailerOptions,
+    platformOptions,
     importOptions,
 }: Props) {
     const { apply } = useFilters(index.url(), filters);
@@ -96,7 +96,7 @@ export default function Transactions({
     return (
         <Page
             title="Transactions"
-            description="Every line of income, every expense and every transfer. Expenses are negative; a negative transfer was given to the payee. A one-time payment is an expense the label bears alone."
+            description="Every line of income, every expense and every transfer. Expenses are negative; a negative transfer was given to the payee. A label cost is an expense the label bears alone."
             actions={
                 <>
                     <Button variant="outline" asChild>
@@ -106,25 +106,25 @@ export default function Transactions({
                             })}
                         >
                             <Plus />
-                            One-time payment
+                            New label cost
                         </Link>
                     </Button>
                     <Button variant="outline" asChild>
                         <Link href={create({ query: { type: 'expense' } })}>
                             <Plus />
-                            Expense
+                            New expense
                         </Link>
                     </Button>
                     <Button variant="outline" asChild>
                         <Link href={create({ query: { type: 'transfer' } })}>
                             <Plus />
-                            Transfer
+                            New transfer
                         </Link>
                     </Button>
                     <Button asChild>
                         <Link href={create({ query: { type: 'income' } })}>
                             <Plus />
-                            Income
+                            New income
                         </Link>
                     </Button>
                 </>
@@ -134,7 +134,7 @@ export default function Transactions({
                 <div className="flex flex-wrap items-center gap-3">
                     <Input
                         type="search"
-                        placeholder="Search memo, retailer, track, release, ISRC…"
+                        placeholder="Search memo, platform, track, release, ISRC…"
                         defaultValue={filters.search ?? ''}
                         onChange={(event) =>
                             apply({ search: event.target.value }, true)
@@ -162,13 +162,13 @@ export default function Transactions({
                         className="w-64"
                     />
                     <SelectInput
-                        aria-label="Retailer"
+                        aria-label="Platform"
                         value={filters.retailer ?? ''}
                         onChange={(event) =>
                             apply({ retailer: event.target.value })
                         }
-                        placeholder="All retailers"
-                        options={retailerOptions}
+                        placeholder="All platforms"
+                        options={platformOptions}
                         className="w-48"
                     />
                     <SelectInput
@@ -262,7 +262,7 @@ export default function Transactions({
                                 Matching{' '}
                             </span>
                             <span className="font-medium tabular-nums">
-                                {summary.transactions.toLocaleString('en-GB')}
+                                {count(summary.transactions)}
                             </span>
                         </span>
                         <span>
@@ -298,7 +298,7 @@ export default function Transactions({
                                     sorter={sorter}
                                     first="desc"
                                 >
-                                    Paid
+                                    Paid date
                                 </SortableHead>
                                 <SortableHead column="type" sorter={sorter}>
                                     Type
@@ -307,13 +307,13 @@ export default function Transactions({
                                     Release / track
                                 </SortableHead>
                                 <SortableHead column="retailer" sorter={sorter}>
-                                    Retailer
+                                    Platform
                                 </SortableHead>
                                 <SortableHead column="format" sorter={sorter}>
                                     Format / category
                                 </SortableHead>
                                 <SortableHead column="region" sorter={sorter}>
-                                    Region
+                                    Country
                                 </SortableHead>
                                 <SortableHead
                                     column="quantity"
@@ -470,10 +470,11 @@ export default function Transactions({
                                         {transaction.converted_total ===
                                         null ? (
                                             <Badge variant="destructive">
-                                                {Number(
+                                                {money(
                                                     transaction.total,
-                                                ).toFixed(2)}{' '}
-                                                {transaction.currency} · no rate
+                                                    transaction.currency,
+                                                )}{' '}
+                                                · no rate
                                             </Badge>
                                         ) : (
                                             <Amount

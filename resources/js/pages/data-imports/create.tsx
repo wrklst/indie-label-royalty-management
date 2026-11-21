@@ -1,4 +1,4 @@
-import { Link, useForm } from '@inertiajs/react';
+import { Link, setLayoutProps, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { FilePond } from 'react-filepond';
 import DataImportController from '@/actions/App/Http/Controllers/DataImportController';
@@ -105,6 +105,13 @@ export default function CreateDataImport({
         );
         form.post(DataImportController.store.url(), { forceFormData: !key });
     };
+
+    setLayoutProps({
+        breadcrumbs: [
+            { title: 'Data imports', href: index() },
+            { title: 'Import a statement', href: '#' },
+        ],
+    });
 
     return (
         <Page
@@ -360,10 +367,3 @@ export default function CreateDataImport({
         </Page>
     );
 }
-
-CreateDataImport.layout = {
-    breadcrumbs: [
-        { title: 'Data imports', href: index() },
-        { title: 'New import', href: '#' },
-    ],
-};

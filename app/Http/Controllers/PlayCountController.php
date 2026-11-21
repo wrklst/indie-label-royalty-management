@@ -56,7 +56,7 @@ class PlayCountController extends Controller
                     'counts' => (int) $file->counts,
                     'matched' => (int) $file->matched,
                     'plays' => (int) $file->plays,
-                    'created_at' => (string) $file->created_at,
+                    'created_at' => Carbon::parse($file->created_at)->toIso8601String(),
                     'unmatched' => ($unmatched[$file->batch] ?? collect())->pluck('track_name')->take(30)->all(),
                 ]),
         ]);
@@ -79,10 +79,10 @@ class PlayCountController extends Controller
         $missing = $result['counts'] - $result['matched'];
 
         Inertia::flash('toast', [
-            'type' => $missing === 0 ? 'success' : 'error',
+            'type' => $missing === 0 ? 'success' : 'warning',
             'message' => $missing === 0
                 ? __(':count play counts imported.', ['count' => $result['counts']])
-                : __(':count play counts imported, :missing of them for tracks the catalogue does not have under that name.', ['count' => $result['counts'], 'missing' => $missing]),
+                : __(':count play counts imported, :missing of them for tracks the catalog does not have under that name.', ['count' => $result['counts'], 'missing' => $missing]),
         ]);
 
         return to_route('play-counts.index');

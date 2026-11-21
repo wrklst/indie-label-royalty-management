@@ -1,6 +1,6 @@
 import { PlatformLinks } from '@/components/platform-links';
 import type { PlatformLinksProps } from '@/components/platform-links';
-import { Link } from '@inertiajs/react';
+import { Link, setLayoutProps } from '@inertiajs/react';
 import { Pencil, Plus } from 'lucide-react';
 import TrackController from '@/actions/App/Http/Controllers/TrackController';
 import { Amount } from '@/components/amount';
@@ -11,7 +11,7 @@ import type { ArtistCredit } from '@/components/artist-credit-rows';
 import { DeliveryMenu } from '@/components/delivery-menu';
 import { Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
-import { Page, Panel, Stat } from '@/components/page';
+import { EmptyState, Page, Panel, Stat } from '@/components/page';
 import type { PlayerTrack } from '@/components/player/player-store';
 import {
     ReleaseActions,
@@ -34,7 +34,7 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { useTableSort } from '@/hooks/use-table-sort';
-import { country, date, duration, quantity } from '@/lib/format';
+import { count, country, date, duration, quantity } from '@/lib/format';
 import { show as showFile } from '@/routes/release-files';
 import { edit, index } from '@/routes/releases';
 import {
@@ -42,6 +42,7 @@ import {
     index as transactions,
 } from '@/routes/transactions';
 import type { Option } from '@/types';
+import { AI_LEVELS, AiField } from '@/components/ai-field';
 
 type Credits = Partial<
     Record<
@@ -249,7 +250,7 @@ function TrackFields({
                     />
                 </Field>
                 <Field
-                    label="Duration (seconds)"
+                    label="Length (seconds)"
                     htmlFor="duration"
                     error={errors.duration}
                 >
@@ -333,57 +334,27 @@ function TrackFields({
                         placeholder="Same as release"
                     >
                         <option value="explicit">Explicit</option>
-                        <option value="clean">Clean</option>
+                        <option value="clean">Clean version</option>
                     </SelectInput>
                 </Field>
-                <Field
+                <AiField
                     label="AI in the recording"
-                    htmlFor="ai_recording"
+                    name="ai_recording"
                     error={errors.ai_recording}
-                >
-                    <SelectInput
-                        id="ai_recording"
-                        name="ai_recording"
-                        defaultValue={track.ai_recording ?? ''}
-                        placeholder="Not declared"
-                    >
-                        <option value="none">None</option>
-                        <option value="partly">Partly AI-generated</option>
-                        <option value="all">Fully AI-generated</option>
-                    </SelectInput>
-                </Field>
-                <Field
+                    defaultValue={track.ai_recording ?? ''}
+                />
+                <AiField
                     label="AI in the composition"
-                    htmlFor="ai_composition"
+                    name="ai_composition"
                     error={errors.ai_composition}
-                >
-                    <SelectInput
-                        id="ai_composition"
-                        name="ai_composition"
-                        defaultValue={track.ai_composition ?? ''}
-                        placeholder="Not declared"
-                    >
-                        <option value="none">None</option>
-                        <option value="partly">Partly AI-generated</option>
-                        <option value="all">Fully AI-generated</option>
-                    </SelectInput>
-                </Field>
-                <Field
+                    defaultValue={track.ai_composition ?? ''}
+                />
+                <AiField
                     label="AI in the lyrics"
-                    htmlFor="ai_lyrics"
+                    name="ai_lyrics"
                     error={errors.ai_lyrics}
-                >
-                    <SelectInput
-                        id="ai_lyrics"
-                        name="ai_lyrics"
-                        defaultValue={track.ai_lyrics ?? ''}
-                        placeholder="Not declared"
-                    >
-                        <option value="none">None</option>
-                        <option value="partly">Partly AI-generated</option>
-                        <option value="all">Fully AI-generated</option>
-                    </SelectInput>
-                </Field>
+                    defaultValue={track.ai_lyrics ?? ''}
+                />
                 <Field label="Genre" htmlFor="genre" error={errors.genre}>
                     <Input
                         id="genre"
@@ -516,6 +487,13 @@ export default function ShowRelease({
         track.audio_file_id ? [playerTrack(track, track.audio_file_id)] : [],
     );
 
+    setLayoutProps({
+        breadcrumbs: [
+            { title: 'Releases', href: index() },
+            { title, href: '#' },
+        ],
+    });
+
     return (
         <Page
             title={title}
@@ -551,7 +529,7 @@ export default function ShowRelease({
                             })}
                         >
                             <Plus />
-                            Add expense
+                            New expense
                         </Link>
                     </Button>
                     <Button variant="outline" asChild>
@@ -623,7 +601,7 @@ export default function ShowRelease({
                                     {release.contract.name}
                                 </RecordLink>
                             ) : (
-                                <span className="text-base">None</span>
+                                <span className="text-base">No contract</span>
                             )
                         }
                         hint={
@@ -647,17 +625,14 @@ export default function ShowRelease({
                                     query: { release: release.id },
                                 })}
                             >
-                                {totals.transactions.toLocaleString('en-GB')}{' '}
-                                transactions
+                                {count(totals.transactions)} transactions
                             </Link>
                         </Button>
                     </div>
                 }
             >
                 {release.tracks.length === 0 ? (
-                    <p className="p-4 text-sm text-muted-foreground">
-                        No tracks on this release.
-                    </p>
+                    <EmptyState compact title="No tracks on this release." />
                 ) : (
                     <Table>
                         <TableHeader>
@@ -767,7 +742,7 @@ export default function ShowRelease({
                                             </span>
                                         ) : (
                                             <Badge variant="warning">
-                                                none
+                                                No contract
                                             </Badge>
                                         )}
                                     </TableCell>
@@ -868,15 +843,13 @@ export default function ShowRelease({
                         {release.explicit &&
                             (release.explicit === 'explicit'
                                 ? 'Explicit'
-                                : 'Clean')}
+                                : 'Clean version')}
                     </Detail>
                     <Detail label="AI in the artwork">
                         {release.ai_artwork &&
-                            {
-                                none: 'None',
-                                partly: 'Partly AI-generated',
-                                all: 'Fully AI-generated',
-                            }[release.ai_artwork]}
+                            AI_LEVELS[
+                                release.ai_artwork as keyof typeof AI_LEVELS
+                            ]}
                     </Detail>
                     <Detail label="℗ line">{release.p_line}</Detail>
                     <Detail label="© line">{release.c_line}</Detail>
@@ -949,7 +922,7 @@ export default function ShowRelease({
             <div className="grid gap-6">
                 <Panel
                     title="Items"
-                    description="Every name a statement, shop or manual entry used for this release or one of its tracks. A line with that name is booked on the track shown, and counts for that track's contract."
+                    description="Every name a statement, platform or manual entry used for this release or one of its tracks. A line with that name is booked on the track shown, and counts for that track's contract."
                     flush
                 >
                     <Table>
@@ -958,7 +931,7 @@ export default function ShowRelease({
                                 <TableHead>Name on statements</TableHead>
                                 <TableHead>Booked on</TableHead>
                                 <TableHead className="text-right">
-                                    Bookings
+                                    Transactions
                                 </TableHead>
                                 <TableHead className="text-right">
                                     Amount
@@ -1019,10 +992,3 @@ export default function ShowRelease({
         </Page>
     );
 }
-
-ShowRelease.layout = {
-    breadcrumbs: [
-        { title: 'Releases', href: index() },
-        { title: 'Release', href: '#' },
-    ],
-};

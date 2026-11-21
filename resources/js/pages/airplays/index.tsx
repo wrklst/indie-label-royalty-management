@@ -45,18 +45,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { useFilters } from '@/hooks/use-filters';
 import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
-import { country, date } from '@/lib/format';
+import { country, date, dateTime, plural } from '@/lib/format';
 import { index } from '@/routes/airplays';
 import type { Option, Paginated } from '@/types';
-
-type Origin = 'statement' | 'search' | 'manual';
-
-/** How the label learned of a play, or of a link kept with it. */
-const ORIGINS: Record<Origin, string> = {
-    statement: 'Neighbouring rights statement',
-    search: 'Web search',
-    manual: 'Entered by hand',
-};
+import { ORIGINS } from '@/lib/origins';
+import type { Origin } from '@/lib/origins';
 
 type AirplayLink = {
     url: string;
@@ -142,7 +135,7 @@ type SearchEntry = {
 
 /** The station of a play, or how to call a play whose station is not known. */
 function stationName(airplay: Airplay): string {
-    return airplay.station ?? 'an unidentified station';
+    return airplay.station ?? 'an unknown station';
 }
 
 type SearchResult = {
@@ -358,9 +351,7 @@ function LinksDialog({
                                         <ExternalLink className="size-3 shrink-0" />
                                     </a>
                                     <p className="truncate text-xs text-muted-foreground">
-                                        {link.source === 'search'
-                                            ? 'Found by web search'
-                                            : 'Added by hand'}
+                                        {ORIGINS[link.source ?? 'manual']}
                                         {' · '}
                                         {link.url}
                                     </p>
@@ -834,7 +825,7 @@ function ResearchLog({ searches }: { searches: Paginated<SearchEntry> }) {
                     {searches.data.map((entry) => (
                         <TableRow key={entry.id}>
                             <TableCell className="align-top text-muted-foreground">
-                                {entry.created_at}
+                                {dateTime(entry.created_at)}
                             </TableCell>
                             <TableCell className="align-top">
                                 <RecordLink to="track" id={entry.track_id}>
@@ -843,8 +834,7 @@ function ResearchLog({ searches }: { searches: Paginated<SearchEntry> }) {
                                 {entry.airplay_id !== null && (
                                     <p className="text-xs text-muted-foreground">
                                         Play on{' '}
-                                        {entry.station ??
-                                            'an unidentified station'}
+                                        {entry.station ?? 'an unknown station'}
                                     </p>
                                 )}
                             </TableCell>
@@ -858,8 +848,15 @@ function ResearchLog({ searches }: { searches: Paginated<SearchEntry> }) {
                                 {entry.succeeded ? (
                                     <details>
                                         <summary className="cursor-pointer">
-                                            {entry.results.length} result(s),{' '}
-                                            {entry.new_findings} new finding(s)
+                                            {plural(
+                                                entry.results.length,
+                                                'result',
+                                            )}
+                                            ,{' '}
+                                            {plural(
+                                                entry.new_findings,
+                                                'new finding',
+                                            )}
                                         </summary>
                                         <ul className="mt-1 grid gap-1 text-xs">
                                             {entry.results.map((result) => (
@@ -971,13 +968,13 @@ export default function Airplays({
                         />
                     )}
                     <FormDialog
-                        title="Add airplay"
+                        title="New airplay"
                         form={AirplayController.store.form()}
-                        submitLabel="Add airplay"
+                        submitLabel="Create airplay"
                         trigger={
                             <Button>
                                 <Plus />
-                                Add airplay
+                                New airplay
                             </Button>
                         }
                     >
@@ -1073,7 +1070,7 @@ export default function Airplays({
                                     <TableCell>
                                         {airplay.station ?? (
                                             <span className="text-muted-foreground italic">
-                                                Unidentified
+                                                Unknown
                                             </span>
                                         )}
                                         <p className="text-xs text-muted-foreground">
@@ -1125,7 +1122,7 @@ export default function Airplays({
                                                       'failed'
                                                     ? `Research failed: ${airplay.research_step ?? ''}`
                                                     : airplay.researched_at
-                                                      ? `Researched ${date(airplay.researched_at.slice(0, 10))}`
+                                                      ? `Researched ${date(airplay.researched_at)}`
                                                       : 'Not researched yet'}
                                         </p>
                                     </TableCell>

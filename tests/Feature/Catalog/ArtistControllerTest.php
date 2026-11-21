@@ -137,7 +137,8 @@ test('an artist is updated', function () {
         ->from(route('artists.index'))
         ->put(route('artists.update', $artist->id), ['name' => 'Renamed Artist', 'alias_of_id' => $main->id, 'notes' => 'Now an alias.'])
         ->assertSessionHasNoErrors()
-        ->assertRedirect(route('artists.index'));
+        ->assertRedirect(route('artists.index'))
+        ->assertInertiaFlash('toast.message', 'Artist saved.');
 
     $this->assertDatabaseHas('artists', ['id' => $artist->id, 'name' => 'Renamed Artist', 'alias_of_id' => $main->id, 'notes' => 'Now an alias.']);
 });

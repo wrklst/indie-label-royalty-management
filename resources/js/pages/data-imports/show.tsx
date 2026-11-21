@@ -1,6 +1,6 @@
 import { MoneyFlow } from '@/components/money-flow';
 import type { Flow } from '@/components/money-flow';
-import { Form, Link } from '@inertiajs/react';
+import { Form, Link, setLayoutProps } from '@inertiajs/react';
 import DataImportController from '@/actions/App/Http/Controllers/DataImportController';
 import { Amount } from '@/components/amount';
 import { IncomeReport } from '@/components/income-report';
@@ -8,7 +8,7 @@ import type { Report } from '@/components/income-report';
 import { DeleteButton } from '@/components/delete-button';
 import { SelectInput } from '@/components/field';
 import InputError from '@/components/input-error';
-import { Page, Panel, Stat } from '@/components/page';
+import { Notice, Page, Panel, Stat } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -18,7 +18,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { date } from '@/lib/format';
+import { count, date, plural } from '@/lib/format';
 import { index as catalog } from '@/routes/catalog';
 import { create, index } from '@/routes/data-imports';
 import { index as items } from '@/routes/items';
@@ -73,8 +73,9 @@ type Duplicate = {
 };
 
 const DECISIONS: Record<string, string> = {
-    replace: 'Merge: keep the lines of this file, remove the existing booking',
-    skip: 'Leave these lines of the file out, keep the existing booking',
+    replace:
+        'Merge: keep the lines of this file, remove the existing transaction',
+    skip: 'Leave these lines of the file out, keep the existing transaction',
     both: 'Not a duplicate: keep both',
 };
 
@@ -86,14 +87,14 @@ function DuplicateSides({ duplicate }: { duplicate: Duplicate }) {
                     Already booked
                 </p>
                 <ul className="mt-1 grid gap-1">
-                    {duplicate.existing.map((booking) => (
-                        <li key={booking.id}>
-                            <Amount value={booking.total} /> · paid{' '}
-                            {date(booking.paid)}
-                            {booking.source && ` · ${booking.source}`}
-                            {booking.memo && (
+                    {duplicate.existing.map((transaction) => (
+                        <li key={transaction.id}>
+                            <Amount value={transaction.total} /> · paid{' '}
+                            {date(transaction.paid)}
+                            {transaction.source && ` · ${transaction.source}`}
+                            {transaction.memo && (
                                 <p className="text-xs text-muted-foreground">
-                                    {booking.memo}
+                                    {transaction.memo}
                                 </p>
                             )}
                         </li>
@@ -106,7 +107,7 @@ function DuplicateSides({ duplicate }: { duplicate: Duplicate }) {
                 </p>
                 <p className="mt-1">
                     <Amount value={duplicate.imported.total} /> in{' '}
-                    {duplicate.imported.count} line(s)
+                    {plural(duplicate.imported.count, 'line')}
                 </p>
                 {duplicate.imported.tracks.length > 0 && (
                     <p className="text-xs text-muted-foreground">
@@ -131,7 +132,7 @@ function DuplicateReview({
     return (
         <Panel
             title={`Possible duplicates (${duplicates.length})`}
-            description="Lines of this file look like bookings that exist already, so nothing was imported yet. A merge keeps the detailed lines of the file and removes the earlier booking; the lines stay unpublished if the booking was, and take over its contract, payee and ledger."
+            description="Lines of this file look like transactions that exist already, so nothing was imported yet. A merge keeps the detailed lines of the file and removes the earlier transaction; the lines stay unpublished if the transaction was, and take over its contract, payee and ledger."
         >
             <Form
                 {...DataImportController.resolve.form(importId)}
@@ -192,6 +193,13 @@ export default function ShowDataImport({
     const unconverted = dataImport.metadata?.unconverted ?? 0;
     const unassigned = dataImport.metadata?.unassigned ?? 0;
 
+    setLayoutProps({
+        breadcrumbs: [
+            { title: 'Data imports', href: index() },
+            { title: dataImport.name, href: '#' },
+        ],
+    });
+
     return (
         <Page
             title={dataImport.name}
@@ -204,7 +212,7 @@ export default function ShowDataImport({
                     {[
                         dataImport.importer_name,
                         dataImport.original_filename,
-                        `uploaded ${date(dataImport.created_at.slice(0, 10))}${dataImport.user ? ` by ${dataImport.user}` : ''}`,
+                        `uploaded ${date(dataImport.created_at)}${dataImport.user ? ` by ${dataImport.user}` : ''}`,
                         dataImport.default_paid_timestamp &&
                             `paid ${date(dataImport.default_paid_timestamp)}`,
                     ]
@@ -233,7 +241,7 @@ export default function ShowDataImport({
                             label="Delete import"
                             confirmLabel="Delete import and transactions"
                             title={`Delete ${dataImport.name}?`}
-                            description={`${dataImport.transactions_count.toLocaleString('en-GB')} transaction(s) from this file are deleted. Releases and tracks it created stay in the catalog. Statements already generated keep their figures.`}
+                            description={`${plural(dataImport.transactions_count, 'transaction')} from this file ${dataImport.transactions_count === 1 ? 'is' : 'are'} deleted. Releases and tracks it created stay in the catalog. Statements already generated keep their figures.`}
                         />
                     )}
                 </>
@@ -264,7 +272,7 @@ export default function ShowDataImport({
             {resolved.length > 0 && (
                 <Panel
                     title="Duplicates decided at import"
-                    description="What was done about lines that looked like existing bookings."
+                    description="What was done about lines that looked like existing transactions."
                 >
                     <div className="grid gap-4">
                         {resolved.map((duplicate) => (
@@ -297,17 +305,13 @@ export default function ShowDataImport({
                         />
                         <Stat
                             label="Transactions"
-                            value={dataImport.transactions_count.toLocaleString(
-                                'en-GB',
-                            )}
-                            hint={`of ${dataImport.rows_count.toLocaleString('en-GB')} lines in the file`}
+                            value={count(dataImport.transactions_count)}
+                            hint={`of ${count(dataImport.rows_count)} lines in the file`}
                         />
                         <Stat
                             label="Skipped"
-                            value={(
-                                dataImport.duplicates_count + skipped
-                            ).toLocaleString('en-GB')}
-                            hint={`${dataImport.duplicates_count.toLocaleString('en-GB')} already imported, ${skipped.toLocaleString('en-GB')} not sales`}
+                            value={count(dataImport.duplicates_count + skipped)}
+                            hint={`${count(dataImport.duplicates_count)} already imported, ${count(skipped)} not sales`}
                         />
                         <Stat
                             label="Added to catalog"
@@ -321,16 +325,14 @@ export default function ShowDataImport({
                     {(unassigned > 0 ||
                         unconverted > 0 ||
                         dataImport.errors_count > 0) && (
-                        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-                            <p className="font-medium">To clean up</p>
-                            <ul className="mt-1 grid gap-1">
+                        <Notice title="To clean up">
+                            <ul className="grid gap-1">
                                 {unassigned > 0 && (
                                     <li>
-                                        {unassigned.toLocaleString('en-GB')}{' '}
-                                        transaction(s) could not be matched to a
-                                        release
+                                        {plural(unassigned, 'transaction')}{' '}
+                                        could not be matched to a release
                                         {unassignedItems > 0
-                                            ? ` (${unassignedItems} item${unassignedItems === 1 ? '' : 's'})`
+                                            ? ` (${plural(unassignedItems, 'item')})`
                                             : ''}
                                         .{' '}
                                         <Link
@@ -345,9 +347,14 @@ export default function ShowDataImport({
                                 )}
                                 {unconverted > 0 && (
                                     <li>
-                                        {unconverted.toLocaleString('en-GB')}{' '}
-                                        transaction(s) are in another currency
-                                        and have no conversion rate, so they are
+                                        {plural(unconverted, 'transaction')}{' '}
+                                        {unconverted === 1 ? 'is' : 'are'} in
+                                        another currency and{' '}
+                                        {unconverted === 1 ? 'has' : 'have'} no
+                                        conversion rate, so{' '}
+                                        {unconverted === 1
+                                            ? 'it is'
+                                            : 'they are'}{' '}
                                         not counted.{' '}
                                         <Link
                                             href={transactions({
@@ -364,15 +371,19 @@ export default function ShowDataImport({
                                 )}
                                 {dataImport.errors_count > 0 && (
                                     <li>
-                                        {dataImport.errors_count.toLocaleString(
-                                            'en-GB',
+                                        {plural(
+                                            dataImport.errors_count,
+                                            'line',
                                         )}{' '}
-                                        line(s) could not be read and were left
-                                        out. See below.
+                                        could not be read and{' '}
+                                        {dataImport.errors_count === 1
+                                            ? 'was'
+                                            : 'were'}{' '}
+                                        left out. See below.
                                     </li>
                                 )}
                             </ul>
-                        </div>
+                        </Notice>
                     )}
 
                     {dataImport.created_releases_count > 0 && (
@@ -433,10 +444,3 @@ export default function ShowDataImport({
         </Page>
     );
 }
-
-ShowDataImport.layout = {
-    breadcrumbs: [
-        { title: 'Data imports', href: index() },
-        { title: 'Import', href: '#' },
-    ],
-};

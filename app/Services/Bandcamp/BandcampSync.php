@@ -124,7 +124,7 @@ class BandcampSync
                 $import = $this->import($label, $new, $from, $to, $userId);
 
                 if ($import->status === ImportStatus::Review) {
-                    throw new BandcampException("Sales from {$from->toDateString()} to {$to->toDateString()} look like bookings that exist already. Decide about them under Data imports, then sync again.");
+                    throw new BandcampException("Sales from {$from->toDateString()} to {$to->toDateString()} look like transactions that exist already. Decide about them under Data imports, then sync again.");
                 }
 
                 if ($import->status !== ImportStatus::Imported) {

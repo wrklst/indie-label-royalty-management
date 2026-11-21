@@ -201,7 +201,8 @@ test('a payee is updated', function () {
         ->from(route('payees.show', $payee->id))
         ->put(route('payees.update', $payee->id), ['name' => 'Renamed Payee', 'email' => 'renamed@example.com', 'tags' => 'producer, publisher', 'notes' => 'Updated.'])
         ->assertSessionHasNoErrors()
-        ->assertRedirect(route('payees.show', $payee->id));
+        ->assertRedirect(route('payees.show', $payee->id))
+        ->assertInertiaFlash('toast.message', 'Payee saved.');
 
     $payee->refresh();
 

@@ -23,6 +23,7 @@ import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
 import { index, show } from '@/routes/payees';
 import type { Paginated } from '@/types';
+import { count } from '@/lib/format';
 
 export type Payee = {
     id: number;
@@ -56,7 +57,7 @@ export function PayeeFields({
                 label="Email"
                 htmlFor="email"
                 error={errors.email}
-                hint="Only for your reference. Portal access is granted under Settings → Team."
+                hint="Only for your reference. Access to My statements is granted under Settings → Team."
             >
                 <Input
                     id="email"
@@ -214,14 +215,14 @@ export default function Payees({
                                                 no splits
                                             </Badge>
                                         ) : (
-                                            payee.splits_count
+                                            count(payee.splits_count)
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {payee.statements_count}
+                                        {count(payee.statements_count)}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {payee.payouts_count}
+                                        {count(payee.payouts_count)}
                                     </TableCell>
                                     <TableCell>
                                         <FormDialog

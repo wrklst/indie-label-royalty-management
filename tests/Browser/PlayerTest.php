@@ -159,7 +159,7 @@ test('a release is played and queued as a whole from the release list', function
     $this->actingAs($scenario['admin']);
 
     visit('/releases')
-        ->click("[aria-label=\"Add release {$name} to queue\"]")
+        ->click("[aria-label=\"Queue release {$name}\"]")
         ->assertSee('2 tracks added to the queue.')
         ->assertSeeIn('[data-player="count"]', '2')
         ->wait(1)

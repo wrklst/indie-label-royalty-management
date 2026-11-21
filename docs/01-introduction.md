@@ -6,7 +6,7 @@ Label Office is royalty accounting and release management for independent record
 
 - **Imports the statements you already get.** Distributor statements, Bandcamp sales reports, neighbouring rights statements and a generic spreadsheet template are read as CSV or Excel. Releases, tracks and artists are created from the files.
 - **Splits income by contract.** A contract says which payee gets which share. Expenses can be recouped before anyone is paid.
-- **Closes accounting periods.** A period shows what every payee has earned, what is still unrecouped and what is payable. Statements are frozen snapshots a payee can read in their own portal.
+- **Closes accounting periods.** A period shows what every payee has earned, what is still unrecouped and what is payable. Statements are frozen snapshots a payee can read under **My statements**.
 - **Keeps the catalog together.** Every release holds its metadata, cover, audio masters and documents. Audio plays in the browser.
 - **Tracks airplay.** Radio plays from neighbouring rights statements are listed per track and can be researched on the web.
 
@@ -42,7 +42,7 @@ This assumes the software is installed and you can sign in. If not, start with [
 
 1. **Create your label.** After the first sign-in you are asked for the label's name and accounting currency. The currency cannot be changed once transactions exist.
 2. **Import a statement.** Open **Royalties → Data imports**, choose **Import a statement** and upload a file from your distributor. The source is detected from the columns. See [Importing statements](10-importing-statements.md).
-3. **Look at what was created.** **Catalog → Releases** now lists the releases named in the file. Open one to see its tracks and its income by track and retailer.
+3. **Look at what was created.** **Catalog → Releases** now lists the releases named in the file. Open one to see its tracks and its income by track and platform.
 4. **Add a payee and a contract.** Under **Catalog → Payees** create the artist, then under **Catalog → Contracts** a contract that gives them, say, 50%. See [Contracts, payees and ledgers](30-contracts-payees-and-ledgers.md).
 5. **Assign the contract.** Open **Catalog → Catalog manager** and set the contract on the release. Every transaction of that release now follows it.
 6. **Create a period.** Under **Royalties → Periods** create the quarter the statement was paid in. The period lists each payee with their share.

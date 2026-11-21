@@ -41,7 +41,7 @@ class StatementController extends Controller
                     'payee' => $statement->payee?->name,
                     'period' => $statement->period?->name,
                     'published' => $statement->published_at !== null,
-                    'created_at' => $statement->created_at->toDateTimeString(),
+                    'created_at' => $statement->created_at->toIso8601String(),
                 ]),
             'filters' => ['archived' => $request->boolean('archived'), 'period' => $request->integer('period') ?: null, ...$sorting->toArray()],
         ]);
@@ -53,7 +53,7 @@ class StatementController extends Controller
             'statement' => [
                 ...$statement->only(['id', 'name', 'archived', 'revision_of_id', 'period_id', 'payee_id']),
                 'published' => $statement->published_at !== null,
-                'created_at' => $statement->created_at->toDateTimeString(),
+                'created_at' => $statement->created_at->toIso8601String(),
                 'data' => $statement->data,
             ],
             'portal' => false,
@@ -152,7 +152,7 @@ class StatementController extends Controller
 
             $put([]);
             $put(['Income']);
-            $put(['Release', 'Track', 'Contract', 'Format', 'Quantity', 'Income', 'Split %', 'Your share']);
+            $put(['Release', 'Track', 'Contract', 'Format', 'Units', 'Income', 'Split %', 'Your share']);
 
             foreach ($data['income_rows'] ?? [] as $row) {
                 $put([$row['release_name'], $row['track_name'], $row['contract_name'], $row['format'], Decimal::round($row['quantity'], 2), $money($row['amount']), Decimal::round(Decimal::mul($row['split'], '100'), 4), $money($row['payee_share'])]);

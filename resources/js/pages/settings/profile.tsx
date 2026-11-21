@@ -26,15 +26,15 @@ export default function Profile({
 
     return (
         <>
-            <Head title="Profile settings" />
+            <Head title="Profile" />
 
-            <h1 className="sr-only">Profile settings</h1>
+            <h1 className="sr-only">Profile</h1>
 
             <div className="space-y-6">
                 <Heading
                     variant="small"
                     title="Profile"
-                    description="Update your name and email address"
+                    description="Update your name and email address."
                 />
 
                 <Form
@@ -131,7 +131,7 @@ export default function Profile({
 Profile.layout = {
     breadcrumbs: [
         {
-            title: 'Profile settings',
+            title: 'Profile',
             href: edit(),
         },
     ],

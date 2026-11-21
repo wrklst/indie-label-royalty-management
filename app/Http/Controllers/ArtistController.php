@@ -157,7 +157,7 @@ class ArtistController extends Controller
     {
         $artist->update($request->validated());
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Artist updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Artist saved.')]);
 
         return back();
     }

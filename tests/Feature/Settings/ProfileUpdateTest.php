@@ -136,7 +136,7 @@ test('a changed email address gets a confirmation link', function () {
 
     $this->actingAs($user)
         ->patch(route('profile.update'), ['name' => $user->name, 'email' => 'new@example.com'])
-        ->assertInertiaFlash('toast.message', 'Profile updated. Confirm the new address with the link we sent to it.');
+        ->assertInertiaFlash('toast.message', 'Profile saved. Confirm the new address with the link we sent to it.');
 
     Notification::assertSentTo($user, VerifyEmail::class);
     expect($user->refresh()->email_verified_at)->toBeNull();

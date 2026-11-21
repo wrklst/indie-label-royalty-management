@@ -50,7 +50,7 @@ export function SelectInput({
     children,
     ...props
 }: ComponentProps<'select'> & {
-    options?: (Option | string)[];
+    options?: (Option | { id: string; name: string } | string)[];
     placeholder?: string;
 }) {
     return (

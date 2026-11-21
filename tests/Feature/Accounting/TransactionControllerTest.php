@@ -83,7 +83,7 @@ test('the transaction list shows the newest sale first with totals for the label
             ->where('summary.transactions', 4)
             ->where('summary.total', '50.000000000000000')
             ->where('summary.quantity', '5.000000000000000')
-            ->where('retailerOptions', ['Example Store', 'Other Shop'])
+            ->where('platformOptions', [['id' => 'x-example-store', 'name' => 'Example Store'], ['id' => 'x-other-shop', 'name' => 'Other Shop'], ['id' => 'unknown', 'name' => 'Unknown']])
             ->has('importOptions', 1)
             ->has('releaseOptions', 1));
 });
@@ -105,7 +105,7 @@ test('the transaction list and its totals follow the filter', function (array $q
     'type' => [['type' => 'expense'], ['Bravo'], '-40.000000000000000'],
     'release' => [['release' => ':release'], ['Alpha', 'Bravo'], '60.000000000000000'],
     'import' => [['import' => ':import'], ['Alpha'], '100.000000000000000'],
-    'retailer' => [['retailer' => 'Example Store'], ['Alpha'], '100.000000000000000'],
+    'platform' => [['retailer' => 'x-example-store'], ['Alpha'], '100.000000000000000'],
     'sold from' => [['from' => '2026-02-01'], ['Bravo', 'Charlie', 'Delta'], '-50.000000000000000'],
     'sold until' => [['to' => '2026-02-28'], ['Alpha', 'Bravo'], '60.000000000000000'],
     'sold between' => [['from' => '2026-02-01', 'to' => '2026-02-28'], ['Bravo'], '-40.000000000000000'],
@@ -152,6 +152,25 @@ test('the new transaction form defaults to an income and offers only records of 
             ->has('payeeOptions', 0)
             ->where('categories', config('royalties.categories'))
             ->where('formats', config('royalties.formats')));
+});
+
+test('the platform filter treats the spellings of one platform as one choice', function () {
+    $label = Label::factory()->create();
+    foreach (['Apple' => 'First', 'Apple/iTunes' => 'Second', 'Example Store' => 'Third'] as $retailer => $memo) {
+        Transaction::factory()->create(['label_id' => $label->id, 'memo' => $memo, 'retailer' => $retailer]);
+    }
+    Transaction::factory()->create(['label_id' => $label->id, 'memo' => 'Fourth', 'retailer' => null]);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('transactions.index', ['retailer' => 'apple_music']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('platformOptions', [['id' => 'apple_music', 'name' => 'Apple Music'], ['id' => 'x-example-store', 'name' => 'Example Store'], ['id' => 'unknown', 'name' => 'Unknown']])
+            ->where('transactions.data', fn ($rows) => collect($rows)->pluck('memo')->sort()->values()->all() === ['First', 'Second']));
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('transactions.index', ['retailer' => 'unknown']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('transactions.data', fn ($rows) => collect($rows)->pluck('memo')->all() === ['Fourth']));
 });
 
 test('a transaction of each type can be entered by hand', function (string $type, string $total) {

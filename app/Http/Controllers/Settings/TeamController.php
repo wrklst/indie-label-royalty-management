@@ -88,7 +88,7 @@ class TeamController extends Controller
 
         $label->users()->updateExistingPivot($user->id, $this->pivot($request));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Access updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Access saved.')]);
 
         return back();
     }

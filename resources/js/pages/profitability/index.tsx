@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Download } from 'lucide-react';
 import { Amount } from '@/components/amount';
 import { SelectInput } from '@/components/field';
-import { EmptyState, Page, Panel, Stat } from '@/components/page';
+import { EmptyState, Notice, Page, Panel, Stat } from '@/components/page';
 import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { useFilters } from '@/hooks/use-filters';
 import { useTableSort } from '@/hooks/use-table-sort';
-import { percent } from '@/lib/format';
+import { percent, plural } from '@/lib/format';
 import { download, index } from '@/routes/profitability';
 import { show as showRelease } from '@/routes/releases';
 import { index as transactions } from '@/routes/transactions';
@@ -79,7 +79,7 @@ const COLUMNS: { key: keyof Figures; label: string; hint: string }[] = [
     {
         key: 'label_costs',
         label: 'Label costs',
-        hint: 'One-time payments and other costs the label bears alone.',
+        hint: 'Every expense the label bears alone, with or without a release.',
     },
     {
         key: 'label_result',
@@ -158,7 +158,7 @@ export default function Profitability({
     const { apply } = useFilters(index.url(), filters);
     const filtered =
         filters.from !== null || filters.to !== null || filters.artist !== null;
-    // "Not assigned to a release" and "Label overheads" stay below the
+    // "Not assigned to a release" and "Overheads" stay below the
     // releases however those are sorted.
     const releaseRows = useMemo(
         () => rows.filter((row) => row.release_id !== null),
@@ -176,7 +176,7 @@ export default function Profitability({
     return (
         <Page
             title="Profitability"
-            description="What the label is left with per release: income, minus recoupable expenses, minus what payees earn, minus the costs the label bears alone such as one-time payments. Advances are prepaid royalties, not costs, so they are listed for information and are not part of the label result."
+            description="What the label is left with per release: income, minus recoupable expenses, minus what payees earn, minus the costs the label bears alone such as one-off costs. Advances are prepaid royalties, not costs, so they are listed for information and are not part of the label result."
             actions={
                 <Button variant="outline" asChild>
                     <a href={download.url({ query })}>
@@ -247,16 +247,16 @@ export default function Profitability({
             </div>
 
             {unconverted > 0 && (
-                <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                <Notice>
                     <Link
                         href={transactions({ query: { unconverted: 1 } })}
                         className="underline underline-offset-4"
                     >
-                        {unconverted} transaction{unconverted === 1 ? '' : 's'}{' '}
-                        without a conversion rate
+                        {plural(unconverted, 'transaction')} without a
+                        conversion rate
                     </Link>{' '}
                     {unconverted === 1 ? 'is' : 'are'} not counted here.
-                </div>
+                </Notice>
             )}
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -321,7 +321,7 @@ export default function Profitability({
                             ? 'Nothing was booked in this range'
                             : 'No transactions yet'
                     }
-                    description="Income, expenses and one-time payments show up here once they are booked."
+                    description="Income, expenses and label costs show up here once they are booked."
                 />
             ) : (
                 <Panel flush>

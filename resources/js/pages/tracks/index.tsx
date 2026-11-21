@@ -7,7 +7,7 @@ import { FormDialog } from '@/components/form-dialog';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
 import { TrackActions } from '@/components/player/track-actions';
-import { RecordLink } from '@/components/record-link';
+import { RecordLink, recordLinkClass } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -161,7 +161,9 @@ export default function Tracks({
                                                         href={showRelease(
                                                             release.id,
                                                         )}
-                                                        className="underline decoration-muted-foreground/40 underline-offset-4"
+                                                        className={
+                                                            recordLinkClass
+                                                        }
                                                     >
                                                         {release.name}
                                                     </Link>
@@ -182,7 +184,7 @@ export default function Tracks({
                                             </span>
                                         ) : (
                                             <Badge variant="warning">
-                                                none
+                                                No contract
                                             </Badge>
                                         )}
                                         {track.without_contract_on.map(
@@ -192,7 +194,7 @@ export default function Tracks({
                                                     variant="warning"
                                                     className="ml-2"
                                                 >
-                                                    none on {release}
+                                                    No contract on {release}
                                                 </Badge>
                                             ),
                                         )}
@@ -356,7 +358,7 @@ export default function Tracks({
                                                                 />
                                                             </Field>
                                                             <Field
-                                                                label="Duration (seconds)"
+                                                                label="Length (seconds)"
                                                                 htmlFor="duration"
                                                                 error={
                                                                     errors.duration

@@ -17,7 +17,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { date, quantity } from '@/lib/format';
+import { count, date, quantity } from '@/lib/format';
 import { index } from '@/routes/play-counts';
 
 type Props = {
@@ -59,7 +59,7 @@ export default function PlayCounts({
             description="What the platforms themselves say was played: how it developed, on which platform, and which releases and tracks it was. Held against the streams on your statements."
         >
             <Panel
-                title="Add a file"
+                title="Import a file"
                 description="The file as the portal exported it, CSV or Excel. The platform and the days are read from it; a file without dates counts as the total up to today. A newer file replaces earlier counts of the same track and platform for the days it covers."
             >
                 <Form
@@ -171,7 +171,7 @@ export default function PlayCounts({
                                         <div>{file.source_file}</div>
                                         {file.unmatched.length > 0 && (
                                             <div className="mt-1 max-w-md text-xs whitespace-normal text-muted-foreground">
-                                                Not in the catalogue under that
+                                                Not in the catalog under that
                                                 name:{' '}
                                                 {file.unmatched.join(', ')}
                                             </div>
@@ -197,13 +197,14 @@ export default function PlayCounts({
                                         {date(file.starts)} – {date(file.ends)}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {file.matched} of {file.counts}
+                                        {count(file.matched)} of{' '}
+                                        {count(file.counts)}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
                                         {quantity(file.plays)}
                                     </TableCell>
                                     <TableCell className="whitespace-nowrap text-muted-foreground">
-                                        {date(file.created_at.slice(0, 10))}
+                                        {date(file.created_at)}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <DeleteButton

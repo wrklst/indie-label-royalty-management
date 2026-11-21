@@ -53,7 +53,7 @@ class AirplayResearchController extends Controller
         Track::query()->whereIn('id', $trackIds)->update(['research_state' => ResearchState::QUEUED, 'research_step' => null, 'research_state_at' => now()]);
         $trackIds->each(fn (int $trackId) => ResearchTrackAirplay::dispatch($trackId));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __(':count track(s) queued for research. Findings appear here as they come in.', ['count' => $trackIds->count()])]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => trans_choice(':count track queued for research.|:count tracks queued for research.', $trackIds->count()).' '.__('Findings appear here as they come in.')]);
 
         return back();
     }

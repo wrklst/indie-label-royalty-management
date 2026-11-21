@@ -6,7 +6,7 @@ import { Amount } from '@/components/amount';
 import { SelectInput } from '@/components/field';
 import { IncomeReport, MoversPanel } from '@/components/income-report';
 import type { Movers, Report } from '@/components/income-report';
-import { EmptyState, Page, Stat } from '@/components/page';
+import { EmptyState, Notice, Page, Stat } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useFilters } from '@/hooks/use-filters';
@@ -18,6 +18,7 @@ import {
 } from '@/routes/data-imports';
 import { index as items } from '@/routes/items';
 import { index as transactions } from '@/routes/transactions';
+import { count, plural } from '@/lib/format';
 
 type Props = {
     filters: { from: string; to: string; date: 'sold' | 'paid' };
@@ -46,19 +47,19 @@ export default function Dashboard({
     const { apply } = useFilters(dashboard.url(), filters);
     const todo = [
         attention.unassigned_items > 0 && {
-            text: `${attention.unassigned_items} item${attention.unassigned_items === 1 ? '' : 's'} not assigned to a release`,
+            text: `${plural(attention.unassigned_items, 'item')} not assigned to a release`,
             href: items({ query: { unassigned: 1 } }),
         },
         attention.releases_without_contract > 0 && {
-            text: `${attention.releases_without_contract} release${attention.releases_without_contract === 1 ? '' : 's'} without a contract`,
+            text: `${plural(attention.releases_without_contract, 'release')} without a contract`,
             href: catalog(),
         },
         attention.unconverted > 0 && {
-            text: `${attention.unconverted} transaction${attention.unconverted === 1 ? '' : 's'} without a conversion rate`,
+            text: `${plural(attention.unconverted, 'transaction')} without a conversion rate`,
             href: transactions({ query: { unconverted: 1 } }),
         },
         attention.imports > 0 && {
-            text: `${attention.imports} import${attention.imports === 1 ? '' : 's'} flagged for cleanup`,
+            text: `${plural(attention.imports, 'import')} flagged for cleanup`,
             href: imports(),
         },
     ].filter((entry) => entry !== false);
@@ -124,11 +125,8 @@ export default function Dashboard({
             }
         >
             {todo.length > 0 && (
-                <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-                    <p className="font-medium">
-                        Needs attention before the next statements
-                    </p>
-                    <ul className="mt-1 grid gap-0.5">
+                <Notice title="Needs attention before the next statements">
+                    <ul className="grid gap-0.5">
                         {todo.map((entry) => (
                             <li key={entry.text}>
                                 <Link
@@ -140,7 +138,7 @@ export default function Dashboard({
                             </li>
                         ))}
                     </ul>
-                </div>
+                </Notice>
             )}
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -159,10 +157,7 @@ export default function Dashboard({
                         />
                     }
                 />
-                <Stat
-                    label="Transactions"
-                    value={totals.transactions.toLocaleString('en-GB')}
-                />
+                <Stat label="Transactions" value={count(totals.transactions)} />
             </div>
 
             <MoneyFlow flow={flow} />

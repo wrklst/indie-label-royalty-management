@@ -43,7 +43,7 @@ test('mechanicals are reported for a range, booked, and an overlapping run needs
         ->assertSeeIn('[data-slot="table-body"]', '€55.00')
         ->click('[data-test="create-transactions"]')
         ->fill('#paid_on', '2026-03-31')
-        ->press('Create')
+        ->press('[role="dialog"] button:has-text("Book")')
         ->assertSee('2 transactions created.')
         ->assertNoJavaScriptErrors();
 
@@ -55,10 +55,10 @@ test('mechanicals are reported for a range, booked, and an overlapping run needs
         ->press('Show report')
         ->assertSee('This range overlaps an earlier run')
         ->click('[data-test="create-transactions"]')
-        ->press('Create')
+        ->press('[role="dialog"] button:has-text("Book")')
         ->assertSee('An earlier run covers part of this range')
         ->check('#confirm_overlap')
-        ->press('Create')
+        ->press('[role="dialog"] button:has-text("Book")')
         ->assertSee('2 transactions created.')
         ->assertNoJavaScriptErrors();
 
@@ -86,7 +86,7 @@ test('a PPD rate is set on the rates page and the report is booked', function ()
         ->assertSeeIn('[data-slot="table-body"]', '€750.00')
         ->click('[data-test="create-transactions"]')
         ->fill('#paid_on', '2026-03-31')
-        ->press('Create')
+        ->press('[role="dialog"] button:has-text("Book")')
         ->assertSee('2 transactions created.')
         ->assertSee('Earlier runs')
         ->assertNoJavaScriptErrors();
@@ -111,7 +111,7 @@ test('reserves are held and liquidated on the dates entered', function () {
         ->click('[data-test="create-transactions"]')
         ->fill('#held_on', '2026-03-31')
         ->fill('#liquidated_on', '2026-09-30')
-        ->press('Create')
+        ->press('[role="dialog"] button:has-text("Book")')
         ->assertSee('2 transactions created.')
         ->assertSee('Still held')
         ->assertNoJavaScriptErrors();

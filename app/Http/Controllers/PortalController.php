@@ -52,7 +52,7 @@ class PortalController extends Controller
             'statement' => [
                 ...$statement->only(['id', 'name', 'archived', 'revision_of_id', 'period_id', 'payee_id']),
                 'published' => true,
-                'created_at' => $statement->created_at->toDateTimeString(),
+                'created_at' => $statement->created_at->toIso8601String(),
                 'data' => $statement->data,
             ],
             'portal' => true,

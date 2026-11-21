@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router, setLayoutProps } from '@inertiajs/react';
 import { FileText } from 'lucide-react';
 import PeriodController from '@/actions/App/Http/Controllers/PeriodController';
 import { Page } from '@/components/page';
@@ -15,6 +15,14 @@ type Props = {
 };
 
 export default function PeriodPayee({ period, payee, statement }: Props) {
+    setLayoutProps({
+        breadcrumbs: [
+            { title: 'Periods', href: index() },
+            { title: period.name, href: show(period.id) },
+            { title: payee.name, href: '#' },
+        ],
+    });
+
     return (
         <Page
             title={`${payee.name} · ${period.name}`}
@@ -55,10 +63,3 @@ export default function PeriodPayee({ period, payee, statement }: Props) {
         </Page>
     );
 }
-
-PeriodPayee.layout = {
-    breadcrumbs: [
-        { title: 'Periods', href: index() },
-        { title: 'Payee breakdown', href: '#' },
-    ],
-};

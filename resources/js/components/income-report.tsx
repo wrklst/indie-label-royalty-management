@@ -15,7 +15,15 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { country, date, money, month, quantity } from '@/lib/format';
+import {
+    compact,
+    country,
+    date,
+    decimal,
+    money,
+    month,
+    quantity,
+} from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export type Report = {
@@ -73,11 +81,6 @@ const MOVING =
 /** A line is uncovered from left to right when it first shows. */
 const WIPING =
     'transition-[clip-path] duration-700 ease-out motion-reduce:transition-none';
-
-const compact = new Intl.NumberFormat('en-GB', {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-});
 
 /** What one stream paid, or nothing where no stream was counted. */
 function rate(income: number, streams: number): number | null {
@@ -287,10 +290,8 @@ function Development({
                         >
                             <span className="w-12 shrink-0 text-right">
                                 {metric === 'rate'
-                                    ? (peak * line).toLocaleString('en-GB', {
-                                          maximumFractionDigits: 4,
-                                      })
-                                    : compact.format(peak * line)}
+                                    ? decimal(peak * line, 4)
+                                    : compact(peak * line)}
                             </span>
                             <span className="h-px flex-1 bg-border" />
                         </div>

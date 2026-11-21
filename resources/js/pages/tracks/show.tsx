@@ -1,6 +1,6 @@
 import { PlatformLinks } from '@/components/platform-links';
 import type { PlatformLinksProps } from '@/components/platform-links';
-import { Link, router } from '@inertiajs/react';
+import { Link, router, setLayoutProps } from '@inertiajs/react';
 import { ExternalLink, Radar } from 'lucide-react';
 import AirplayResearchController from '@/actions/App/Http/Controllers/AirplayResearchController';
 import { Amount } from '@/components/amount';
@@ -19,10 +19,11 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { country, date, duration } from '@/lib/format';
+import { country, date, dateTime, duration, plural } from '@/lib/format';
 import { index as airplayIndex } from '@/routes/airplays';
 import { index } from '@/routes/tracks';
 import { index as transactions } from '@/routes/transactions';
+import { ORIGINS } from '@/lib/origins';
 
 type Named = { id: number; name: string };
 
@@ -92,12 +93,6 @@ type Props = {
     searchAvailable: boolean;
 };
 
-const ORIGINS = {
-    statement: 'Neighbouring rights statement',
-    search: 'Web search',
-    manual: 'Entered by hand',
-};
-
 function Fact({
     label,
     children,
@@ -136,6 +131,13 @@ export default function ShowTrack({
     );
     const busy =
         track.research_state === 'queued' || track.research_state === 'running';
+
+    setLayoutProps({
+        breadcrumbs: [
+            { title: 'Tracks', href: index() },
+            { title, href: '#' },
+        ],
+    });
 
     return (
         <Page
@@ -208,8 +210,7 @@ export default function ShowTrack({
                             href={transactions({ query: { track: track.id } })}
                             className="underline underline-offset-4"
                         >
-                            {income.transactions.toLocaleString('en-GB')}{' '}
-                            transaction(s)
+                            {plural(income.transactions, 'transaction')}
                         </Link>
                     }
                 />
@@ -233,7 +234,7 @@ export default function ShowTrack({
                               : track.research_state === 'failed'
                                 ? `Research failed: ${track.research_step ?? ''}`
                                 : track.researched_at
-                                  ? `Researched ${date(track.researched_at.slice(0, 10))}`
+                                  ? `Researched ${date(track.researched_at)}`
                                   : 'Not researched yet'
                     }
                 />
@@ -383,7 +384,7 @@ export default function ShowTrack({
                                     <TableCell>
                                         {airplay.station ?? (
                                             <span className="text-muted-foreground italic">
-                                                Unidentified
+                                                Unknown
                                             </span>
                                         )}
                                         <p className="text-xs text-muted-foreground">
@@ -479,7 +480,7 @@ export default function ShowTrack({
                             {searches.map((entry) => (
                                 <TableRow key={entry.id}>
                                     <TableCell className="text-muted-foreground">
-                                        {entry.created_at}
+                                        {dateTime(entry.created_at)}
                                     </TableCell>
                                     <TableCell className="max-w-md whitespace-normal">
                                         {entry.query}
@@ -491,7 +492,7 @@ export default function ShowTrack({
                                     </TableCell>
                                     <TableCell>
                                         {entry.succeeded ? (
-                                            `${entry.results} result(s), ${entry.new_findings} new finding(s)`
+                                            `${plural(entry.results, 'result')}, ${plural(entry.new_findings, 'new finding')}`
                                         ) : (
                                             <span className="text-red-600 dark:text-red-400">
                                                 {entry.error ?? 'Failed'}
@@ -507,10 +508,3 @@ export default function ShowTrack({
         </Page>
     );
 }
-
-ShowTrack.layout = {
-    breadcrumbs: [
-        { title: 'Tracks', href: index() },
-        { title: 'Track', href: '#' },
-    ],
-};

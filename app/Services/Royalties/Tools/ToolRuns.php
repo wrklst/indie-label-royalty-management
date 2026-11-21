@@ -85,7 +85,7 @@ class ToolRuns
                 'total' => (string) ($import->options['total'] ?? '0'),
                 'paid_on' => $import->default_paid_timestamp?->toDateString(),
                 'transactions_count' => $import->transactions_count,
-                'created_at' => $import->created_at?->toDateTimeString(),
+                'created_at' => $import->created_at?->toIso8601String(),
             ])
             ->all());
     }

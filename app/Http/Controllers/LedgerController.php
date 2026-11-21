@@ -41,7 +41,7 @@ class LedgerController extends Controller
     {
         $ledger->update($request->validated());
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Ledger updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Ledger saved.')]);
 
         return back();
     }

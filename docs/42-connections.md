@@ -23,7 +23,7 @@ Which countries the research searches in is a setting of the label: **Settings �
 
 ## Receipt reading
 
-An AI service can read vendor, date, amount and category off the receipts you upload under **Royalties → Label costs**. Without a service, receipts are stored and booked by hand.
+An AI service can read vendor, date, amount and category off the receipts you upload under **Royalties → Overheads**. Without a service, receipts are stored and booked by hand.
 
 | Service                                                   | What you enter                                           |
 | --------------------------------------------------------- | -------------------------------------------------------- |
@@ -46,12 +46,12 @@ For Infomaniak, OpenAI, Anthropic, Mistral and Google Gemini the **Model** field
 
 Choosing a model shows:
 
-- its description from the catalogue,
+- its description from the catalog,
 - its list price per million tokens and what about a hundred receipts cost (a receipt is counted as 3,000 tokens in and 150 out),
 - whether it answers in a fixed format, so the fields arrive reliably,
 - whether it works a document through before answering (slower, more careful) or answers directly (fast).
 
-Names, prices and descriptions come from [models.dev](https://models.dev), a public catalogue, fetched once a day. Prices are list prices in US dollars and may differ from your own terms with the service. **Another model…** lets you type a name the list does not have. When the catalogue cannot be reached, the field is a plain text field.
+Names, prices and descriptions come from [models.dev](https://models.dev), a public catalog, fetched once a day. Prices are list prices in US dollars and may differ from your own terms with the service. **Another model…** lets you type a name the list does not have. When the catalog cannot be reached, the field is a plain text field.
 
 ### The test
 

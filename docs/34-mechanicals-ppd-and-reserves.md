@@ -31,7 +31,7 @@ The steps are the same for all three:
 1. Open the tool under **Royalties**.
 2. In **Report**, enter **Paid from** and **Paid until** and choose **Show report**.
 3. Read the report and the notices above it. They tell you what was left out and why.
-4. Choose **Create transactions**, enter the date or dates asked for, and choose **Create**.
+4. Choose **Book transactions**, enter the date or dates asked for, and choose **Book**.
 
 The dates you enter in step 4 become the paid dates of the new transactions, so they decide which period the result falls in.
 

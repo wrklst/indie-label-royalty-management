@@ -218,7 +218,7 @@ test('label costs lower the label result as overheads and leave royalties untouc
     $report = app(ProfitabilityReport::class)->forLabel($this->label);
     $royalties = app(RoyaltyCalculator::class)->forPeriod($period);
 
-    expect(array_column($report['rows'], 'release_name'))->toBe(['Example Release', 'Label overheads'])
+    expect(array_column($report['rows'], 'release_name'))->toBe(['Example Release', 'Overheads'])
         ->and($report['rows'][1]['label_costs'])->toBe('-30.000000000000000')
         ->and($report['totals']['label_result'])->toBe('20.000000000000000')
         ->and($royalties['payees'][0]['totals']['payee_share'])->toBe('50.000000000000000')

@@ -109,7 +109,7 @@ class TrackController extends Controller
                 'audio_file_id' => PlayableAudio::forTracks(collect([$track]))->get($track->id)?->id,
                 'contract' => $track->contract?->only(['id', 'name']),
                 'inherited_contract' => $track->contract ? null : $track->release?->contract?->only(['id', 'name']),
-                'researched_at' => $track->researched_at?->toDateTimeString(),
+                'researched_at' => $track->researched_at?->toIso8601String(),
                 'research_state' => ResearchState::visible($track->research_state, $track->research_state_at),
                 'research_step' => $track->research_step,
             ],
@@ -137,7 +137,7 @@ class TrackController extends Controller
                 ->map(fn (AirplaySearch $entry): array => [
                     ...$entry->only(['id', 'query', 'region', 'succeeded', 'new_findings', 'error']),
                     'results' => count($entry->results ?? []),
-                    'created_at' => $entry->created_at?->toDateTimeString(),
+                    'created_at' => $entry->created_at?->toIso8601String(),
                 ]),
             'searchAvailable' => $search->isConfigured(),
             'platformLinks' => PlatformLinkController::props($track),

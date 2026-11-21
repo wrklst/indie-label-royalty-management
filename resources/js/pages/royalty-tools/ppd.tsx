@@ -5,15 +5,13 @@ import RatesController from '@/actions/App/Http/Controllers/RoyaltyTools/RatesCo
 import TransactionController from '@/actions/App/Http/Controllers/TransactionController';
 import { Amount } from '@/components/amount';
 import { Field, SelectInput } from '@/components/field';
-import { Page, Panel, Stat } from '@/components/page';
+import { EmptyState, Notice, Page, Panel, Stat } from '@/components/page';
 import { RecordLink } from '@/components/record-link';
 import {
     CreateTransactions,
-    Notice,
     OverlapNotice,
     RunsPanel,
     plain,
-    today,
 } from '@/components/royalty-tool';
 import type { ToolRun } from '@/components/royalty-tool';
 import { Button } from '@/components/ui/button';
@@ -27,7 +25,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { date, quantity } from '@/lib/format';
+import { date, quantity, today } from '@/lib/format';
 import { index as items } from '@/routes/items';
 import { edit as labelSettings } from '@/routes/label-settings';
 import { index } from '@/routes/royalty-tools/ppd';
@@ -398,10 +396,10 @@ export default function Ppd({
                         flush
                     >
                         {report.rows.length === 0 ? (
-                            <p className="p-4 text-sm text-muted-foreground">
-                                No income with a quantity was paid in this range
-                                on anything that has a PPD rate.
-                            </p>
+                            <EmptyState
+                                compact
+                                title="No income with a quantity was paid in this range on anything that has a PPD rate."
+                            />
                         ) : (
                             <Table>
                                 <TableHeader>
@@ -410,7 +408,7 @@ export default function Ppd({
                                         <TableHead>Track</TableHead>
                                         <TableHead>Rate from</TableHead>
                                         <TableHead className="text-right">
-                                            Quantity
+                                            Units
                                         </TableHead>
                                         <TableHead className="text-right">
                                             Rate

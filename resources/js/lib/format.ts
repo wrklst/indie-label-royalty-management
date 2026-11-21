@@ -51,13 +51,67 @@ export function quantity(value: string | number | null | undefined): string {
     );
 }
 
-/** Format a split fraction such as "0.250000000" as "25%". */
-export function percent(fraction: string | number | null | undefined): string {
+/** A whole number such as a row count: "12,345". */
+export function count(value: string | number | null | undefined): string {
+    if (value === null || value === undefined || value === '') {
+        return '–';
+    }
+
+    return formatter('count', { maximumFractionDigits: 0 }).format(
+        Number(value),
+    );
+}
+
+/** A short number for a chart axis: "1.2K". */
+export function compact(value: number): string {
+    return formatter('compact', {
+        notation: 'compact',
+        maximumFractionDigits: 1,
+    }).format(value);
+}
+
+/** A number with at most `digits` decimals, for a value that is neither money nor a count. */
+export function decimal(value: number, digits: number): string {
+    return formatter(`decimal-${digits}`, {
+        maximumFractionDigits: digits,
+    }).format(value);
+}
+
+/** A count with its noun: plural(1, 'track') is "1 track", plural(2, 'track') is "2 tracks". */
+export function plural(
+    amount: number,
+    singular: string,
+    plural = `${singular}s`,
+): string {
+    return `${count(amount)} ${amount === 1 ? singular : plural}`;
+}
+
+/**
+ * Format a split fraction such as "0.250000000" as "25%". `digits` is the
+ * most decimals shown.
+ */
+export function percent(
+    fraction: string | number | null | undefined,
+    digits = 4,
+): string {
     if (fraction === null || fraction === undefined || fraction === '') {
         return '–';
     }
 
-    return `${formatter('percent', { maximumFractionDigits: 4 }).format(Number(fraction) * 100)}%`;
+    return `${formatter(`percent-${digits}`, { maximumFractionDigits: digits }).format(Number(fraction) * 100)}%`;
+}
+
+/** A file size: "3.4 MB". */
+export function fileSize(bytes: number): string {
+    if (bytes >= 1024 ** 3) {
+        return `${formatter('size-2', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(bytes / 1024 ** 3)} GB`;
+    }
+
+    if (bytes >= 1024 ** 2) {
+        return `${formatter('size-1', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(bytes / 1024 ** 2)} MB`;
+    }
+
+    return `${formatter('size-0', { maximumFractionDigits: 0 }).format(Math.max(1, bytes / 1024))} KB`;
 }
 
 // Month names are spelled out here instead of asking Intl: Node and Safari
@@ -86,6 +140,28 @@ export function date(value: string | null | undefined): string {
     const name = match ? MONTHS[Number(match[2]) - 1] : undefined;
 
     return match && name ? `${match[3]} ${name} ${match[1]}` : value;
+}
+
+/** A moment from an ISO string, in the browser's own time: "19 Nov 2026, 14:03". */
+export function dateTime(value: string | null | undefined): string {
+    if (!value) {
+        return '–';
+    }
+
+    const moment = new Date(value);
+
+    if (Number.isNaN(moment.getTime())) {
+        return value;
+    }
+
+    const pad = (part: number) => String(part).padStart(2, '0');
+
+    return `${pad(moment.getDate())} ${MONTHS[moment.getMonth()]} ${moment.getFullYear()}, ${pad(moment.getHours())}:${pad(moment.getMinutes())}`;
+}
+
+/** The local date as Y-m-d: toISOString() is UTC and gives yesterday shortly after midnight. */
+export function today(): string {
+    return new Date().toLocaleDateString('sv-SE');
 }
 
 export function month(value: string | null | undefined): string {

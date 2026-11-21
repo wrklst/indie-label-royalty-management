@@ -41,7 +41,7 @@ test('the connections page offers the models of a service with their prices and 
         ->select('#ai_provider', 'infomaniak')
         ->assertSee('Product ID')
         ->assertSeeIn('[data-model-details]', 'Small Vision')
-        ->assertSeeIn('[data-model-details]', 'about $0.08 per 100 receipts')
+        ->assertSeeIn('[data-model-details]', 'about US$0.08 per 100 receipts')
         ->select('#ai_model', 'example/large-vision')
         ->assertSeeIn('[data-model-details]', 'slower, more careful')
         ->select('#ai_model', 'other')

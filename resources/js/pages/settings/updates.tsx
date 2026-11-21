@@ -6,6 +6,7 @@ import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { edit } from '@/routes/updates';
+import { dateTime } from '@/lib/format';
 
 type Last = {
     tag: string;
@@ -29,13 +30,6 @@ const outcome: Record<Last['status'], string> = {
     broken: 'Failed, and going back failed too',
     refused: 'Not started',
 };
-
-function dateTime(value: string): string {
-    return new Date(value).toLocaleString(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    });
-}
 
 function LastUpdate({ last }: { last: Last }) {
     return (
@@ -98,7 +92,7 @@ export default function Updates({
                 <Heading
                     variant="small"
                     title="Updates"
-                    description="The version this installation runs, and how it gets new ones"
+                    description="The version this installation runs, and how it gets new ones."
                 />
 
                 <p className="flex flex-wrap items-center gap-2 text-sm">
@@ -173,7 +167,7 @@ export default function Updates({
                     <Heading
                         variant="small"
                         title="Automatic updates"
-                        description="Install each new version without being asked"
+                        description="Install each new version without being asked."
                     />
                     <Form
                         {...UpdatesController.update.form()}

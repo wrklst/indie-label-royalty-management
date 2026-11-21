@@ -16,7 +16,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useTableSort } from '@/hooks/use-table-sort';
-import { date } from '@/lib/format';
+import { count, date } from '@/lib/format';
 import { index, show } from '@/routes/periods';
 
 type Period = {
@@ -195,10 +195,10 @@ export default function Periods({
                                         {date(period.ends_on)}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {period.statements_count}
+                                        {count(period.statements_count)}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {period.payouts_count}
+                                        {count(period.payouts_count)}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Amount value={period.paid} />

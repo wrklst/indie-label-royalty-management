@@ -20,7 +20,7 @@ class PlayCountImport
     /**
      * Columns that give a portal away when its file names it nowhere:
      * platform => headers only its export has together, in lower case.
-     * ponytail: Spotify only, from its Songs export; add a portal when one of its files comes in as "Not named".
+     * ponytail: Spotify only, from its Songs export; add a portal when one of its files comes in as "Unknown".
      *
      * @var array<string, list<string>>
      */
@@ -54,7 +54,7 @@ class PlayCountImport
      * is the total up to today and replaces everything before it.
      *
      * The platform is the one each line names, else the one in the file
-     * name, else the one its columns give away, else "Not named", which
+     * name, else the one its columns give away, else "Unknown", which
      * is also right for a distributor's export of all platforms together.
      *
      * @return array{batch: string, counts: int, matched: int, unmatched: list<string>}

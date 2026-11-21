@@ -43,7 +43,7 @@ One installation can hold any number of labels. Each has its own catalog, contra
 The **label switcher** is the button at the top of the sidebar. It shows the current label and its currency. Open it to:
 
 - switch to another label you belong to,
-- choose **Add a label** to create another one. The entry is shown to people who run a label or have none yet, not to people who were only invited as payees.
+- choose **New label** to create another one. The entry is shown to people who run a label or have none yet, not to people who were only invited as payees.
 
 One account can belong to several labels with a different role in each, for example admin of your own label and payee of a label that releases your music.
 
@@ -56,7 +56,7 @@ A role belongs to the combination of a person and a label. There are two.
 | Dashboard, catalog, releases, files             | Yes                  | No                  |
 | Imports, transactions, periods, payouts         | Yes                  | No                  |
 | Contracts, payees, ledgers                      | Yes                  | No                  |
-| Profitability, label costs, optional tools      | Yes                  | No                  |
+| Profitability, overheads, optional tools        | Yes                  | No                  |
 | All statements, drafts and live figures         | Yes                  | No                  |
 | **Settings → Label**, **Team**, **Bandcamp**    | Yes                  | No                  |
 | Own **published** statements and their download | Yes, for every payee | Yes, only their own |
@@ -65,7 +65,7 @@ A role belongs to the combination of a person and a label. There are two.
 
 **Admin** means full access to everything in that label. There are no finer permissions: every admin can see all contracts and balances, change settings and manage the team.
 
-**Payee** means access to the payee portal and nothing else. A payee who opens any other page of the label is sent back to their overview. A payee user is linked to exactly one payee record of the label, and that link decides whose statements they see.
+**Payee** means access to **My statements** and nothing else. A payee who opens any other page of the label is sent back to **My statements**. A payee user is linked to exactly one payee record of the label, and that link decides whose statements they see.
 
 A label always keeps at least one admin: the last admin cannot be removed or turned into a payee.
 
@@ -102,22 +102,22 @@ To let several people see the same payee's statements, for example an artist and
 - **Change** switches a member between admin and payee or links them to a different payee. Making someone an admin removes their payee link.
 - **Remove access** takes the person out of this label. Their account and their access to other labels stay.
 
-## The payee portal
+## My statements, the payee's area
 
-A payee who signs in sees one menu entry, **Royalties → Overview**. Everything on it comes from statements the label has published. Live figures, drafts and archived revisions never reach the portal.
+A payee who signs in sees one menu entry, **My statements**. Everything on it comes from statements the label has published. Live figures, drafts and archived revisions never reach **My statements**.
 
-| Section                | What the payee sees                                                                                                                                                                              |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Owed to you**        | What was still payable according to their latest published statement. If payouts were recorded after that statement was generated, they are shown next to it as paid since and not deducted yet. |
-| **Earned in …**        | Their share in the period of that statement, after expenses and the contract split.                                                                                                              |
-| **Paid out for …**     | The payouts for that period contained in the statement, with a link to open it.                                                                                                                  |
-| **Balance per ledger** | The balance of each of their ledgers. A ledger below zero is marked **Unrecouped**.                                                                                                              |
-| **Payouts**            | Every payment the label recorded for them: date, period, memo and amount. Payouts appear as soon as they are recorded, whether or not a statement mentions them yet.                             |
-| **My statements**      | Their published statements with period, publication date, balance and payable amount.                                                                                                            |
+| Section                  | What the payee sees                                                                                                                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Owed to you**          | What was still payable according to their latest published statement. If payouts were recorded after that statement was generated, they are shown next to it as paid since and not deducted yet. |
+| **Earned in …**          | Their share in the period of that statement, after expenses and the contract split.                                                                                                              |
+| **Paid out for …**       | The payouts for that period contained in the statement, with a link to open it.                                                                                                                  |
+| **Balance per ledger**   | The balance of each of their ledgers. A ledger below zero is marked **Unrecouped**.                                                                                                              |
+| **Payouts**              | Every payment the label recorded for them: date, period, memo and amount. Payouts appear as soon as they are recorded, whether or not a statement mentions them yet.                             |
+| **Published statements** | Their published statements with period, publication date, balance and payable amount.                                                                                                            |
 
 Opening a statement shows the full breakdown: a summary, one tab per ledger, and the income, expenses, transfers and payouts behind the figures. **Download CSV** saves it as a file. The content of a statement is described in [Periods, statements and payouts](32-periods-statements-and-payouts.md).
 
-Before the first statement is published, the portal says "Nothing published yet". If the payee record a user was linked to has been deleted, it says "Your access is not linked to a payee yet"; link them again on the team page.
+Before the first statement is published, **My statements** says "Nothing published yet". If the payee record a user was linked to has been deleted, it says "Your access is not linked to a payee yet"; link them again on the team page.
 
 ## Signing in
 
@@ -197,7 +197,7 @@ Payees see **Profile**, **Security** and **Appearance** only. Admins also see **
 - **Settings → Security** and **Delete account** ask for your password. An account that has only ever used codes has to set a password through **Forgot your password?** first.
 - The **Email** field of a payee record under **Catalog → Payees** gives no access and receives nothing. Access always goes through **Settings → Team**.
 - Publishing a statement sends no notification. Tell your payees when there is something to read.
-- Someone invited only as a payee cannot create a label. Someone who runs a label can create further ones with **Add a label**.
+- Someone invited only as a payee cannot create a label. Someone who runs a label can create further ones with **New label**.
 - A label always keeps at least one admin: neither the team page nor **Delete account** lets its last admin go.
 - Removing someone from the team does not delete their account, and deleting a payee record does not remove the user: they keep signing in and see the "not linked" notice until you link or remove them.
 - Passkeys are bound to the web address of the installation. If the address changes, they stop working and have to be registered again.

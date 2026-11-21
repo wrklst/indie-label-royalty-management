@@ -1,4 +1,4 @@
-import { Link, useForm, usePage } from '@inertiajs/react';
+import { Link, setLayoutProps, useForm, usePage } from '@inertiajs/react';
 import { Plus, X } from 'lucide-react';
 import ReleaseController from '@/actions/App/Http/Controllers/ReleaseController';
 import { ArtistCreditRows } from '@/components/artist-credit-rows';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { index, show } from '@/routes/releases';
 import type { Option } from '@/types';
+import { AiField } from '@/components/ai-field';
 
 type TrackRow = {
     id: number | null;
@@ -157,6 +158,18 @@ export default function ReleaseForm({
         }
     };
 
+    setLayoutProps({
+        breadcrumbs: [
+            { title: 'Releases', href: index() },
+            ...(release
+                ? [
+                      { title: release.name, href: show(release.id) },
+                      { title: 'Edit', href: '#' },
+                  ]
+                : [{ title: 'New release', href: '#' }]),
+        ],
+    });
+
     return (
         <Page
             title={release ? `Edit ${release.name}` : 'New release'}
@@ -212,7 +225,7 @@ export default function ReleaseForm({
                             label="Contract"
                             htmlFor="contract_id"
                             error={errors.contract_id}
-                            hint="Applies to every track that has no contract of its own."
+                            hint="Applies to every track that has no contract of its own. Without a contract the label keeps all income."
                         >
                             <SelectInput
                                 id="contract_id"
@@ -224,7 +237,7 @@ export default function ReleaseForm({
                                     )
                                 }
                                 options={contractOptions}
-                                placeholder="No contract – label keeps all"
+                                placeholder="No contract"
                             />
                         </Field>
                         <Field
@@ -329,7 +342,7 @@ export default function ReleaseForm({
 
                 <Panel
                     title="Release details"
-                    description="What stores and distributors ask for when the release is delivered."
+                    description="What platforms and distributors ask for when the release is delivered."
                 >
                     <div className="grid gap-4 md:grid-cols-3">
                         <Field
@@ -487,29 +500,15 @@ export default function ReleaseForm({
                                 <option value="clean">Clean version</option>
                             </SelectInput>
                         </Field>
-                        <Field
+                        <AiField
                             label="AI in the artwork"
-                            htmlFor="ai_artwork"
+                            name="ai_artwork"
                             error={errors.ai_artwork}
-                        >
-                            <SelectInput
-                                id="ai_artwork"
-                                value={form.data.ai_artwork}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'ai_artwork',
-                                        event.target.value,
-                                    )
-                                }
-                                placeholder="Not declared"
-                            >
-                                <option value="none">None</option>
-                                <option value="partly">
-                                    Partly AI-generated
-                                </option>
-                                <option value="all">Fully AI-generated</option>
-                            </SelectInput>
-                        </Field>
+                            value={form.data.ai_artwork}
+                            onChange={(event) =>
+                                form.setData('ai_artwork', event.target.value)
+                            }
+                        />
                         <Field
                             label="Original release date"
                             htmlFor="original_released_on"
@@ -567,7 +566,7 @@ export default function ReleaseForm({
                             label="Do not deliver to"
                             htmlFor="blocked_services"
                             error={errors.blocked_services}
-                            hint="Services, separated by commas."
+                            hint="Platforms, separated by commas."
                         >
                             <Input
                                 id="blocked_services"
@@ -650,7 +649,7 @@ export default function ReleaseForm({
                             label="Key facts"
                             htmlFor="key_facts"
                             error={errors.key_facts}
-                            hint="Selling points for stores, press and playlists."
+                            hint="Selling points for platforms, press and playlists."
                         >
                             <Textarea
                                 id="key_facts"
@@ -950,10 +949,3 @@ export default function ReleaseForm({
         </Page>
     );
 }
-
-ReleaseForm.layout = {
-    breadcrumbs: [
-        { title: 'Releases', href: index() },
-        { title: 'Release', href: '#' },
-    ],
-};

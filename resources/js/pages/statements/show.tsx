@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router, setLayoutProps } from '@inertiajs/react';
 import { Download, Eye, EyeOff } from 'lucide-react';
 import StatementController from '@/actions/App/Http/Controllers/StatementController';
 import { DeleteButton } from '@/components/delete-button';
@@ -29,6 +29,15 @@ type Props = {
 export default function ShowStatement({ statement, portal: isPortal }: Props) {
     const data = statement.data;
 
+    setLayoutProps({
+        breadcrumbs: [
+            isPortal
+                ? { title: 'My statements', href: portal() }
+                : { title: 'Statements', href: index() },
+            { title: statement.name, href: '#' },
+        ],
+    });
+
     return (
         <Page
             title={statement.name}
@@ -47,7 +56,7 @@ export default function ShowStatement({ statement, portal: isPortal }: Props) {
                     <span>
                         {date(data.period.starts_on)} –{' '}
                         {date(data.period.ends_on)} · generated{' '}
-                        {date(statement.created_at.slice(0, 10))}
+                        {date(statement.created_at)}
                     </span>
                     {!isPortal && statement.revision_of_id && (
                         <Link
@@ -75,7 +84,7 @@ export default function ShowStatement({ statement, portal: isPortal }: Props) {
                     </Button>
                     {isPortal ? (
                         <Button variant="outline" asChild>
-                            <Link href={portal()}>All statements</Link>
+                            <Link href={portal()}>My statements</Link>
                         </Button>
                     ) : (
                         <>
@@ -124,10 +133,3 @@ export default function ShowStatement({ statement, portal: isPortal }: Props) {
         </Page>
     );
 }
-
-ShowStatement.layout = {
-    breadcrumbs: [
-        { title: 'Statements', href: index() },
-        { title: 'Statement', href: '#' },
-    ],
-};

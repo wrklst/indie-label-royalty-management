@@ -19,11 +19,11 @@ test('an airplay is added by hand and shows where it is known from', function ()
 
     visit('/airplays')
         ->assertSeeIn('[data-slot="table"]', 'Neighbouring rights statement')
-        ->click('Add airplay')
+        ->click('New airplay')
         ->fill('track_name', 'Sample Track')
         ->fill('station', 'Sample FM')
-        ->press('[role="dialog"] button:has-text("Add airplay")')
-        ->assertSee('Airplay added.')
+        ->press('[role="dialog"] button:has-text("Create airplay")')
+        ->assertSee('Airplay created.')
         ->assertSeeIn('[data-slot="table"]', 'Sample FM')
         ->assertSeeIn('[data-slot="table"]', 'Entered by hand')
         ->assertMissing('[role="dialog"]')
@@ -61,7 +61,7 @@ test('a link is added to an airplay in its links dialog', function () {
         ->fill('url', 'https://example.com/'.str_repeat('a-very-long-playlist-address/', 12))
         ->fill('title', 'Playlist')
         ->press('Add link')
-        ->assertSeeIn('[role="dialog"]', 'Added by hand')
+        ->assertSeeIn('[role="dialog"]', 'Entered by hand')
         ->assertScript('document.querySelector(\'[role="dialog"]\').scrollWidth <= document.querySelector(\'[role="dialog"]\').clientWidth', true)
         ->assertNoJavaScriptErrors();
 

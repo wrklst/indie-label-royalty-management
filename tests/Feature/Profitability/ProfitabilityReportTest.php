@@ -185,7 +185,7 @@ test('income without a release and label costs without a release get their own r
 
     $rows = profitability()['rows'];
 
-    expect(array_column($rows, 'release_name'))->toBe(['Example Release', 'Not assigned to a release', 'Label overheads'])
+    expect(array_column($rows, 'release_name'))->toBe(['Example Release', 'Not assigned to a release', 'Overheads'])
         ->and($rows[1]['release_id'])->toBeNull()
         ->and($rows[1]['income'])->toBe('300.000000000000000')
         ->and($rows[1]['payee_share'])->toBe('0.000000000000000')

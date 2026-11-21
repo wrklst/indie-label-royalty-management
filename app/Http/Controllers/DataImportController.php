@@ -59,7 +59,7 @@ class DataImportController extends Controller
                     'importer_name' => $names[$import->importer] ?? RoyaltyTool::importerName($import->importer) ?? $import->importer,
                     'status' => $import->status->value,
                     'default_paid_timestamp' => $import->default_paid_timestamp?->toDateString(),
-                    'created_at' => $import->created_at->toDateTimeString(),
+                    'created_at' => $import->created_at->toIso8601String(),
                     'user' => $import->user?->name,
                 ]),
             'filters' => $sorting->toArray(),
@@ -153,7 +153,7 @@ class DataImportController extends Controller
     {
         return match ($import->status) {
             ImportStatus::Imported => ['type' => 'success', 'message' => __(':count transactions imported.', ['count' => $import->transactions_count])],
-            ImportStatus::Review => ['type' => 'error', 'message' => __('Possible duplicates found. Nothing was imported yet: decide below.')],
+            ImportStatus::Review => ['type' => 'warning', 'message' => __('Possible duplicates found. Nothing was imported yet: decide below.')],
             default => ['type' => 'error', 'message' => __('The import failed. Nothing was saved.')],
         };
     }
@@ -169,7 +169,7 @@ class DataImportController extends Controller
                 'status' => $dataImport->status->value,
                 'default_timestamp' => $dataImport->default_timestamp?->toDateString(),
                 'default_paid_timestamp' => $dataImport->default_paid_timestamp?->toDateString(),
-                'created_at' => $dataImport->created_at->toDateTimeString(),
+                'created_at' => $dataImport->created_at->toIso8601String(),
                 'user' => $dataImport->user?->name,
             ],
             'flow' => MoneyFlow::of(clone $transactions),

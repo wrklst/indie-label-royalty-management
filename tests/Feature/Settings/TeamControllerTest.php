@@ -160,7 +160,7 @@ test('a member can be turned from an admin into a payee', function () {
         ->put(route('team.update', $member->id), ['role' => 'payee', 'payee_id' => $payee->id])
         ->assertRedirect(route('team.index'))
         ->assertSessionHasNoErrors()
-        ->assertInertiaFlash('toast.message', 'Access updated.');
+        ->assertInertiaFlash('toast.message', 'Access saved.');
 
     $this->assertDatabaseHas('label_user', ['label_id' => $label->id, 'user_id' => $member->id, 'role' => 'payee', 'payee_id' => $payee->id]);
 });

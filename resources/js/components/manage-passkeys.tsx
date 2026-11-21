@@ -48,7 +48,7 @@ export default function ManagePasskeys(props: Props) {
             <Heading
                 variant="small"
                 title="Passkeys"
-                description="Manage your passkeys for passwordless sign-in"
+                description="Manage your passkeys for passwordless sign-in."
             />
 
             <div className="overflow-hidden rounded-lg border border-border">

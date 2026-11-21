@@ -72,7 +72,7 @@ class PeriodController extends Controller
                 'statement' => isset($statements[$payee['payee_id']]) ? [
                     'id' => $statements[$payee['payee_id']]->id,
                     'published' => $statements[$payee['payee_id']]->published_at !== null,
-                    'created_at' => $statements[$payee['payee_id']]->created_at->toDateTimeString(),
+                    'created_at' => $statements[$payee['payee_id']]->created_at->toIso8601String(),
                 ] : null,
             ]),
         ]);
@@ -147,7 +147,7 @@ class PeriodController extends Controller
             $request->user(),
         );
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Payout recorded.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Payout booked.')]);
 
         return back();
     }

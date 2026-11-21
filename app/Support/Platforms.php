@@ -87,7 +87,7 @@ class Platforms
         $retailer = trim((string) $retailer);
 
         if ($retailer === '') {
-            return ['key' => 'unknown', 'name' => 'Not named'];
+            return ['key' => 'unknown', 'name' => 'Unknown'];
         }
 
         $lower = Str::lower($retailer);

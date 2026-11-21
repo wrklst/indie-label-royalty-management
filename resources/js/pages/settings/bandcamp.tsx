@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { edit } from '@/routes/bandcamp';
 import { index as dataImports } from '@/routes/data-imports';
+import { dateTime } from '@/lib/format';
 
 type Account = { band_id: number; name: string; subdomain: string | null };
 type Band = Account & { member_bands: Account[] };
@@ -26,13 +27,6 @@ type Connection = {
     last_sync_status: 'ok' | 'failed' | null;
     last_sync_message: string | null;
 };
-
-function dateTime(value: string): string {
-    return new Date(value).toLocaleString(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    });
-}
 
 function accountName(account: Account): string {
     return account.subdomain
@@ -276,7 +270,7 @@ export default function Bandcamp({
                 <Heading
                     variant="small"
                     title="Bandcamp"
-                    description="Import your Bandcamp sales automatically instead of uploading sales reports"
+                    description="Import your Bandcamp sales automatically instead of uploading sales reports."
                 />
 
                 {connection ? (

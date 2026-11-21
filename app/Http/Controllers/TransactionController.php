@@ -15,6 +15,7 @@ use App\Support\CurrentLabel;
 use App\Support\Decimal;
 use App\Support\Formats;
 use App\Support\Options;
+use App\Support\Platforms;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -77,7 +78,10 @@ class TransactionController extends Controller
             ],
             'filters' => [...$request->only(['search', 'type', 'release', 'retailer', 'import', 'from', 'to', 'date', 'unassigned', 'unconverted']), ...$sorting->toArray()],
             'releaseOptions' => Options::releases(),
-            'retailerOptions' => Transaction::query()->whereNotNull('retailer')->distinct()->orderBy('retailer')->pluck('retailer'),
+            'platformOptions' => Transaction::query()->distinct()->pluck('retailer')
+                ->map(fn (?string $retailer): array => Platforms::of($retailer))
+                ->unique('key')->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()
+                ->map(fn (array $platform): array => ['id' => $platform['key'], 'name' => $platform['name']]),
             'importOptions' => DataImport::query()->latest('id')->limit(100)->get(['id', 'name'])->map->only(['id', 'name']),
         ]);
     }
@@ -142,6 +146,20 @@ class TransactionController extends Controller
     }
 
     /**
+     * Keep the lines of one platform by its key, whichever way the statements spell it ("Apple", "Apple/iTunes").
+     *
+     * @param  Builder<Transaction>  $query
+     * @return Builder<Transaction>
+     */
+    private function onPlatform(Builder $query, string $platform): Builder
+    {
+        $retailers = Transaction::query()->whereNotNull('retailer')->distinct()->pluck('retailer')
+            ->filter(fn (string $retailer): bool => Platforms::of($retailer)['key'] === $platform)->all();
+
+        return $query->where(fn ($query) => $query->whereIn('retailer', $retailers)->when($platform === 'unknown', fn ($query) => $query->orWhereNull('retailer')));
+    }
+
+    /**
      * @return Builder<Transaction>
      */
     private function filtered(Request $request): Builder
@@ -153,7 +171,7 @@ class TransactionController extends Controller
             ->when($request->integer('release'), fn ($query, int $release) => $query->where('release_id', $release))
             ->when($request->integer('track'), fn ($query, int $track) => $query->whereIn('track_id', Track::query()->find($track)?->recordingIds() ?? [$track]))
             ->when($request->integer('import'), fn ($query, int $import) => $query->where('data_import_id', $import))
-            ->when($request->string('retailer')->value(), fn ($query, string $retailer) => $query->where('retailer', $retailer))
+            ->when($request->string('retailer')->value(), fn ($query, string $platform) => $this->onPlatform($query, $platform))
             ->when($request->date('from'), fn ($query, $from) => $query->where($dateColumn, '>=', $from->toDateString()))
             ->when($request->date('to'), fn ($query, $to) => $query->where($dateColumn, '<=', $to->toDateString()))
             ->when($request->boolean('unassigned'), fn ($query) => $query->whereNull('release_id')->where('type', '<>', 'transfer')

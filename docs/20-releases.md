@@ -15,14 +15,14 @@ Open **Catalog → Releases**. The list shows 50 releases per page.
 | Column         | What it shows                                                                                                                            |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | (cover)        | A small thumbnail of the cover, if one is uploaded.                                                                                      |
-| (play)         | **Play release** and **Add release to queue** buttons, only when at least one track has audio.                                           |
+| (play)         | **Play release** and **Queue release** buttons, only when at least one track has audio.                                                  |
 | Cat. no.       | The catalog number.                                                                                                                      |
 | Release        | The name, linked to the release page. A status badge appears unless the status is Done, and a badge with the release type if one is set. |
 | Artist         | The credited artists, for example `Example Artist feat. Guest Artist`.                                                                   |
 | UPC / EAN      | The barcode number.                                                                                                                      |
 | Released       | The release date.                                                                                                                        |
 | Tracks         | The number of tracks.                                                                                                                    |
-| Contract       | The contract of the release, or the badge `none`.                                                                                        |
+| Contract       | The contract of the release, or the badge **No contract**.                                                                               |
 | Income to date | The sum of all income transactions of the release, in your label currency. Expenses are not subtracted here.                             |
 
 **Search.** The box **Search name, catalog number or UPC…** matches any part of those three values. The list updates while you type.
@@ -73,7 +73,7 @@ A UPC / EAN can belong to only one release of your label. A 12-digit UPC and its
 
 ## Fields: Release details
 
-These are the values stores and distributors ask for. They are shown on the release page and written into the metadata CSV and the delivery package.
+These are the values platforms and distributors ask for. They are shown on the release page and written into the metadata CSV and the delivery package.
 
 | Field                  | What it is for                                                                                                                                           |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -96,11 +96,11 @@ The blocked services and territories are recorded and exported. The software doe
 
 ## Fields: Promotion and planning
 
-| Field         | What it is for                                  |
-| ------------- | ----------------------------------------------- |
-| To do         | Open tasks for this release.                    |
-| Key facts     | Selling points for stores, press and playlists. |
-| Press release | The full press text.                            |
+| Field         | What it is for                                     |
+| ------------- | -------------------------------------------------- |
+| To do         | Open tasks for this release.                       |
+| Key facts     | Selling points for platforms, press and playlists. |
+| Press release | The full press text.                               |
 
 All three are shown on the release page when filled. Key facts and the press release are also written into the `release.txt` of the delivery package.
 
@@ -153,7 +153,7 @@ Click a release name anywhere to open its page. The heading shows the name (with
 **Buttons.**
 
 - **Delivery** downloads the release as a package or as a spreadsheet; see [Files, audio and delivery](22-files-audio-and-delivery.md).
-- **Add expense** opens a new expense transaction with this release filled in; see [Transactions](31-transactions.md).
+- **New expense** opens a new expense transaction with this release filled in; see [Transactions](31-transactions.md).
 - **Edit** opens the release form.
 
 **Cover and figures.** Next to the cover there are four tiles:
@@ -184,13 +184,13 @@ Example: with 1,250.00 of income and −400.00 of expenses, **Net** shows 850.00
 
 **The report.** How the income of the release developed, which platforms it came from and what each paid per stream, followed by **Tracks by income**; see [Reports and play counts](12-reports-and-play-counts.md).
 
-**Items.** Every name a statement, shop or manual entry used for the release or one of its tracks. Each row says which track it is booked on (or **Whole release**), which sources used the name, its format group, the number of bookings, their amount and, if set, the contract override; see [Tracks, artists and items](21-tracks-artists-and-items.md#items).
+**Items.** Every name a statement, platform or manual entry used for the release or one of its tracks. Each row says which track it is booked on (or **Whole release**), which sources used the name, its format group, the number of transactions, their amount and, if set, the contract override; see [Tracks, artists and items](21-tracks-artists-and-items.md#items).
 
 **Notes.** Shown when the release has notes.
 
 ## Where to find it
 
-The panel **Where to find it** on the release page collects the pages of the release on streaming services, shops and platforms: Spotify, Apple Music, Bandcamp, Subvert, Deezer, Tidal, YouTube, Beatport and so on.
+The panel **Where to find it** on the release page collects the pages of the release on the platforms where it is streamed or sold: Spotify, Apple Music, Bandcamp, Subvert, Deezer, Tidal, YouTube, Beatport and so on.
 
 ### Finding links
 
@@ -239,7 +239,7 @@ Tools on the page:
 - **Filter releases and tracks…** narrows the page to releases where the release name, catalog number, artist, a track title, a track ISRC or a track artist contains your text.
 - **Only releases with tracks lacking a contract** hides every release that has a release contract. A release without a contract is also hidden when all of its tracks have their own contract.
 - The counter on the right says how many tracks have no contract at all, or **Every track is covered by a contract.**
-- A red badge `no contract` marks each track that has neither its own contract nor a release contract.
+- A badge **No contract** marks each track that has neither its own contract nor a release contract.
 - **New contract** opens the contract form.
 
 Example: `Example Release` has no contract and two tracks. The counter shows `2 tracks without a contract`. You pick the contract `Example Artist 50/50` on the release; both badges disappear and the counter drops by two. `Second Track` is a remix with its own deal, so you pick `Remixer deal` on that track only.

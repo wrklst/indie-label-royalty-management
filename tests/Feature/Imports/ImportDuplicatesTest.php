@@ -7,6 +7,7 @@ use App\Models\Label;
 use App\Models\Release;
 use App\Models\Transaction;
 use App\Services\Imports\ImportRunner;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -50,6 +51,18 @@ test('an import whose lines add up to an existing booking of the release is held
             'existing_total' => '11.39',
             'imported' => ['count' => 2, 'total' => '11.39', 'tracks' => []],
         ]);
+});
+
+test('an upload that is held for duplicates is a warning, not an error', function () {
+    Storage::fake('local');
+    $label = Label::factory()->create(['currency' => 'EUR']);
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release']);
+    manualBooking($release, '25.00');
+
+    $this->actingAs(labelAdmin($label))->post(route('data-imports.store'), [
+        'importer' => 'template',
+        'file' => UploadedFile::fake()->createWithContent('example.csv', "paid date,total,release name,format,memo\n2026-03-31,25,Example Release,Neighboring Rights,a\n2026-03-31,40,Example Release,Neighboring Rights,b\n"),
+    ])->assertInertiaFlash('toast.type', 'warning');
 });
 
 test('a single line with the paid date and amount of an existing booking is held as a possible duplicate', function () {
@@ -176,7 +189,7 @@ test('the import command reports held duplicates instead of importing', function
     file_put_contents($path, "paid date,total,release name,format\n2026-03-31,25,Example Release,Neighboring Rights\n");
 
     $this->artisan('royalties:import', ['file' => $path, '--label' => $label->id])
-        ->expectsOutputToContain('1 possible duplicate(s)')
+        ->expectsOutputToContain('1 possible duplicate of an existing transaction')
         ->assertFailed();
 
     unlink($path);

@@ -90,7 +90,7 @@ test('moving copies release files, playback copies and statements to the bucket 
     Storage::disk('local')->put('imports/1/statement.csv', 'statement');
 
     $this->artisan('royalties:move-files', ['--to' => 's3'])
-        ->expectsOutputToContain('Copied 1 release file(s) and 1 statement file(s) to [s3]. Missing at the source: 1. Failed: 0.')
+        ->expectsOutputToContain('Copied 1 release file and 1 statement file to [s3]. Missing at the source: 1. Failed: 0.')
         ->assertSuccessful();
 
     expect($file->refresh()->disk)->toBe('s3')
@@ -106,7 +106,7 @@ test('a dry run of a move changes nothing', function () {
     Storage::disk('local')->put('releases/1/master.wav', 'master');
 
     $this->artisan('royalties:move-files', ['--to' => 's3', '--dry-run' => true])
-        ->expectsOutputToContain('Would copy 1 release file(s)')
+        ->expectsOutputToContain('Would copy 1 release file')
         ->assertSuccessful();
 
     expect($file->refresh()->disk)->toBe('local');

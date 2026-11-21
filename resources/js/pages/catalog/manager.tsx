@@ -11,6 +11,7 @@ import { index } from '@/routes/catalog';
 import { create as createContract } from '@/routes/contracts';
 import { create as createImport } from '@/routes/data-imports';
 import type { Option } from '@/types';
+import { plural } from '@/lib/format';
 
 type Track = {
     id: number;
@@ -127,7 +128,7 @@ export default function CatalogManager({
                         <span className="ml-auto text-sm text-muted-foreground">
                             {uncovered === 0
                                 ? 'Every track is covered by a contract.'
-                                : `${uncovered} track${uncovered === 1 ? '' : 's'} without a contract`}
+                                : `${plural(uncovered, 'track')} without a contract`}
                         </span>
                     </div>
 

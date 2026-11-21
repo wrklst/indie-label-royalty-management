@@ -67,7 +67,7 @@ class MoveFiles extends Command
             }
         });
 
-        $this->info(($dryRun ? 'Would copy' : 'Copied')." {$stats['moved']} release file(s) and {$statements} statement file(s) to [{$to}]. Missing at the source: {$stats['missing']}. Failed: {$stats['failed']}.");
+        $this->info(($dryRun ? 'Would copy ' : 'Copied ').trans_choice(':count release file|:count release files', $stats['moved']).' and '.trans_choice(':count statement file|:count statement files', $statements)." to [{$to}]. Missing at the source: {$stats['missing']}. Failed: {$stats['failed']}.");
 
         if (! $dryRun && $stats['moved'] + $statements > 0) {
             $this->line('The originals were left in place. Remove them once you have checked the copies.');

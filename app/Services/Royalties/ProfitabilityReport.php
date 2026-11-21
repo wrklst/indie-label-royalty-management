@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
  *   alone, so they lower the label result but not the payee share.
  * - Label result = net − payee share + label costs (costs are negative).
  * - Label costs without a release (subscriptions, admin) are listed as
- *   "Label overheads".
+ *   "Overheads".
  * - Advances are transfers given to payees. They are prepaid royalties, not
  *   costs, and are listed for information only.
  * - Transactions without a converted amount are left out and counted.
@@ -76,7 +76,7 @@ class ProfitabilityReport
 {
     public const string UNASSIGNED = 'Not assigned to a release';
 
-    public const string OVERHEADS = 'Label overheads';
+    public const string OVERHEADS = 'Overheads';
 
     /** Row key for label costs that belong to no release. */
     private const int OVERHEAD_KEY = -1;

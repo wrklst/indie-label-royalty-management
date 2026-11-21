@@ -114,11 +114,11 @@ For the track that is currently in the player, the first button pauses and resum
 
 A whole release can be played from three places:
 
-| Place                                         | Buttons                                                    |
-| --------------------------------------------- | ---------------------------------------------------------- |
-| The release page, above the track table       | **Play release** and **Queue release**                     |
-| The release list, in each row                 | Icon buttons **Play release** and **Add release to queue** |
-| An artist's page, in each row of **Releases** | The same icon buttons                                      |
+| Place                                         | Buttons                                             |
+| --------------------------------------------- | --------------------------------------------------- |
+| The release page, above the track table       | **Play release** and **Queue release**              |
+| The release list, in each row                 | Icon buttons **Play release** and **Queue release** |
+| An artist's page, in each row of **Releases** | The same icon buttons                               |
 
 **Play release** replaces the queue with the tracks of the release and starts the first one. **Queue release** adds them to the end. Only tracks with audio are included, in play order. The buttons are missing when no track of the release has audio.
 

@@ -1,10 +1,10 @@
-import { Link } from '@inertiajs/react';
+import { Link, setLayoutProps } from '@inertiajs/react';
 import { Pencil, Plus } from 'lucide-react';
 import PayeeController from '@/actions/App/Http/Controllers/PayeeController';
 import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
 import { FormDialog } from '@/components/form-dialog';
-import { Page, Panel, Stat } from '@/components/page';
+import { EmptyState, Page, Panel, Stat } from '@/components/page';
 import { RecordLink } from '@/components/record-link';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
@@ -124,6 +124,13 @@ export default function ShowPayee({
         TRANSFER_COLUMNS,
     );
 
+    setLayoutProps({
+        breadcrumbs: [
+            { title: 'Payees', href: index() },
+            { title: payee.name, href: '#' },
+        ],
+    });
+
     return (
         <Page
             title={payee.name}
@@ -137,7 +144,7 @@ export default function ShowPayee({
                             })}
                         >
                             <Plus />
-                            Advance or transfer
+                            New transfer
                         </Link>
                     </Button>
                     <FormDialog
@@ -190,7 +197,7 @@ export default function ShowPayee({
                     </div>
                     <Panel
                         title="Ledger balances"
-                        description={`As of the end of ${period.name}`}
+                        description={`As of the end of ${period.name}.`}
                         flush
                         actions={
                             <Button variant="outline" size="sm" asChild>
@@ -300,14 +307,14 @@ export default function ShowPayee({
 
             <Panel
                 title="Splits"
-                description="The contracts this payee earns from"
+                description="The contracts this payee earns from."
                 flush
             >
                 {splits.length === 0 ? (
-                    <p className="p-4 text-sm text-muted-foreground">
-                        Not on any contract yet. Open a contract and add a split
-                        for this payee.
-                    </p>
+                    <EmptyState
+                        compact
+                        title="Not on any contract yet. Open a contract and add a split for this payee."
+                    />
                 ) : (
                     <Table>
                         <TableHeader>
@@ -397,9 +404,10 @@ export default function ShowPayee({
             <div className="grid gap-6 xl:grid-cols-2">
                 <Panel title="Statements" flush>
                     {statements.length === 0 ? (
-                        <p className="p-4 text-sm text-muted-foreground">
-                            No statements generated yet.
-                        </p>
+                        <EmptyState
+                            compact
+                            title="No statements generated yet."
+                        />
                     ) : (
                         <Table>
                             <TableBody>
@@ -437,9 +445,7 @@ export default function ShowPayee({
                 </Panel>
                 <Panel title="Payouts" flush>
                     {payouts.length === 0 ? (
-                        <p className="p-4 text-sm text-muted-foreground">
-                            Nothing paid out yet.
-                        </p>
+                        <EmptyState compact title="Nothing paid out yet." />
                     ) : (
                         <Table>
                             <TableBody>
@@ -471,9 +477,7 @@ export default function ShowPayee({
                 flush
             >
                 {transfers.length === 0 ? (
-                    <p className="p-4 text-sm text-muted-foreground">
-                        No transfers.
-                    </p>
+                    <EmptyState compact title="No transfers." />
                 ) : (
                     <Table>
                         <TableHeader>
@@ -483,7 +487,7 @@ export default function ShowPayee({
                                     sorter={transferSorter}
                                     first="desc"
                                 >
-                                    Paid
+                                    Paid date
                                 </SortableHead>
                                 <SortableHead
                                     column="category"
@@ -567,10 +571,3 @@ export default function ShowPayee({
         </Page>
     );
 }
-
-ShowPayee.layout = {
-    breadcrumbs: [
-        { title: 'Payees', href: index() },
-        { title: 'Payee', href: '#' },
-    ],
-};

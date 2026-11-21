@@ -82,7 +82,7 @@ export function LabelSwitcher() {
                                         className="cursor-pointer"
                                     >
                                         <Plus className="size-4" />
-                                        Add a label
+                                        New label
                                     </Link>
                                 </DropdownMenuItem>
                             </>

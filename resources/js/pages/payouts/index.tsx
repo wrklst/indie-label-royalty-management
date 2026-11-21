@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import PayoutController from '@/actions/App/Http/Controllers/PayoutController';
 import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
@@ -17,11 +17,12 @@ import {
 import { useFilters } from '@/hooks/use-filters';
 import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
-import { date } from '@/lib/format';
+import { date, money } from '@/lib/format';
 import { show as showPayee } from '@/routes/payees';
 import { index } from '@/routes/payouts';
 import { index as periods, show as showPeriod } from '@/routes/periods';
 import type { Paginated } from '@/types';
+import { recordLinkClass } from '@/components/record-link';
 
 type Payout = {
     id: number;
@@ -43,18 +44,19 @@ export default function Payouts({
     payouts: Paginated<Payout>;
     filters: { sort: string | null; direction: SortDirection | null };
 }) {
+    const currency = usePage().props.label?.currency ?? 'EUR';
     const { apply } = useFilters(index.url(), filters);
     const sorter = serverSorter(filters, apply);
 
     return (
         <Page
             title="Payouts"
-            description="Payments you have made to payees. A payout is recorded from its period and reduces what the payee is still owed. Nothing is sent to a bank from here."
+            description="Payments you have made to payees. A payout is booked from its period and reduces what the payee is still owed. Nothing is sent to a bank from here."
         >
             {payouts.total === 0 ? (
                 <EmptyState
-                    title="No payouts recorded"
-                    description="Open a period and record a payout next to the payee you have paid."
+                    title="No payouts booked yet"
+                    description="Open a period and book a payout next to the payee you have paid."
                     action={
                         <Button asChild>
                             <Link href={periods()}>Go to periods</Link>
@@ -71,7 +73,7 @@ export default function Payouts({
                                     sorter={sorter}
                                     first="desc"
                                 >
-                                    Paid on
+                                    Paid date
                                 </SortableHead>
                                 <SortableHead column="payee" sorter={sorter}>
                                     Payee
@@ -114,7 +116,7 @@ export default function Payouts({
                                     <TableCell>
                                         <Link
                                             href={showPeriod(payout.period_id)}
-                                            className="underline decoration-muted-foreground/40 underline-offset-4"
+                                            className={recordLinkClass}
                                         >
                                             {payout.period}
                                         </Link>
@@ -125,7 +127,7 @@ export default function Payouts({
                                             : payout.ledgers
                                                   .map(
                                                       (ledger) =>
-                                                          `${ledger.name} ${Number(ledger.amount).toFixed(2)}`,
+                                                          `${ledger.name} ${money(ledger.amount, currency)}`,
                                                   )
                                                   .join(', ')}
                                     </TableCell>
@@ -144,7 +146,7 @@ export default function Payouts({
                                                 payout.id,
                                             )}
                                             title="Delete this payout?"
-                                            description={`The ${Number(payout.total).toFixed(2)} paid to ${payout.payee} for ${payout.period} becomes payable again. Statements already generated keep showing it until you regenerate them.`}
+                                            description={`The ${money(payout.total, currency)} paid to ${payout.payee} for ${payout.period} becomes payable again. Statements already generated keep showing it until you regenerate them.`}
                                         />
                                     </TableCell>
                                 </TableRow>

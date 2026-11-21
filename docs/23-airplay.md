@@ -17,13 +17,13 @@ Every entry under **Catalog → Airplay** says in the column **Known from** how 
 A Rightz Audio statement has one line per collecting society, country and period. Some lines name the broadcaster, most do not.
 
 - A line that names a station becomes a play **on that station** for the usage period.
-- A line without a station becomes an **unidentified** play: you know the track earned money from a society in a country, but not where it ran. These are listed too, because they are the ones worth researching.
+- A line without a station becomes an **unknown** play: you know the track earned money from a society in a country, but not where it ran. These are listed too, because they are the ones worth researching.
 
 Amounts of several lines for the same track, station and period add up in one entry.
 
 ### By hand
 
-**Add airplay** asks for the track (or a free track name and artist for something not in the catalog), the station, the country, the date or period and notes.
+**New airplay** asks for the track (or a free track name and artist for something not in the catalog), the station, the country, the date or period and notes.
 
 ## Links
 
@@ -50,7 +50,7 @@ For a track by "Example Artist" called "Opening", with the countries `DE GB`:
 1. Google is asked for `"Example Artist" "Opening" radio playlist` in Germany and in the United Kingdom, 30 results each.
 2. Stations that are searched for every track in those countries are asked for by name, for example the BBC.
 3. For each station the track is already known to have been played on, one more search names that station.
-4. Unidentified plays in countries outside your list get a search in their country.
+4. Plays at an unknown station in countries outside your list get a search in their country.
 5. Every result page is opened and read. A result is only kept as a finding when the page names the artist or the title.
 
 ### Findings

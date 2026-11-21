@@ -110,7 +110,7 @@ export function PlatformLinks({
     return (
         <Panel
             title="Where to find it"
-            description="Its pages on streaming services, shops and platforms. Found links can be corrected or removed; a removed one is not found again."
+            description="Its pages on the platforms where it is streamed or sold. Found links can be corrected or removed; a removed one is not found again."
             actions={
                 <div className="flex flex-wrap items-center gap-2">
                     <Button

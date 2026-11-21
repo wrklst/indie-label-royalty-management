@@ -21,6 +21,7 @@ use Illuminate\Database\Query\Grammars\SQLiteGrammar;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -56,7 +57,7 @@ class AirplayController extends Controller
                 ->through(fn (AirplayFinding $finding): array => [
                     ...$finding->only(['id', 'track_id', 'is_radio', 'station', 'url', 'title', 'description', 'domain', 'query', 'airplay_id', 'verification', 'page_title', 'show', 'excerpt']),
                     'track' => $finding->track->name ?? $finding->airplay?->track_name,
-                    'airplay_station' => $finding->airplay_id === null ? null : ($finding->airplay->station ?? __('Unidentified')),
+                    'airplay_station' => $finding->airplay_id === null ? null : ($finding->airplay->station ?? __('Unknown')),
                 ]),
             'searches' => AirplaySearch::query()->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with(['track:id,name', 'airplay:id,track_name,station'])->latest('id')->paginate(25, pageName: 'log_page')->withQueryString()
                 ->through(fn (AirplaySearch $entry): array => [
@@ -64,7 +65,7 @@ class AirplayController extends Controller
                     'track' => $entry->track->name ?? $entry->airplay?->track_name,
                     'station' => $entry->airplay?->station,
                     'results' => $entry->results ?? [],
-                    'created_at' => $entry->created_at?->toDateTimeString(),
+                    'created_at' => $entry->created_at?->toIso8601String(),
                 ]),
             'trackResearch' => Track::query()->whereNotNull('research_state')->orderByRaw("research_state = 'running' desc")->orderBy('research_state_at')
                 ->get(['id', 'name', 'research_state', 'research_step', 'research_state_at'])
@@ -78,7 +79,7 @@ class AirplayController extends Controller
                 ->get(['id', 'track_name', 'station', 'research_state', 'research_step', 'research_state_at'])
                 ->map(fn (Airplay $airplay): array => [
                     'id' => $airplay->id,
-                    'name' => $airplay->track_name.' on '.($airplay->station ?? __('an unidentified station')),
+                    'name' => $airplay->track_name.' on '.($airplay->station ?? __('an unknown station')),
                     'state' => ResearchState::visible($airplay->research_state, $airplay->research_state_at),
                     'step' => $airplay->research_step,
                 ])->whereNotNull('state')->values(),
@@ -94,7 +95,7 @@ class AirplayController extends Controller
                     'links' => $airplay->links ?? [],
                     'artist_id' => $airplay->track?->artist_id,
                     'search_query' => $airplay->searchQuery(),
-                    'researched_at' => $researched[$airplay->id] ?? null,
+                    'researched_at' => isset($researched[$airplay->id]) ? Carbon::parse($researched[$airplay->id])->toIso8601String() : null,
                     'research_state' => ResearchState::visible($airplay->research_state, $airplay->research_state_at),
                     'research_step' => $airplay->research_step,
                 ]),
@@ -112,7 +113,7 @@ class AirplayController extends Controller
     {
         Airplay::query()->create([...$this->attributes($request), 'origin' => AirplayOrigin::Manual]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Airplay added.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Airplay created.')]);
 
         return back();
     }
@@ -121,7 +122,7 @@ class AirplayController extends Controller
     {
         $airplay->update($this->attributes($request));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Airplay updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Airplay saved.')]);
 
         return back();
     }

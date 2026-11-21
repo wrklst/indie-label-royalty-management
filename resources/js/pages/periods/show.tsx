@@ -1,6 +1,6 @@
 import { MoneyFlow } from '@/components/money-flow';
 import type { Flow } from '@/components/money-flow';
-import { Link, router } from '@inertiajs/react';
+import { Link, router, setLayoutProps } from '@inertiajs/react';
 import { Banknote, FileText, Pencil } from 'lucide-react';
 import PeriodController from '@/actions/App/Http/Controllers/PeriodController';
 import { Amount } from '@/components/amount';
@@ -9,7 +9,7 @@ import type { Report } from '@/components/income-report';
 import { DeleteButton } from '@/components/delete-button';
 import { Field } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
-import { Page, Panel, Stat } from '@/components/page';
+import { EmptyState, Page, Panel, Stat } from '@/components/page';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useTableSort } from '@/hooks/use-table-sort';
-import { date } from '@/lib/format';
+import { count, date, money, plural, today } from '@/lib/format';
 import { index as catalog } from '@/routes/catalog';
 import { create as createImport } from '@/routes/data-imports';
 import { index as items } from '@/routes/items';
@@ -34,6 +34,7 @@ import { show as showStatement } from '@/routes/statements';
 import { index as transactions } from '@/routes/transactions';
 import type { PayeeTotals } from '@/types';
 import { PeriodFields } from './index';
+import { recordLinkClass } from '@/components/record-link';
 
 type PayeeRow = {
     payee_id: number;
@@ -77,9 +78,8 @@ type Props = {
     payees: PayeeRow[];
 };
 
-// The local date: toISOString() is UTC and gives yesterday shortly after midnight.
-const today = () => new Date().toLocaleDateString('sv-SE');
-const cents = (value: string) =>
+/** An amount cut down to whole cents, never rounded up: what is payable at most. */
+const floorToCents = (value: string) =>
     (Math.floor(Number(value) * 100 + 1e-6) / 100).toFixed(2);
 
 const PAYEE_COLUMNS = {
@@ -108,10 +108,17 @@ export default function ShowPeriod({
         audit.unassigned + audit.missing_contract + audit.unconverted;
     const withStatement = payees.filter((row) => row.statement).length;
 
+    setLayoutProps({
+        breadcrumbs: [
+            { title: 'Periods', href: index() },
+            { title: period.name, href: '#' },
+        ],
+    });
+
     return (
         <Page
             title={period.name}
-            description={`${date(period.starts_on)} – ${date(period.ends_on)} · ${audit.transactions.toLocaleString('en-GB')} transactions paid in this period`}
+            description={`${date(period.starts_on)} – ${date(period.ends_on)} · ${plural(audit.transactions, 'transaction')} paid in this period.`}
             actions={
                 <>
                     <FormDialog
@@ -263,7 +270,7 @@ export default function ShowPeriod({
                                     variant="destructive"
                                     className="mr-2 tabular-nums"
                                 >
-                                    {audit.unassigned.toLocaleString('en-GB')}
+                                    {count(audit.unassigned)}
                                 </Badge>
                                 transactions are not assigned to a release.{' '}
                                 <Link
@@ -289,7 +296,7 @@ export default function ShowPeriod({
                                     variant="destructive"
                                     className="mr-2 tabular-nums"
                                 >
-                                    {audit.unconverted.toLocaleString('en-GB')}
+                                    {count(audit.unconverted)}
                                 </Badge>
                                 transactions have no conversion rate to{' '}
                                 {currency} and are left out.{' '}
@@ -309,9 +316,7 @@ export default function ShowPeriod({
                                     variant="warning"
                                     className="mr-2 tabular-nums"
                                 >
-                                    {audit.missing_contract.toLocaleString(
-                                        'en-GB',
-                                    )}
+                                    {count(audit.missing_contract)}
                                 </Badge>
                                 transactions are on releases without a contract,
                                 so the label keeps them in full.{' '}
@@ -330,7 +335,7 @@ export default function ShowPeriod({
                                                     href={showRelease(
                                                         release.release_id,
                                                     )}
-                                                    className="underline decoration-muted-foreground/40 underline-offset-4"
+                                                    className={recordLinkClass}
                                                 >
                                                     {release.release_name}
                                                 </Link>{' '}
@@ -386,11 +391,10 @@ export default function ShowPeriod({
                 }
             >
                 {payees.length === 0 ? (
-                    <p className="p-4 text-sm text-muted-foreground">
-                        No payee has earnings, transfers or a balance up to this
-                        period. Payees appear once their contracts are assigned
-                        to releases with income.
-                    </p>
+                    <EmptyState
+                        compact
+                        title="No payee has earnings, transfers or a balance up to this period. Payees appear once their contracts are assigned to releases with income."
+                    />
                 ) : (
                     <Table>
                         <TableHeader>
@@ -520,7 +524,7 @@ export default function ShowPeriod({
                                                 href={showStatement(
                                                     row.statement.id,
                                                 )}
-                                                className="underline decoration-muted-foreground/40 underline-offset-4"
+                                                className={recordLinkClass}
                                             >
                                                 {row.statement.published
                                                     ? 'Published'
@@ -528,7 +532,7 @@ export default function ShowPeriod({
                                             </Link>
                                         ) : (
                                             <span className="text-muted-foreground">
-                                                None
+                                                –
                                             </span>
                                         )}
                                     </TableCell>
@@ -557,21 +561,23 @@ export default function ShowPeriod({
                                                 <FileText className="text-muted-foreground" />
                                             </Button>
                                             {Number(
-                                                cents(row.totals.outstanding),
+                                                floorToCents(
+                                                    row.totals.outstanding,
+                                                ),
                                             ) > 0 && (
                                                 <FormDialog
-                                                    title={`Record payout to ${row.payee_name}`}
-                                                    description="Record a payment you have made. It is booked against the payee's ledgers, largest balance first."
+                                                    title={`Book payout to ${row.payee_name}`}
+                                                    description="Book a payment you have made. It is booked against the payee's ledgers, largest balance first."
                                                     form={PeriodController.payout.form(
                                                         period.id,
                                                     )}
-                                                    submitLabel="Record payout"
+                                                    submitLabel="Book payout"
                                                     trigger={
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            aria-label={`Record payout to ${row.payee_name}`}
-                                                            title="Record payout"
+                                                            aria-label={`Book payout to ${row.payee_name}`}
+                                                            title="Book payout"
                                                         >
                                                             <Banknote className="text-muted-foreground" />
                                                         </Button>
@@ -593,7 +599,7 @@ export default function ShowPeriod({
                                                                     errors.total
                                                                 }
                                                                 required
-                                                                hint={`Up to ${cents(row.totals.outstanding)} is payable.`}
+                                                                hint={`Up to ${money(floorToCents(row.totals.outstanding), currency)} is payable.`}
                                                             >
                                                                 <Input
                                                                     id="total"
@@ -601,7 +607,7 @@ export default function ShowPeriod({
                                                                     type="number"
                                                                     step="0.01"
                                                                     min="0.01"
-                                                                    defaultValue={cents(
+                                                                    defaultValue={floorToCents(
                                                                         row
                                                                             .totals
                                                                             .outstanding,
@@ -610,7 +616,7 @@ export default function ShowPeriod({
                                                                 />
                                                             </Field>
                                                             <Field
-                                                                label="Paid on"
+                                                                label="Paid date"
                                                                 htmlFor="paid_on"
                                                                 error={
                                                                     errors.paid_on
@@ -696,10 +702,3 @@ export default function ShowPeriod({
         </Page>
     );
 }
-
-ShowPeriod.layout = {
-    breadcrumbs: [
-        { title: 'Periods', href: index() },
-        { title: 'Period', href: '#' },
-    ],
-};

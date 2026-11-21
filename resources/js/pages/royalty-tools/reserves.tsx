@@ -2,15 +2,13 @@ import { Form, Link } from '@inertiajs/react';
 import ReservesController from '@/actions/App/Http/Controllers/RoyaltyTools/ReservesController';
 import { Amount } from '@/components/amount';
 import { Field } from '@/components/field';
-import { Page, Panel, Stat } from '@/components/page';
+import { EmptyState, Notice, Page, Panel, Stat } from '@/components/page';
 import { RecordLink } from '@/components/record-link';
 import {
     CreateTransactions,
-    Notice,
     OverlapNotice,
     RunsPanel,
     plain,
-    today,
 } from '@/components/royalty-tool';
 import type { ToolRun } from '@/components/royalty-tool';
 import { Button } from '@/components/ui/button';
@@ -24,6 +22,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { today } from '@/lib/format';
 import { index as items } from '@/routes/items';
 import { edit as editRelease } from '@/routes/releases';
 import { index } from '@/routes/royalty-tools/reserves';
@@ -243,10 +242,10 @@ export default function Reserves({
                         flush
                     >
                         {report.rows.length === 0 ? (
-                            <p className="p-4 text-sm text-muted-foreground">
-                                No physical income was paid in this range on a
-                                release that has a reserves rate.
-                            </p>
+                            <EmptyState
+                                compact
+                                title="No physical income was paid in this range on a release that has a reserves rate."
+                            />
                         ) : (
                             <Table>
                                 <TableHeader>
@@ -330,9 +329,10 @@ export default function Reserves({
                 flush
             >
                 {balances.length === 0 ? (
-                    <p className="p-4 text-sm text-muted-foreground">
-                        No reserves have been booked yet.
-                    </p>
+                    <EmptyState
+                        compact
+                        title="No reserves have been booked yet."
+                    />
                 ) : (
                     <Table>
                         <TableHeader>

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Amount } from '@/components/amount';
 import { Panel } from '@/components/page';
 import { SegmentedBar } from '@/components/segmented-bar';
+import { count, percent as formatPercent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export type Flow = {
@@ -61,7 +62,7 @@ function percent(part: string, whole: string): string | undefined {
 
     return share === null
         ? undefined
-        : `${(share * 100).toLocaleString('en-GB', { maximumFractionDigits: 1 })}% of what customers paid`;
+        : `${formatPercent(share, 1)} of what customers paid`;
 }
 
 const negative = (value: string): number => -Math.abs(Number(value));
@@ -120,12 +121,12 @@ export function MoneyFlow({
                     <>
                         <Row
                             label="Paid by customers"
-                            hint={`${flow.lines_with_breakdown.toLocaleString('en-GB')} lines with a breakdown`}
+                            hint={`${count(flow.lines_with_breakdown)} lines with a breakdown`}
                             value={flow.gross}
                             currency={currency}
                         />
                         <Row
-                            label="Kept by distributors, shops and agencies"
+                            label="Kept by distributors, platforms and agencies"
                             hint={percent(flow.distribution_fee, flow.gross)}
                             value={negative(flow.distribution_fee)}
                             currency={currency}
@@ -149,7 +150,7 @@ export function MoneyFlow({
                 {flow.lines_without_breakdown > 0 && (
                     <Row
                         label="Received without a breakdown"
-                        hint={`${flow.lines_without_breakdown.toLocaleString('en-GB')} lines whose statement does not say what was deducted before`}
+                        hint={`${count(flow.lines_without_breakdown)} lines whose statement does not say what was deducted before`}
                         value={flow.received_without_breakdown}
                         currency={currency}
                     />

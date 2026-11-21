@@ -82,7 +82,7 @@ const adminGroups: NavGroup[] = [
                 href: profitability(),
                 icon: TrendingUp,
             },
-            { title: 'Label costs', href: labelCosts(), icon: Receipt },
+            { title: 'Overheads', href: labelCosts(), icon: Receipt },
         ],
     },
     {
@@ -104,7 +104,7 @@ const adminGroups: NavGroup[] = [
 const payeeGroups: NavGroup[] = [
     {
         title: 'Royalties',
-        items: [{ title: 'Overview', href: portal(), icon: FileText }],
+        items: [{ title: 'My statements', href: portal(), icon: FileText }],
     },
 ];
 

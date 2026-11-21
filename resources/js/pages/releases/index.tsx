@@ -22,7 +22,7 @@ import {
 import { useFilters } from '@/hooks/use-filters';
 import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
-import { date } from '@/lib/format';
+import { count, date } from '@/lib/format';
 import { create as createImport } from '@/routes/data-imports';
 import { show as showFile } from '@/routes/release-files';
 import { create, index, metadata } from '@/routes/releases';
@@ -281,7 +281,7 @@ export default function Releases({
                                         {date(release.released_on)}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {release.tracks_count}
+                                        {count(release.tracks_count)}
                                     </TableCell>
                                     <TableCell>
                                         {release.contract ? (
@@ -293,7 +293,7 @@ export default function Releases({
                                             </RecordLink>
                                         ) : (
                                             <Badge variant="warning">
-                                                none
+                                                No contract
                                             </Badge>
                                         )}
                                     </TableCell>

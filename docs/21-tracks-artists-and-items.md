@@ -24,11 +24,11 @@ Open **Catalog → Tracks**. The list shows 50 tracks per page, ordered by title
 - **Search title or ISRC…** matches part of the title or of the ISRC. You can type the ISRC with or without dashes.
 - **All releases** narrows the list to one release.
 
-A recording that is on several releases is one row in this list, naming all its releases; the row is the oldest of its tracks. A track without audio of its own plays the audio of the same recording on another release. Narrow the list to a release to see and edit that release's own track. A badge `none on Example Single` marks a release on which the recording has no contract.
+A recording that is on several releases is one row in this list, naming all its releases; the row is the oldest of its tracks. A track without audio of its own plays the audio of the same recording on another release. Narrow the list to a release to see and edit that release's own track. A badge **No contract on Example Single** marks a release on which the recording has no contract.
 
 - Click a column heading to sort, again to reverse, and a third time to return to the default order.
 
-The pencil at the end of a row opens a short edit dialog with **Title**, **Artist**, **Contract**, **ISRC**, **ISWC**, **Track number** and **Duration (seconds)**. The bin deletes the track.
+The pencil at the end of a row opens a short edit dialog with **Title**, **Artist**, **Contract**, **ISRC**, **ISWC**, **Track number** and **Length (seconds)**. The bin deletes the track.
 
 ### All track details
 
@@ -42,12 +42,12 @@ The full set of details is edited on the release page: open the release and clic
 | Contract                                    | Empty means **Same as release**.                                               |
 | Further artist credits                      | Additional artists with a role; see [Artist credits](#artist-credits).         |
 | ISRC, ISWC                                  | See below.                                                                     |
-| Duration (seconds)                          | The length in whole seconds. Shown as minutes and seconds elsewhere.           |
+| Length (seconds)                            | The length in whole seconds. Shown as minutes and seconds elsewhere.           |
 | Disc, Track number                          | Disc 1 to 99, track number 1 to 999.                                           |
-| Preview starts at (s)                       | The second at which a store preview should start.                              |
+| Preview starts at (s)                       | The second at which a platform preview should start.                           |
 | BPM                                         | 20 to 400, with up to two decimals.                                            |
 | Key                                         | Free text, for example `F minor`.                                              |
-| Explicit                                    | **Same as release** (empty), **Explicit** or **Clean**.                        |
+| Explicit                                    | **Same as release** (empty), **Explicit** or **Clean version**.                |
 | Genre, Language, ℗ line                     | Leave empty to use the value of the release in exports.                        |
 | Composers, Lyricists, Producers, Publishers | Names separated by commas.                                                     |
 | Lyrics                                      | Free text.                                                                     |
@@ -76,12 +76,12 @@ Click a track title anywhere to open its page. The heading shows the title (with
 
 **Tiles.**
 
-| Tile                | What it shows                                                                                                                       |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Income              | The sum of all income transactions of the recording. The link **… transaction(s)** below opens the transaction list filtered to it. |
-| Airplay             | The number of known airplay entries, and how many of them name a station.                                                           |
-| Earned from airplay | The sum of the amounts of those entries.                                                                                            |
-| Findings to review  | The number of research findings you have not kept or dismissed yet, and when the track was last researched.                         |
+| Tile                | What it shows                                                                                                                     |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Income              | The sum of all income transactions of the recording. The link **… transactions** below opens the transaction list filtered to it. |
+| Airplay             | The number of known airplay entries, and how many of them name a station.                                                         |
+| Earned from airplay | The sum of the amounts of those entries.                                                                                          |
+| Findings to review  | The number of research findings you have not kept or dismissed yet, and when the track was last researched.                       |
 
 **Details.** ISRC, Release, Contract, Length, Track number, Genre, BPM / key and ISWC. When the track uses the release contract, the contract is followed by `(from the release)`. These details belong to the entry you opened, not to the whole recording.
 
@@ -126,7 +126,7 @@ The pencil in a row opens the same fields for editing. The bin deletes the artis
 
 ### Aliases
 
-Set **Alias of** when an artist is another name of an artist already in your catalog, for example the spelling a shop or a statement uses, such as `Example Artist feat. Guest Artist`.
+Set **Alias of** when an artist is another name of an artist already in your catalog, for example the spelling a platform or a statement uses, such as `Example Artist feat. Guest Artist`.
 
 - The artist list shows an alias under its artist, not as a row of its own. Tick **Show aliases as rows of their own** to edit or delete an alias. The search also finds an artist by the name of an alias.
 - The artist page names its aliases under the title; the page of an alias links to its artist.

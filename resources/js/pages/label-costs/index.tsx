@@ -23,7 +23,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useTableSort } from '@/hooks/use-table-sort';
-import { date } from '@/lib/format';
+import { date, money, plural, today } from '@/lib/format';
 import { index } from '@/routes/label-costs';
 
 type Recurring = {
@@ -80,8 +80,6 @@ type Props = {
     receiptReading: boolean;
 };
 
-// The local date: toISOString() is UTC and gives yesterday shortly after midnight.
-const today = () => new Date().toLocaleDateString('sv-SE');
 const plain = (value: string) => value.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
 const PER: Record<string, string> = {
     monthly: 'per month',
@@ -191,7 +189,7 @@ function AmountFields({
                     ]}
                 />
             </Field>
-            <Field label="Note" htmlFor="memo" error={errors.memo}>
+            <Field label="Memo" htmlFor="memo" error={errors.memo}>
                 <Input id="memo" name="memo" defaultValue={cost?.memo ?? ''} />
             </Field>
         </>
@@ -278,7 +276,10 @@ function ReceiptRow({
                             receipt.vendor,
                             receipt.paid_on && date(receipt.paid_on),
                             receipt.amount &&
-                                `${receipt.amount} ${receipt.currency ?? ''}`,
+                                money(
+                                    receipt.amount,
+                                    receipt.currency ?? currency,
+                                ),
                             receipt.category,
                             receipt.summary,
                         ]
@@ -321,7 +322,7 @@ function ReceiptRow({
                                 }}
                             />
                             <Field
-                                label="Paid on"
+                                label="Paid date"
                                 htmlFor="paid_on"
                                 error={errors.paid_on}
                                 required
@@ -357,13 +358,13 @@ function ReceiptRow({
                                     <option value="">Attach to a cost…</option>
                                     {costs.map((cost) => (
                                         <option key={cost.id} value={cost.id}>
-                                            {cost.paid_on} ·{' '}
+                                            {date(cost.paid_on)} ·{' '}
                                             {cost.source ?? cost.memo ?? 'Cost'}{' '}
                                             ·{' '}
-                                            {Math.abs(
-                                                Number(cost.total),
-                                            ).toFixed(2)}{' '}
-                                            {cost.currency}
+                                            {money(
+                                                Math.abs(Number(cost.total)),
+                                                cost.currency,
+                                            )}
                                             {cost.id ===
                                             receipt.suggested_cost_id
                                                 ? ' (matches)'
@@ -459,16 +460,16 @@ export default function LabelCosts({
             0,
         );
 
-    const oneTime = (
+    const oneOff = (
         <FormDialog
-            title="One-time cost"
+            title="One-off cost"
             description="A cost of running the label that belongs to no release. The label bears it alone; royalties are not affected."
             form={LabelCostController.store.form()}
             submitLabel="Book cost"
             trigger={
                 <Button variant="outline">
                     <Plus />
-                    One-time cost
+                    One-off cost
                 </Button>
             }
         >
@@ -481,7 +482,7 @@ export default function LabelCosts({
                         amountLabel="Amount"
                     />
                     <Field
-                        label="Paid on"
+                        label="Paid date"
                         htmlFor="paid_on"
                         error={errors.paid_on}
                         required
@@ -504,7 +505,7 @@ export default function LabelCosts({
             title="Recurring cost"
             description="Booked automatically on every due date. Due dates in the past are booked right away."
             form={LabelCostController.storeRecurring.form()}
-            submitLabel="Add recurring cost"
+            submitLabel="Create recurring cost"
             trigger={
                 <Button>
                     <Repeat />
@@ -573,11 +574,11 @@ export default function LabelCosts({
 
     return (
         <Page
-            title="Label costs"
-            description="What it costs to run the label itself: subscriptions, software, accounting, fees. These are borne by the label alone, show up as “Label overheads” in the profitability report and never reduce what payees earn. Costs of a single release are booked as expenses on that release instead."
+            title="Overheads"
+            description="What it costs to run the label itself: subscriptions, software, accounting, fees. These are label costs that belong to no release: the label bears them alone, they show up as “Overheads” in the profitability report and they never reduce what payees earn. Costs of a single release are booked as expenses on that release instead."
             actions={
                 <>
-                    {oneTime}
+                    {oneOff}
                     {repeating}
                 </>
             }
@@ -604,10 +605,11 @@ export default function LabelCosts({
 
             <Panel title="Recurring costs" flush>
                 {recurring.length === 0 ? (
-                    <p className="p-4 text-sm text-muted-foreground">
-                        Nothing recurring yet. Add a subscription once and it is
-                        booked on every due date.
-                    </p>
+                    <EmptyState
+                        compact
+                        title="Nothing recurring yet."
+                        description="Add a subscription once and it is booked on every due date."
+                    />
                 ) : (
                     <Table>
                         <TableHeader>
@@ -758,7 +760,7 @@ export default function LabelCosts({
                                                 alternative={
                                                     cost.occurrences_booked > 0
                                                         ? {
-                                                              label: `Delete with its ${cost.occurrences_booked} ${cost.occurrences_booked === 1 ? 'payment' : 'payments'}`,
+                                                              label: `Delete with its ${plural(cost.occurrences_booked, 'payment', 'payments')}`,
                                                               url: LabelCostController.destroyRecurring.url(
                                                                   cost.id,
                                                                   {
@@ -816,8 +818,8 @@ export default function LabelCosts({
 
             {costs.length === 0 ? (
                 <EmptyState
-                    title="No label costs booked yet"
-                    description="Add a one-time cost, or a recurring one such as a subscription."
+                    title="No overheads booked yet"
+                    description="Book a one-off cost, or a recurring one such as a subscription."
                 />
             ) : (
                 <Panel
@@ -833,7 +835,7 @@ export default function LabelCosts({
                                     sorter={costSorter}
                                     first="desc"
                                 >
-                                    Paid
+                                    Paid date
                                 </SortableHead>
                                 <SortableHead column="name" sorter={costSorter}>
                                     Cost
@@ -878,8 +880,11 @@ export default function LabelCosts({
                                     <TableCell className="text-right">
                                         {cost.converted_total === null ? (
                                             <Badge variant="destructive">
-                                                {Number(cost.total).toFixed(2)}{' '}
-                                                {cost.currency} · no rate
+                                                {money(
+                                                    cost.total,
+                                                    cost.currency,
+                                                )}{' '}
+                                                · no rate
                                             </Badge>
                                         ) : (
                                             <Amount
@@ -942,4 +947,4 @@ export default function LabelCosts({
     );
 }
 
-LabelCosts.layout = { breadcrumbs: [{ title: 'Label costs', href: index() }] };
+LabelCosts.layout = { breadcrumbs: [{ title: 'Overheads', href: index() }] };

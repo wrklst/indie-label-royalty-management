@@ -66,12 +66,12 @@ test('a period is settled from statement to payout in the browser', function () 
         ->assertSee('1 statement generated.')
         ->assertSeeIn('[data-slot="table-body"]', 'Draft');
 
-    $page->click('[aria-label="Record payout to Example Payee"]')
+    $page->click('[aria-label="Book payout to Example Payee"]')
         ->assertValue('[role="dialog"] input[name="total"]', '50.00')
         ->fill('[role="dialog"] input[name="total"]', '20')
         ->fill('memo', 'Bank transfer')
-        ->press('Record payout')
-        ->assertSee('Payout recorded.')
+        ->press('Book payout')
+        ->assertSee('Payout booked.')
         ->assertSeeIn('[data-slot="table-footer"]', '€30.00');
 
     $page->click('[data-slot="table-body"] a:has-text("Draft")')
@@ -89,9 +89,9 @@ test('a payout above the payable amount is refused in the dialog', function () {
     $this->actingAs($scenario['admin']);
 
     visit("/periods/{$scenario['period']->id}")
-        ->click('[aria-label="Record payout to Example Payee"]')
+        ->click('[aria-label="Book payout to Example Payee"]')
         ->fill('[role="dialog"] input[name="total"]', '80')
-        ->press('Record payout')
+        ->press('Book payout')
         ->assertSeeIn('[role="dialog"]', 'exceeds the 50.00 payable');
 
     $this->assertDatabaseCount('payouts', 0);

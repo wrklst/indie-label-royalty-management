@@ -18,6 +18,7 @@ import { useFilters } from '@/hooks/use-filters';
 import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
+import { index as portal } from '@/routes/portal';
 import { index as periods } from '@/routes/periods';
 import { index, show } from '@/routes/statements';
 import type { Paginated } from '@/types';
@@ -53,7 +54,12 @@ export default function Statements({
     return (
         <Page
             title="Statements"
-            description="A statement is a frozen copy of a payee's figures for a period. Later changes to transactions or contracts do not alter it; regenerate it to get a new revision."
+            description="A statement is a frozen copy of a payee's figures for a period. Later changes to transactions or contracts do not alter it; regenerate it to get a new revision. My statements shows what payees see of the published ones."
+            actions={
+                <Button variant="outline" asChild>
+                    <Link href={portal()}>My statements</Link>
+                </Button>
+            }
         >
             <CheckField
                 label="Include archived revisions"
@@ -151,9 +157,7 @@ export default function Statements({
                                         </span>
                                     </TableCell>
                                     <TableCell>
-                                        {date(
-                                            statement.created_at.slice(0, 10),
-                                        )}
+                                        {date(statement.created_at)}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Amount value={statement.balance} />
