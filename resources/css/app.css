@@ -150,6 +150,13 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    /* A grid cell is as wide as its column, not as its widest table: a
+       wide table scrolls inside its panel instead of pushing the page
+       off a phone's screen. */
+    :where(.grid) > * {
+        min-width: 0;
+    }
 }
 
 /* Handbook articles, rendered from Markdown. */
