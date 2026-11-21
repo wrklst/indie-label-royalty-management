@@ -56,7 +56,7 @@ No platform offers these figures to a label's own software. They have to be down
 
 Zebralution counts every platform it delivers to, so one export covers most of them.
 
-The short way: sign in to Greenhouse, Zebralution's portal, then on **Royalties → Play counts** follow the link **download the streams since the last import**. It asks Zebralution for the streams by track, platform and day, from a week before the last counted day until yesterday, or for the last year when nothing was counted yet. The week is fetched again because the latest days are still filling up; the import replaces them.
+The short way: sign in to [Zebralution Tools](https://zebralution.tools), then on **Royalties → Play counts** follow the link **download the streams since the last import**. It asks Zebralution for the streams by track, platform and day, from a week before the last counted day until yesterday, or for the last year when nothing was counted yet. The week is fetched again because the latest days are still filling up; the import replaces them.
 
 By hand: in its analytics, set the date filter to the months you want and remove every other filter, then open **Datenexport** and tick:
 

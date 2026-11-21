@@ -101,7 +101,16 @@ export default function PlayCounts({
                                                 last import
                                             </a>
                                             , by track, platform and day. Sign
-                                            in to Greenhouse first.
+                                            in to{' '}
+                                            <a
+                                                href="https://zebralution.tools"
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="underline underline-offset-4"
+                                            >
+                                                Zebralution Tools
+                                            </a>{' '}
+                                            first.
                                         </li>
                                     )}
                                     {SOURCES.map((source) => (
