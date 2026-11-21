@@ -12,6 +12,7 @@ use App\Services\Receipts\SampleReceipt;
 use App\Support\CurrentLabel;
 use App\Support\DirectUploads;
 use App\Support\InstallationSettings;
+use App\Support\PublicAddress;
 use App\Support\WorkingCopy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -128,6 +129,12 @@ class ConnectionsController extends Controller
 
         if ($needsEndpoint && $endpoint === null) {
             throw ValidationException::withMessages(['endpoint' => __('This service needs its :field.', ['field' => AiConnection::SERVICES[$service]['endpoint']])]);
+        }
+
+        // Only who runs the installation may point it at its own machine or network, for a model
+        // hosted there. From anyone else such an address would be a way to look around inside.
+        if ($service === 'openai-compatible' && $endpoint !== null && ! $request->user()->installation_admin && ! (str_starts_with(strtolower($endpoint), 'https://') && PublicAddress::is($endpoint))) {
+            throw ValidationException::withMessages(['endpoint' => __('Enter an https address on the internet. An address on this server or its network can only be set by the person who runs the installation.')]);
         }
 
         if ($needsEndpoint && $model === null) {

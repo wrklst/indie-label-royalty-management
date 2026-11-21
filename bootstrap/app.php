@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureLabelAdmin;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetCurrentLabel;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -23,7 +24,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // The updater empties the web server's code cache before it opens the site again.
         $middleware->preventRequestsDuringMaintenance(except: ['system/code-cache/reset']);
 
+        // Links in emails and upload addresses are built from the host a request names.
+        $middleware->trustHosts(at: fn (): array => array_filter([parse_url((string) config('app.url'), PHP_URL_HOST)]));
+
         $middleware->web(append: [
+            SecurityHeaders::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

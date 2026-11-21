@@ -8,6 +8,7 @@ use App\Services\Airplay\WebSearch;
 use App\Services\Receipts\ModelCatalogue;
 use App\Services\Receipts\SampleReceipt;
 use App\Support\InstallationSettings;
+use App\Support\PublicAddress;
 use App\Support\WorkingCopy;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
@@ -301,3 +302,20 @@ test('the first account created looks after the installation and later ones do n
     expect(User::query()->where('email', 'first@example.com')->sole()->installation_admin)->toBeTrue()
         ->and(User::query()->where('email', 'second@example.com')->sole()->installation_admin)->toBeFalse();
 });
+
+test('only who runs the installation may point the AI connection at the server or its network', function (string $endpoint, array $addresses) {
+    PublicAddress::resolveUsing(fn (string $host): array => $addresses);
+    $label = Label::factory()->create();
+    $input = ['provider' => 'openai-compatible', 'key' => 'example-key', 'endpoint' => $endpoint, 'model' => 'example/vision'];
+
+    $this->actingAs(labelAdmin($label))->put(route('connections.ai'), $input)->assertSessionHasErrors('endpoint');
+
+    Http::assertNothingSent();
+    expect($label->refresh()->ai_endpoint)->toBeNull();
+})->with([
+    'the server itself' => ['https://127.0.0.1:6379', []],
+    'a cloud metadata service' => ['https://169.254.169.254/latest?', []],
+    'a name that leads into the private network' => ['https://models.example.com/v1', ['10.0.0.5']],
+    'plain http' => ['http://models.example.com/v1', ['203.0.114.10']],
+    'a name that cannot be looked up' => ['https://models.example.com/v1', []],
+]);

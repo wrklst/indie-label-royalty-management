@@ -37,7 +37,7 @@ class CreateUser extends Command
             'password' => Str::password(32),
         ]);
         // The first account looks after the installation: it may change the file storage.
-        $user->forceFill(['email_verified_at' => now(), 'installation_admin' => User::query()->where('installation_admin', true)->doesntExist()])->save();
+        $user->forceFill(['email_verified_at' => now(), 'may_create_labels' => true, 'installation_admin' => User::query()->where('installation_admin', true)->doesntExist()])->save();
 
         $this->info("Account created. {$email} signs in at ".route('login.code.create').' with a code sent by email.');
 

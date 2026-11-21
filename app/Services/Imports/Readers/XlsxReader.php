@@ -206,7 +206,7 @@ class XlsxReader extends TabularReader
         }
 
         $xml = new XMLReader;
-        $xml->XML((string) $zip->getFromName('xl/sharedStrings.xml'));
+        $xml->XML($this->part($zip, 'xl/sharedStrings.xml'));
         $strings = [];
 
         while ($xml->read()) {
@@ -247,11 +247,24 @@ class XlsxReader extends TabularReader
     }
 
     /**
+     * A part of the workbook that is read in one piece. A few kilobytes
+     * can unpack to gigabytes, so its unpacked size is looked at first.
+     */
+    private function part(ZipArchive $zip, string $name): string
+    {
+        if (($zip->statName($name)['size'] ?? 0) > 200 * 1024 * 1024) {
+            throw new ImportException('The workbook is too large to read. Save the sheet as CSV and import that.');
+        }
+
+        return (string) $zip->getFromName($name);
+    }
+
+    /**
      * @return array<int, bool>
      */
     private function readDateStyles(ZipArchive $zip): array
     {
-        $styles = (string) $zip->getFromName('xl/styles.xml');
+        $styles = $this->part($zip, 'xl/styles.xml');
 
         if ($styles === '') {
             return [];

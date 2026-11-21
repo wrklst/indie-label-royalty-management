@@ -139,6 +139,12 @@ class ReleaseImageVariants
      */
     private function reserveMemory(int $bytes): bool
     {
+        // Never more than this for one picture, whatever the limit could be raised to:
+        // a handful of huge pictures asked for at once would take the server's memory.
+        if ($bytes > 256 * 1024 * 1024) {
+            return false;
+        }
+
         $limit = ini_parse_quantity((string) ini_get('memory_limit'));
         $needed = memory_get_usage() + $bytes + self::MEMORY_HEADROOM;
 

@@ -36,9 +36,19 @@ class LabelInvitation extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject(__(':label gave you access to their royalty accounting', ['label' => $this->label->name]))
-            ->greeting(__('Hello :name,', ['name' => $notifiable->name]))
-            ->line(__(':label gave you access to their royalty accounting. You can read your statements and payouts there.', ['label' => $this->label->name]))
+            ->greeting(__('Hello :name,', ['name' => self::plain($notifiable->name)]))
+            ->line(__(':label gave you access to their royalty accounting. You can read your statements and payouts there.', ['label' => self::plain($this->label->name)]))
             ->action(__('Sign in'), route('login.code.create', ['email' => $notifiable->email]))
             ->line(__('You do not need a password: we email you a one-time code to sign in with.'));
+    }
+
+    /**
+     * A name as plain words: the mail is written in Markdown, where a
+     * label called "[Confirm your bank details](https://…)" would
+     * become a link sent from this installation's address.
+     */
+    private static function plain(string $name): string
+    {
+        return trim((string) preg_replace('/\s+/', ' ', (string) preg_replace('/[\[\]()<>*_`!#\\|]+/', ' ', $name)));
     }
 }

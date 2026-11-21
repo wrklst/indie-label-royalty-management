@@ -727,6 +727,7 @@ function Findings({ findings }: { findings: Paginated<Finding> }) {
                     ))}
                 </TableBody>
             </Table>
+            <Pagination page={findings} noun="findings" />
         </Panel>
     );
 }
@@ -888,6 +889,7 @@ function ResearchLog({ searches }: { searches: Paginated<SearchEntry> }) {
                     ))}
                 </TableBody>
             </Table>
+            <Pagination page={searches} noun="searches" />
         </Panel>
     );
 }

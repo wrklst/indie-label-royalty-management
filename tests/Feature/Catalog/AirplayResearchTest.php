@@ -11,6 +11,8 @@ use App\Models\Label;
 use App\Models\Release;
 use App\Models\Track;
 use App\Services\Airplay\AirplayResearch;
+use App\Services\Airplay\PageCheck;
+use App\Support\PublicAddress;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -423,4 +425,17 @@ test('the command queues nothing when web search is not set up', function () {
     $this->artisan('royalties:research-airplay')->assertSuccessful();
 
     Queue::assertNothingPushed();
+});
+
+test('a page is not fetched when its address or a redirect leads into the server or its network', function () {
+    Http::fake(['*' => Http::response('<title>Example Track</title>Example Artist')]);
+    PublicAddress::resolveUsing(fn (string $host): array => $host === 'radio.example.com' ? ['203.0.114.10'] : ['10.0.0.5']);
+    $check = app(PageCheck::class);
+
+    expect($check->check('https://radio.example.com/playlist', 'Example Artist', 'Example Track')['verification'])->not->toBe(PageCheck::UNREACHABLE)
+        ->and($check->check('https://intranet.example.com/playlist', 'Example Artist', 'Example Track')['verification'])->toBe(PageCheck::UNREACHABLE)
+        ->and($check->check('http://127.0.0.1:8080/', 'Example Artist', 'Example Track')['verification'])->toBe(PageCheck::UNREACHABLE)
+        ->and($check->check('http://[::1]/', 'Example Artist', 'Example Track')['verification'])->toBe(PageCheck::UNREACHABLE);
+
+    Http::assertSentCount(1);
 });

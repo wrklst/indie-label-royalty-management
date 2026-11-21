@@ -6,6 +6,7 @@ use App\Models\Payee;
 use App\Models\User;
 use App\Notifications\LabelInvitation;
 use App\Notifications\LoginCodeNotification;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 
 test('someone new gets an account and an invitation naming the label', function () {
@@ -76,8 +77,8 @@ test('the invitation escapes the label and user name', function () {
     $content = (string) (new LabelInvitation($label))->toMail($user)->render();
 
     expect($content)
-        ->toContain('&lt;script&gt;')
-        ->not->toContain('<script>alert("label")</script>')
+        ->toContain('Example script')
+        ->not->toContain('<script>')
         ->not->toContain('<img src=x');
 });
 
@@ -100,4 +101,47 @@ test('an invited person can sign in with a code from the invitation link without
 
     $this->assertAuthenticatedAs($user);
     $this->get(route('portal.index'))->assertOk();
+});
+
+test('an account that took the invited address without proving it is locked to its owner before it is added', function () {
+    $label = Label::factory()->create();
+    $squatter = User::factory()->unverified()->create(['email' => 'manager@example.com']);
+    $password = $squatter->password;
+    DB::table('sessions')->insert(['id' => 'squatter-session', 'user_id' => $squatter->id, 'payload' => '', 'last_activity' => now()->timestamp]);
+    config(['session.driver' => 'database']);
+    Notification::fake();
+
+    $this->actingAs(labelAdmin($label))->post(route('team.store'), ['email' => 'manager@example.com', 'role' => 'admin'])->assertSessionHasNoErrors();
+
+    expect($squatter->refresh()->password)->not->toBe($password)
+        ->and(DB::table('sessions')->where('user_id', $squatter->id)->exists())->toBeFalse()
+        ->and($squatter->hasVerifiedEmail())->toBeFalse();
+});
+
+test('someone removed from the label they were invited to cannot open a label of their own', function () {
+    $label = Label::factory()->create();
+    Notification::fake();
+    $this->actingAs(labelAdmin($label))->post(route('team.store'), ['email' => 'former@example.com', 'role' => 'admin'])->assertSessionHasNoErrors();
+    $former = User::query()->where('email', 'former@example.com')->sole();
+    $label->users()->detach($former->id);
+
+    $this->actingAs($former)->post(route('labels.store'), ['name' => 'Example Records', 'currency' => 'EUR'])->assertForbidden();
+
+    $this->assertDatabaseMissing('labels', ['name' => 'Example Records']);
+});
+
+test('a label or person named like a link does not become one in the invitation', function () {
+    $label = Label::factory()->create(['name' => '[Confirm your bank details](https://example.com/phish)']);
+    $user = User::factory()->create(['name' => '**Sir** <b>']);
+
+    $mail = (new LabelInvitation($label))->toMail($user);
+
+    expect($mail->introLines[0])->not->toContain('](')->not->toContain('[')
+        ->and($mail->greeting)->toBe('Hello Sir b,');
+});
+
+test('every page tells the browser not to frame it elsewhere or guess content types', function () {
+    $this->get(route('login'))
+        ->assertHeader('X-Content-Type-Options', 'nosniff')
+        ->assertHeader('Content-Security-Policy', "frame-ancestors 'self'");
 });

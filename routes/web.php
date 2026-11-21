@@ -65,7 +65,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::resource('releases', ReleaseController::class);
 
             Route::post('platform-links', [PlatformLinkController::class, 'store'])->name('platform-links.store');
-            Route::post('platform-links/detect', [PlatformLinkController::class, 'detect'])->name('platform-links.detect');
+            Route::post('platform-links/detect', [PlatformLinkController::class, 'detect'])->middleware('throttle:20,1')->name('platform-links.detect');
             Route::put('platform-links/{platform_link}', [PlatformLinkController::class, 'update'])->name('platform-links.update');
             Route::delete('platform-links/{platform_link}', [PlatformLinkController::class, 'destroy'])->name('platform-links.destroy');
             Route::resource('tracks', TrackController::class)->only(['index', 'show', 'update', 'destroy']);
@@ -77,10 +77,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::resource('airplays', AirplayController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::post('airplays/{airplay}/links', [AirplayController::class, 'storeLink'])->name('airplays.links.store');
             Route::delete('airplays/{airplay}/links', [AirplayController::class, 'destroyLink'])->name('airplays.links.destroy');
-            Route::post('airplays/research', [AirplayResearchController::class, 'store'])->name('airplays.research.store');
+            Route::post('airplays/research', [AirplayResearchController::class, 'store'])->middleware('throttle:10,1')->name('airplays.research.store');
             Route::post('airplay-findings/{finding}/keep', [AirplayResearchController::class, 'keep'])->name('airplay-findings.keep');
             Route::post('airplay-findings/{finding}/dismiss', [AirplayResearchController::class, 'dismiss'])->name('airplay-findings.dismiss');
-            Route::post('airplays/{airplay}/research', [AirplayResearchController::class, 'airplay'])->name('airplays.research.airplay');
+            Route::post('airplays/{airplay}/research', [AirplayResearchController::class, 'airplay'])->middleware('throttle:30,1')->name('airplays.research.airplay');
             Route::post('airplays/{airplay}/search', [AirplayController::class, 'search'])->middleware('throttle:30,1')->name('airplays.search');
 
             Route::resource('transactions', TransactionController::class)->except(['show']);
@@ -111,8 +111,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('settings/connections', [ConnectionsController::class, 'edit'])->name('connections.edit');
             Route::put('settings/connections/search', [ConnectionsController::class, 'search'])->name('connections.search');
-            Route::put('settings/connections/ai', [ConnectionsController::class, 'ai'])->name('connections.ai');
-            Route::put('settings/connections/ai/model', [ConnectionsController::class, 'aiModel'])->name('connections.ai.model');
+            Route::put('settings/connections/ai', [ConnectionsController::class, 'ai'])->middleware('throttle:10,1')->name('connections.ai');
+            Route::put('settings/connections/ai/model', [ConnectionsController::class, 'aiModel'])->middleware('throttle:10,1')->name('connections.ai.model');
             Route::put('settings/connections/storage', [ConnectionsController::class, 'storage'])->name('connections.storage');
             Route::post('settings/connections/storage/direct-uploads', [ConnectionsController::class, 'directUploads'])->name('connections.storage.direct-uploads');
             Route::delete('settings/connections/search', [ConnectionsController::class, 'destroySearch'])->name('connections.search.destroy');

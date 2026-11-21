@@ -76,7 +76,7 @@ class AiConnection
         }
 
         try {
-            $response = Http::withToken((string) $key)->acceptJson()->connectTimeout(5)->timeout(15)->get($url.'/models');
+            $response = Http::withToken((string) $key)->acceptJson()->connectTimeout(5)->timeout(15)->withoutRedirecting()->get($url.'/models');
         } catch (Throwable $exception) {
             throw new RuntimeException('The AI service could not be reached.', previous: $exception);
         }

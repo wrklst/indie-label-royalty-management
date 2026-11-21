@@ -187,6 +187,8 @@ class AudioPreviews
     {
         $command = [
             (string) config('royalties.audio.ffmpeg'), '-hide_banner', '-nostdin', '-y',
+            // The file may be a playlist dressed up as audio: it reads nothing but local files.
+            '-protocol_whitelist', 'file,crypto',
             '-i', $source,
             '-map', '0:a:0', '-vn', '-sn', '-dn', '-map_metadata', '-1', '-map_chapters', '-1',
             '-c:a', 'libmp3lame', '-b:a', ((int) config('royalties.audio.bitrate')).'k',

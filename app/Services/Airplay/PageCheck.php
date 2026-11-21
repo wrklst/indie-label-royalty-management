@@ -2,8 +2,11 @@
 
 namespace App\Services\Airplay;
 
+use App\Support\PublicAddress;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Psr\Http\Message\UriInterface;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -32,22 +35,32 @@ class PageCheck
     {
         $failed = ['verification' => self::UNREACHABLE, 'page_title' => null, 'text' => '', 'excerpt' => null];
 
-        if (! in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
+        // The address comes from a search result: it must not lead into this server or its network.
+        if (! PublicAddress::is($url)) {
             return $failed;
         }
 
         try {
             $response = Http::withUserAgent('Mozilla/5.0 (compatible; airplay-research)')
-                ->accept('text/html')->connectTimeout(5)->timeout(12)->withOptions(['allow_redirects' => ['max' => 3]])->get($url);
+                ->accept('text/html')->connectTimeout(5)->timeout(12)->withOptions([
+                    'stream' => true,
+                    'allow_redirects' => ['max' => 3, 'on_redirect' => function ($request, $response, UriInterface $target): void {
+                        if (! PublicAddress::is((string) $target)) {
+                            throw new RuntimeException('The page redirects to an address that is not public.');
+                        }
+                    }],
+                ])->get($url);
+
+            if ($response->failed()) {
+                return $failed;
+            }
+
+            // Read no more than is looked at, however much the page sends.
+            $html = $response->toPsrResponse()->getBody()->read(self::MAX_BYTES);
         } catch (Throwable) {
             return $failed;
         }
 
-        if ($response->failed()) {
-            return $failed;
-        }
-
-        $html = substr($response->body(), 0, self::MAX_BYTES);
         $pageTitle = preg_match('/<title[^>]*>(.*?)<\/title>/is', $html, $match) === 1 ? $this->clean($match[1]) : null;
         $text = $this->clean((string) preg_replace('/<(script|style|noscript|title)\b.*?<\/\1>/is', ' ', $html));
         $lower = Str::lower($text);

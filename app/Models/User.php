@@ -31,6 +31,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $two_factor_confirmed_at
  * @property string|null $remember_token
  * @property int|null $current_label_id
+ * @property bool $may_create_labels Made to run a label, not invited to one: may open a first label.
  * @property bool $installation_admin May change settings of the whole installation, such as the file storage.
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -52,6 +53,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     {
         return [
             'installation_admin' => 'boolean',
+            'may_create_labels' => 'boolean',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
@@ -59,12 +61,14 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     }
 
     /**
-     * Someone invited to read their statements does not get to open a
-     * label of their own; someone new, or who runs a label already, does.
+     * Someone invited to a label does not get to open one of their own,
+     * also not after being removed from it; whoever runs a label does,
+     * and so does an account made to run one that has none yet.
      */
     public function canCreateLabel(): bool
     {
-        return $this->labels()->doesntExist() || $this->labels()->wherePivot('role', LabelRole::Admin->value)->exists();
+        return $this->labels()->wherePivot('role', LabelRole::Admin->value)->exists()
+            || ($this->may_create_labels && $this->labels()->doesntExist());
     }
 
     /**

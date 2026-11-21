@@ -148,7 +148,7 @@ test('the master is converted by ffmpeg, called with separate arguments and neve
         $target = last($process->command);
 
         return $process->timeout === 600 && array_slice($process->command, 0, -1) === [
-            'ffmpeg', '-hide_banner', '-nostdin', '-y', '-i', $source,
+            'ffmpeg', '-hide_banner', '-nostdin', '-y', '-protocol_whitelist', 'file,crypto', '-i', $source,
             '-map', '0:a:0', '-vn', '-sn', '-dn', '-map_metadata', '-1', '-map_chapters', '-1',
             '-c:a', 'libmp3lame', '-b:a', '320k', '-ar', '44100', '-ac', '2', '-id3v2_version', '3',
             '-metadata', 'title=Opening"; rm -rf ~ # (Club Mix)',

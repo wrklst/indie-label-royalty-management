@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Support\PublicAddress;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -24,6 +25,9 @@ abstract class TestCase extends BaseTestCase
 
         // No test may call an outside service: one that needs an answer fakes it.
         Http::preventStrayRequests();
+
+        // Nor look a name up: every host counts as public unless a test says otherwise.
+        PublicAddress::resolveUsing(fn (string $host): array => ['203.0.114.10']);
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

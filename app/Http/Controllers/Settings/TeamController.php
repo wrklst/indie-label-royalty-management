@@ -60,6 +60,13 @@ class TeamController extends Controller
             $user->forceFill(['email_verified_at' => now()])->save();
         }
 
+        if (! $user->hasVerifiedEmail()) {
+            // Whoever holds this account never proved the address is theirs: they may have put it
+            // there to be invited in its owner's place. Only the owner's code opens it from here on.
+            $user->forceFill(['password' => Str::password(32)])->save();
+            $user->revokeAccessExceptPassword();
+        }
+
         $label->users()->attach($user, $this->pivot($request));
         $user->notify(new LabelInvitation($label));
 
