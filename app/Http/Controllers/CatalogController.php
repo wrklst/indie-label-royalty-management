@@ -7,6 +7,7 @@ use App\Models\Track;
 use App\Support\CurrentLabel;
 use App\Support\Filters;
 use App\Support\Options;
+use App\Support\PageSize;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -34,7 +35,7 @@ class CatalogController extends Controller
             ->when($request->boolean('without_contract'), fn ($query) => $query->whereNull('contract_id')
                 ->where(fn ($query) => $query->doesntHave('tracks')->orWhereHas('tracks', fn ($query) => $query->whereNull('contract_id'))))
             ->orderByRaw('catalog_number IS NULL')->orderBy('catalog_number')->orderBy('name')->orderBy('id')
-            ->paginate(50)
+            ->paginate(PageSize::MAIN)
             ->withQueryString()
             ->through(fn (Release $release): array => [
                 ...$release->only(['id', 'name', 'catalog_number', 'contract_id', 'artist_id']),

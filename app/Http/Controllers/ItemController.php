@@ -10,6 +10,7 @@ use App\Models\Track;
 use App\Models\Transaction;
 use App\Support\Filters;
 use App\Support\Options;
+use App\Support\PageSize;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -44,7 +45,7 @@ class ItemController extends Controller
             ->when($request->boolean('unassigned'), fn ($query) => $query->whereNull('release_id'))
             ->when($request->integer('release'), fn ($query, int $release) => $query->where('release_id', $release))
             ->tap($sorting)
-            ->paginate(50)
+            ->paginate(PageSize::MAIN)
             ->withQueryString()
             ->through(fn (Item $item): array => [
                 ...$item->only(['id', 'name', 'artist_name', 'track_name', 'catalog_number', 'isrc', 'upc', 'format_group', 'is_additionals', 'release_id', 'track_id', 'contract_id', 'transactions_count']),

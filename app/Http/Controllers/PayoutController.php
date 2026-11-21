@@ -7,6 +7,7 @@ use App\Models\Payout;
 use App\Models\Period;
 use App\Models\User;
 use App\Support\Options;
+use App\Support\PageSize;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -33,7 +34,7 @@ class PayoutController extends Controller
                 ->when($request->integer('period'), fn ($query, int $period) => $query->where('period_id', $period))
                 ->when($request->integer('payee'), fn ($query, int $payee) => $query->where('payee_id', $payee))
                 ->tap($sorting)
-                ->paginate(50)
+                ->paginate(PageSize::MAIN)
                 ->withQueryString()
                 ->through(fn (Payout $payout): array => [
                     ...$payout->only(['id', 'total', 'memo', 'payee_id', 'period_id']),

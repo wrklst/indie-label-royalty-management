@@ -14,6 +14,7 @@ use App\Services\Royalties\PayoutService;
 use App\Services\Royalties\RoyaltyCalculator;
 use App\Services\Royalties\StatementGenerator;
 use App\Support\Decimal;
+use App\Support\PageSize;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -41,7 +42,7 @@ class PeriodController extends Controller
                 ->withCount(['payouts', 'statements' => fn ($query) => $query->where('archived', false)])
                 ->withSum('payouts as paid', 'total')
                 ->tap($sorting)
-                ->paginate(50)
+                ->paginate(PageSize::MAIN)
                 ->withQueryString()
                 ->through(fn (Period $period): array => [
                     ...$period->only(['id', 'name', 'payouts_count', 'statements_count']),

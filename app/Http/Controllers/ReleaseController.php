@@ -22,6 +22,7 @@ use App\Services\Reports\IncomeReport;
 use App\Support\CurrentLabel;
 use App\Support\Filters;
 use App\Support\Options;
+use App\Support\PageSize;
 use App\Support\ReturnTo;
 use App\Support\Services;
 use App\Support\Sorting;
@@ -59,7 +60,7 @@ class ReleaseController extends Controller
             ->when($request->boolean('without_contract'), fn ($query) => $query->whereNull('contract_id'))
             ->when(ReleaseStatus::tryFrom(Filters::text($request, 'status')), fn ($query, ReleaseStatus $status) => $query->where('status', $status))
             ->tap($sorting)
-            ->paginate(50)
+            ->paginate(PageSize::MAIN)
             ->withQueryString();
         $albums = PlayableAudio::albums($releases->getCollection());
         $releases = $releases
@@ -121,7 +122,7 @@ class ReleaseController extends Controller
             ->withCount('transactions')
             ->withSum('transactions as total', 'converted_total')
             ->tap($itemSorting)
-            ->paginate(25, pageName: 'items_page')->withQueryString();
+            ->paginate(PageSize::SECONDARY, pageName: 'items_page')->withQueryString();
 
         $release->load([
             'artist:id,name', 'artists:id,name', 'contract:id,name', 'tracks.artist:id,name', 'tracks.artists:id,name', 'tracks.contract:id,name',

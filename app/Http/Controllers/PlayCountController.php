@@ -9,6 +9,7 @@ use App\Services\Imports\ImportException;
 use App\Services\Imports\PlayCountImport;
 use App\Services\Reports\IncomeReport;
 use App\Support\CurrentLabel;
+use App\Support\PageSize;
 use App\Support\Platforms;
 use App\Support\Services;
 use App\Support\Sorting;
@@ -46,7 +47,7 @@ class PlayCountController extends Controller
 
         $files = PlayCount::query()
             ->selectRaw('batch, MAX(source_file) as source_file, MIN(platform) as first_platform, MIN(period_start) as starts, MAX(period_end) as ends, COUNT(*) as counts, COUNT(track_id) as matched, SUM(plays) as plays, MAX(created_at) as created_at')
-            ->groupBy('batch')->tap($sorting)->orderByDesc('batch')->paginate(50)->withQueryString();
+            ->groupBy('batch')->tap($sorting)->orderByDesc('batch')->paginate(PageSize::MAIN)->withQueryString();
         $batches = $files->getCollection()->pluck('batch')->all();
         $unmatchedCounts = PlayCount::query()->whereNull('track_id')->whereIn('batch', $batches)->toBase()
             ->selectRaw('batch, COUNT(DISTINCT track_name) as names')->groupBy('batch')->pluck('names', 'batch');

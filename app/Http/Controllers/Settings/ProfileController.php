@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\Label;
+use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -67,6 +68,12 @@ class ProfileController extends Controller
         if ($orphaned !== null) {
             throw ValidationException::withMessages([
                 'password' => __('You are the only admin of :label. Make someone else an admin under Settings → Team first.', ['label' => $orphaned->name]),
+            ]);
+        }
+
+        if ($user->installation_admin && User::query()->where('installation_admin', true)->whereKeyNot($user->id)->doesntExist()) {
+            throw ValidationException::withMessages([
+                'password' => __('You are the installation admin. Hand the role over to another account first: run php artisan royalties:hand-over-installation with their email address on the server.'),
             ]);
         }
 

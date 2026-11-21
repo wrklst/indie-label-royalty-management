@@ -15,6 +15,7 @@ use App\Services\Airplay\WebSearch;
 use App\Services\Releases\ArtistCredits;
 use App\Support\CurrentLabel;
 use App\Support\Filters;
+use App\Support\PageSize;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Expression;
@@ -54,13 +55,13 @@ class AirplayController extends Controller
 
         return Inertia::render('airplays/index', [
             'findings' => AirplayFinding::query()->where('status', AirplayFinding::NEW)->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with(['track:id,name', 'airplay:id,track_name,station'])
-                ->orderByRaw("verification = 'confirmed' desc")->orderByDesc('is_radio')->latest()->orderByDesc('id')->paginate(25, pageName: 'findings_page')->withQueryString()
+                ->orderByRaw("verification = 'confirmed' desc")->orderByDesc('is_radio')->latest()->orderByDesc('id')->paginate(PageSize::SECONDARY, pageName: 'findings_page')->withQueryString()
                 ->through(fn (AirplayFinding $finding): array => [
                     ...$finding->only(['id', 'track_id', 'is_radio', 'station', 'url', 'title', 'description', 'domain', 'query', 'airplay_id', 'verification', 'page_title', 'show', 'excerpt']),
                     'track' => $finding->track->name ?? $finding->airplay?->track_name,
                     'airplay_station' => $finding->airplay_id === null ? null : ($finding->airplay->station ?? __('Unknown')),
                 ]),
-            'searches' => AirplaySearch::query()->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with(['track:id,name', 'airplay:id,track_name,station'])->latest('id')->paginate(25, pageName: 'log_page')->withQueryString()
+            'searches' => AirplaySearch::query()->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with(['track:id,name', 'airplay:id,track_name,station'])->latest('id')->paginate(PageSize::SECONDARY, pageName: 'log_page')->withQueryString()
                 ->through(fn (AirplaySearch $entry): array => [
                     ...$entry->only(['id', 'track_id', 'query', 'region', 'succeeded', 'new_findings', 'error', 'airplay_id']),
                     'track' => $entry->track->name ?? $entry->airplay?->track_name,
@@ -98,7 +99,7 @@ class AirplayController extends Controller
                     ->where('track_name', 'like', "%{$search}%")->orWhere('artist_name', 'like', "%{$search}%")
                     ->orWhere('station', 'like', "%{$search}%")->orWhere('isrc', 'like', '%'.str_replace('-', '', $search).'%')))
                 ->when(AirplayOrigin::tryFrom(Filters::text($request, 'origin')), fn ($query, AirplayOrigin $origin) => $query->where('origin', $origin))
-                ->tap($sorting)->paginate(50)->withQueryString()
+                ->tap($sorting)->paginate(PageSize::MAIN)->withQueryString()
                 ->through(fn (Airplay $airplay): array => [
                     ...$airplay->only(['id', 'origin', 'track_id', 'track_name', 'artist_name', 'isrc', 'station', 'media_type', 'region', 'society', 'amount', 'notes', 'data_import_id']),
                     'period_start' => $airplay->period_start?->toDateString(),

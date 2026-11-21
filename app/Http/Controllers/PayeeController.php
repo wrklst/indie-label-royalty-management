@@ -13,6 +13,7 @@ use App\Models\Statement;
 use App\Models\Transaction;
 use App\Services\Royalties\RoyaltyCalculator;
 use App\Support\Filters;
+use App\Support\PageSize;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -37,7 +38,7 @@ class PayeeController extends Controller
             ->withCount(['splits', 'payouts', 'statements'])
             ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
             ->tap($sorting)
-            ->paginate(50)
+            ->paginate(PageSize::MAIN)
             ->withQueryString()
             ->through(fn (Payee $payee): array => $payee->only(['id', 'name', 'email', 'tags', 'notes', 'splits_count', 'payouts_count', 'statements_count']));
 
@@ -94,20 +95,20 @@ class PayeeController extends Controller
                     ],
                 ]),
             'payouts' => Payout::query()->where('payee_id', $payee->id)->with('period:id,name')->tap($payoutSorting)
-                ->paginate(25, pageName: 'payouts_page')->withQueryString()
+                ->paginate(PageSize::SECONDARY, pageName: 'payouts_page')->withQueryString()
                 ->through(fn (Payout $payout): array => [
                     'id' => $payout->id, 'total' => $payout->total, 'paid_on' => $payout->paid_on->toDateString(),
                     'period' => $payout->period?->name, 'memo' => $payout->memo,
                 ]),
             'statements' => Statement::query()->where('payee_id', $payee->id)->where('archived', false)->with('period:id,name')->tap($statementSorting)
-                ->paginate(25, pageName: 'statements_page')->withQueryString()
+                ->paginate(PageSize::SECONDARY, pageName: 'statements_page')->withQueryString()
                 ->through(fn (Statement $statement): array => [
                     'id' => $statement->id, 'name' => $statement->name, 'period' => $statement->period?->name,
                     'payable' => $statement->payable, 'published' => $statement->published_at !== null,
                 ]),
             'transfers' => Transaction::query()->where('type', 'transfer')->where('payee_id', $payee->id)
                 ->with(['release:id,name', 'ledger:id,name'])->tap($transferSorting)
-                ->paginate(50, pageName: 'transfers_page')->withQueryString()
+                ->paginate(PageSize::SECONDARY, pageName: 'transfers_page')->withQueryString()
                 ->through(fn (Transaction $transfer): array => [
                     'id' => $transfer->id, 'paid_timestamp' => $transfer->paid_timestamp->toDateString(), 'total' => $transfer->total,
                     'converted_total' => $transfer->converted_total, 'currency' => $transfer->currency, 'category' => $transfer->category,

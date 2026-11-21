@@ -21,6 +21,7 @@ use App\Services\Releases\PlayableAudio;
 use App\Services\Reports\IncomeReport;
 use App\Support\Filters;
 use App\Support\Options;
+use App\Support\PageSize;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -73,7 +74,7 @@ class TrackController extends Controller
             ->when($request->integer('release'), fn ($query, int $release) => $query->where('release_id', $release), fn ($query) => $query
                 ->where(fn ($query) => $query->whereNull('isrc')->orWhereRaw('tracks.id = (select min(entries.id) from tracks as entries where entries.label_id = tracks.label_id and entries.isrc = tracks.isrc)')))
             ->tap($sorting)
-            ->paginate(50)
+            ->paginate(PageSize::MAIN)
             ->withQueryString();
         $audio = PlayableAudio::forTracks($tracks->getCollection());
         $recordings = $request->integer('release') ? collect() : Track::query()
@@ -173,7 +174,7 @@ class TrackController extends Controller
                 'with_station' => Airplay::query()->whereIn('track_id', $ids)->whereNotNull('station')->count(),
                 'earned' => (string) (Airplay::query()->whereIn('track_id', $ids)->sum('amount') ?: '0'),
             ],
-            'airplays' => Airplay::query()->whereIn('track_id', $ids)->tap($airplaySorting)->paginate(25, pageName: 'airplays_page')->withQueryString()
+            'airplays' => Airplay::query()->whereIn('track_id', $ids)->tap($airplaySorting)->paginate(PageSize::SECONDARY, pageName: 'airplays_page')->withQueryString()
                 ->through(fn (Airplay $airplay): array => [
                     ...$airplay->only(['id', 'origin', 'station', 'media_type', 'region', 'society', 'amount', 'notes', 'data_import_id']),
                     'period_start' => $airplay->period_start?->toDateString(),
@@ -181,7 +182,7 @@ class TrackController extends Controller
                     'links' => $airplay->links ?? [],
                 ]),
             'openFindings' => AirplayFinding::query()->whereIn('track_id', $ids)->where('status', AirplayFinding::NEW)->count(),
-            'searches' => AirplaySearch::query()->whereIn('track_id', $ids)->tap($searchSorting)->paginate(10, pageName: 'searches_page')->withQueryString()
+            'searches' => AirplaySearch::query()->whereIn('track_id', $ids)->tap($searchSorting)->paginate(PageSize::SECONDARY, pageName: 'searches_page')->withQueryString()
                 ->through(fn (AirplaySearch $entry): array => [
                     ...$entry->only(['id', 'query', 'region', 'succeeded', 'new_findings', 'error']),
                     'results' => count($entry->results ?? []),

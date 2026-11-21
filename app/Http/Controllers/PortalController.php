@@ -11,6 +11,7 @@ use App\Models\Statement;
 use App\Support\CurrentLabel;
 use App\Support\Decimal;
 use App\Support\Options;
+use App\Support\PageSize;
 use App\Support\PayeeAccess;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
@@ -65,7 +66,7 @@ class PortalController extends Controller
                 ->when($filters['period'], fn ($query, int $period) => $query->where('period_id', $period))
                 ->when($filters['payee'], fn ($query, int $payee) => $query->where('payee_id', $payee))
                 ->tap($sorting)
-                ->paginate(25, pageName: 'statements_page')->withQueryString()
+                ->paginate(PageSize::SECONDARY, pageName: 'statements_page')->withQueryString()
                 ->through(fn (Statement $statement): array => $this->row($statement));
         }
 
@@ -106,7 +107,7 @@ class PortalController extends Controller
                 ],
                 'overview' => $this->overview($access, $label),
                 'payouts' => $access->payouts($label)->tap($payoutSorting)
-                    ->paginate(25, pageName: "payouts_{$label->id}_page")->withQueryString()
+                    ->paginate(PageSize::SECONDARY, pageName: "payouts_{$label->id}_page")->withQueryString()
                     ->through(fn (Payout $payout): array => [
                         'id' => $payout->id,
                         'paid_on' => $payout->paid_on->toDateString(),
@@ -115,7 +116,7 @@ class PortalController extends Controller
                         'memo' => $payout->memo,
                     ]),
                 'statements' => $access->statements($label)->tap($statementSorting)
-                    ->paginate(25, pageName: "statements_{$label->id}_page")->withQueryString()
+                    ->paginate(PageSize::SECONDARY, pageName: "statements_{$label->id}_page")->withQueryString()
                     ->through(fn (Statement $statement): array => $this->row($statement)),
             ];
         }

@@ -10,6 +10,7 @@ use App\Models\Track;
 use App\Support\Decimal;
 use App\Support\Filters;
 use App\Support\Options;
+use App\Support\PageSize;
 use App\Support\ReturnTo;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
@@ -38,7 +39,7 @@ class ContractController extends Controller
             ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
             ->when($request->boolean('unused'), fn ($query) => $query->doesntHave('releases')->doesntHave('tracks')->doesntHave('items')->doesntHave('parents'))
             ->tap($sorting)
-            ->paginate(50)
+            ->paginate(PageSize::MAIN)
             ->withQueryString()
             ->through(fn (Contract $contract): array => [
                 ...$contract->only(['id', 'name', 'memo', 'releases_count', 'tracks_count', 'items_count', 'children_count', 'parents_count']),
@@ -106,8 +107,8 @@ class ContractController extends Controller
                 'parents' => $contract->parents->map->only(['id', 'name']),
                 'items_count' => $contract->items()->count(),
             ],
-            'releases' => $contract->releases()->tap($releaseSorting)->paginate(25, ['id', 'name', 'catalog_number'], 'releases_page')->withQueryString(),
-            'tracks' => $contract->tracks()->with('release:id,name')->tap($trackSorting)->paginate(25, ['id', 'name', 'release_id'], 'tracks_page')->withQueryString()
+            'releases' => $contract->releases()->tap($releaseSorting)->paginate(PageSize::SECONDARY, ['id', 'name', 'catalog_number'], 'releases_page')->withQueryString(),
+            'tracks' => $contract->tracks()->with('release:id,name')->tap($trackSorting)->paginate(PageSize::SECONDARY, ['id', 'name', 'release_id'], 'tracks_page')->withQueryString()
                 ->through(fn (Track $track): array => ['id' => $track->id, 'name' => $track->name, 'release' => $track->release?->only(['id', 'name'])]),
             'filters' => [...$releaseSorting->toArray(), ...$trackSorting->toArray()],
         ]);

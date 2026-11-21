@@ -17,6 +17,7 @@ use App\Support\CollectionPage;
 use App\Support\Decimal;
 use App\Support\Filters;
 use App\Support\Options;
+use App\Support\PageSize;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -56,7 +57,7 @@ class ArtistController extends Controller
             ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where(fn ($query) => $query
                 ->where('name', 'like', "%{$search}%")->orWhereHas('aliases', fn ($query) => $query->where('name', 'like', "%{$search}%"))))
             ->tap($sorting)
-            ->paginate(50)
+            ->paginate(PageSize::MAIN)
             ->withQueryString()
             ->through(fn (Artist $artist): array => [
                 ...$artist->only(['id', 'name', 'alias_of_id', 'spotify_id', 'discogs_search_name', 'notes', 'releases_count', 'tracks_count', 'aliases_count']),

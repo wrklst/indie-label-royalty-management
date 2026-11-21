@@ -20,7 +20,7 @@ final class CollectionPage
      * @param  list<string>  $columns  The keys of a row the list can be sorted by.
      * @return array{page: LengthAwarePaginator<int, array<string, mixed>>, filters: array<string, string|null>}
      */
-    public static function of(Collection $rows, Request $request, array $columns, string $prefix, int $perPage = 25): array
+    public static function of(Collection $rows, Request $request, array $columns, string $prefix, int $perPage = PageSize::SECONDARY): array
     {
         $sort = $request->query("{$prefix}_sort");
         $direction = $request->query("{$prefix}_direction", 'asc');

@@ -7,6 +7,7 @@ use App\Models\Period;
 use App\Models\Statement;
 use App\Support\Decimal;
 use App\Support\Options;
+use App\Support\PageSize;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -36,7 +37,7 @@ class StatementController extends Controller
                 ->when($request->integer('period'), fn ($query, int $period) => $query->where('period_id', $period))
                 ->when($request->integer('payee'), fn ($query, int $payee) => $query->where('payee_id', $payee))
                 ->tap($sorting)
-                ->paginate(50)
+                ->paginate(PageSize::MAIN)
                 ->withQueryString()
                 ->through(fn (Statement $statement): array => [
                     ...$statement->only(['id', 'name', 'archived', 'balance', 'payable', 'revision_of_id', 'payee_id', 'period_id']),

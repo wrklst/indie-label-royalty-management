@@ -14,6 +14,7 @@ use App\Services\Royalties\RecurringExpenseBooker;
 use App\Support\CurrentLabel;
 use App\Support\Decimal;
 use App\Support\Filters;
+use App\Support\PageSize;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Expression;
@@ -66,7 +67,7 @@ class LabelCostController extends Controller
             ->when($search, fn ($query, string $search) => $query->where(fn ($query) => $query
                 ->where('source', 'like', "%{$search}%")->orWhere('memo', 'like', "%{$search}%")->orWhere('category', 'like', "%{$search}%")))
             ->tap($costSorting)
-            ->paginate(50, pageName: 'costs_page')->withQueryString();
+            ->paginate(PageSize::MAIN, pageName: 'costs_page')->withQueryString();
         $withReceipt = Receipt::query()->whereIn('transaction_id', $listed->getCollection()->modelKeys())->get()->keyBy('transaction_id');
         // A cost without a receipt can have one attached, whichever page of costs it is on; the newest are offered.
         $withoutReceipt = $costs()->whereNotIn('id', Receipt::query()->whereNotNull('transaction_id')->select('transaction_id'))
@@ -85,7 +86,7 @@ class LabelCostController extends Controller
                 'recurring_without_rate' => $withoutRate,
             ],
             'filters' => ['search' => $search, ...$costSorting->toArray(), ...$recurringSorting->toArray()],
-            'recurring' => RecurringExpense::query()->tap($recurringSorting)->paginate(25, pageName: 'recurring_page')->withQueryString()
+            'recurring' => RecurringExpense::query()->tap($recurringSorting)->paginate(PageSize::SECONDARY, pageName: 'recurring_page')->withQueryString()
                 ->through(fn (RecurringExpense $expense): array => [
                     ...$expense->only(['id', 'name', 'category', 'amount', 'currency', 'memo', 'occurrences_booked']),
                     'conversion_rate' => $expense->conversion_rate === null ? null : rtrim(rtrim((string) $expense->conversion_rate, '0'), '.'),
@@ -112,7 +113,7 @@ class LabelCostController extends Controller
             // Whether any receipt is being read, on whichever page it is: the page polls while it is.
             'receiptsBeingRead' => Receipt::query()->whereNull('transaction_id')->where('status', 'reading')->exists(),
             // Receipts that belong to no cost yet, with what was read off them.
-            'receipts' => Receipt::query()->whereNull('transaction_id')->orderByDesc('id')->paginate(10, pageName: 'receipts_page')->withQueryString()
+            'receipts' => Receipt::query()->whereNull('transaction_id')->orderByDesc('id')->paginate(PageSize::SECONDARY, pageName: 'receipts_page')->withQueryString()
                 ->through(fn (Receipt $receipt): array => [
                     ...$receipt->only(['id', 'original_name', 'status', 'vendor', 'currency', 'category', 'summary', 'error']),
                     'amount' => $receipt->amount === null ? null : Decimal::round($receipt->amount, 2),

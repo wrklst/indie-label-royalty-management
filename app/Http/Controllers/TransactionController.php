@@ -17,6 +17,7 @@ use App\Support\Decimal;
 use App\Support\Filters;
 use App\Support\Formats;
 use App\Support\Options;
+use App\Support\PageSize;
 use App\Support\Platforms;
 use App\Support\ReturnTo;
 use App\Support\Sorting;
@@ -57,7 +58,7 @@ class TransactionController extends Controller
         $transactions = $query
             ->with(['release:id,name,catalog_number', 'track:id,name', 'payee:id,name'])
             ->tap($sorting)
-            ->paginate(100)
+            ->paginate(PageSize::TRANSACTIONS)
             ->withQueryString()
             ->through(fn (Transaction $transaction): array => [
                 ...$transaction->only(['id', 'total', 'converted_total', 'currency', 'quantity', 'category', 'format', 'region', 'retailer', 'memo', 'published', 'recoupable', 'data_import_id', 'track_id', 'payee_id']),

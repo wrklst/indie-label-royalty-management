@@ -11,6 +11,7 @@ use App\Models\Label;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Support\Decimal;
+use App\Support\PageSize;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -103,7 +104,7 @@ class ToolRuns
      */
     public function page(Label $label, RoyaltyTool $tool, Sorting $sorting): LengthAwarePaginator
     {
-        return $this->runs($label, $tool)->tap($sorting)->paginate(25, pageName: 'runs_page')->withQueryString()
+        return $this->runs($label, $tool)->tap($sorting)->paginate(PageSize::SECONDARY, pageName: 'runs_page')->withQueryString()
             ->through(fn (DataImport $import): array => $this->present($import));
     }
 

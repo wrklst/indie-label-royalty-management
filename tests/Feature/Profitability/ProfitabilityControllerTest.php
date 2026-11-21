@@ -102,6 +102,13 @@ test('the profitability page follows the filters', function (array $query, array
     'another artist' => [['artist' => ':other'], ['from' => null, 'to' => null, 'date' => null, 'artist' => ':other'], 0],
 ]);
 
+test('a range that ends before it starts matches nothing and is shown as typed', function () {
+    $label = Label::factory()->create();
+
+    $this->actingAs(labelAdmin($label))->get(route('profitability.index', ['from' => '2026-02-01', 'to' => '2026-01-01']))->assertSessionHasNoErrors()
+        ->assertInertia(fn (Assert $page) => $page->where('filters.from', '2026-02-01')->where('filters.to', '2026-01-01'));
+});
+
 test('invalid profitability filters are rejected', function (string $route, array $query, string $field, string $message) {
     $label = Label::factory()->create();
 
@@ -111,7 +118,6 @@ test('invalid profitability filters are rejected', function (string $route, arra
 })->with(['profitability.index', 'profitability.download'])->with([
     'from that is no date' => [['from' => 'someday'], 'from', 'The from field must be a valid date.'],
     'to that is no date' => [['to' => 'someday'], 'to', 'The to field must be a valid date.'],
-    'to before from' => [['from' => '2026-02-01', 'to' => '2026-01-01'], 'to', 'The to field must be a date after or equal to from.'],
     'unknown date kind' => [['date' => 'shipped'], 'date', 'The selected date is invalid.'],
     'artist that is no id' => [['artist' => 'someone'], 'artist', 'The artist field must be an integer.'],
 ]);

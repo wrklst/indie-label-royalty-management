@@ -18,6 +18,7 @@ use App\Services\Reports\IncomeReport;
 use App\Services\Royalties\MoneyFlow;
 use App\Support\CurrentLabel;
 use App\Support\Filters;
+use App\Support\PageSize;
 use App\Support\Services;
 use App\Support\Sorting;
 use App\Support\WorkingCopy;
@@ -58,7 +59,7 @@ class DataImportController extends Controller
                 ->when(Filters::text($request, 'source'), fn ($query, string $source) => $query->where('importer', $source))
                 ->when(ImportStatus::tryFrom(Filters::text($request, 'status')), fn ($query, ImportStatus $status) => $query->where('status', $status))
                 ->tap($sorting)
-                ->paginate(50)
+                ->paginate(PageSize::MAIN)
                 ->withQueryString()
                 ->through(fn (DataImport $import): array => [
                     ...$import->only(['id', 'name', 'importer', 'original_filename', 'rows_count', 'transactions_count', 'duplicates_count', 'errors_count', 'needs_cleanup', 'total', 'tags']),

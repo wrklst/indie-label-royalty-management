@@ -37,13 +37,13 @@ test('booked costs, recurring costs and waiting receipts each have pages of thei
         ]);
     }
     RecurringExpense::factory()->count(26)->create(['label_id' => $label->id, 'starts_on' => '2030-01-15']);
-    Receipt::factory()->count(11)->create(['label_id' => $label->id]);
+    Receipt::factory()->count(26)->create(['label_id' => $label->id]);
     $admin = labelAdmin($label);
 
     $this->actingAs($admin)->get(route('label-costs.index'))->assertInertia(fn (Assert $page) => $page
         ->has('costs.data', 50)->where('costs.total', 51)
         ->has('recurring.data', 25)->where('recurring.total', 26)
-        ->has('receipts.data', 10)->where('receipts.total', 11));
+        ->has('receipts.data', 25)->where('receipts.total', 26));
 
     $this->actingAs($admin)->get(route('label-costs.index', ['costs_page' => 2, 'recurring_page' => 2, 'receipts_page' => 2]))->assertInertia(fn (Assert $page) => $page
         ->has('costs.data', 1)->has('recurring.data', 1)->has('receipts.data', 1));
@@ -70,7 +70,7 @@ test('a payee page pages and sorts the transfers, payouts and statements of the 
     $label = Label::factory()->create();
     $payee = Payee::factory()->create(['label_id' => $label->id]);
     $period = Period::factory()->create(['label_id' => $label->id]);
-    foreach (range(1, 51) as $number) {
+    foreach (range(1, 26) as $number) {
         Transaction::factory()->create(['label_id' => $label->id, 'payee_id' => $payee->id, 'type' => 'transfer', 'total' => (string) $number, 'converted_total' => (string) $number, 'paid_timestamp' => '2026-03-15']);
     }
     foreach (range(1, 26) as $number) {
@@ -80,7 +80,7 @@ test('a payee page pages and sorts the transfers, payouts and statements of the 
     $admin = labelAdmin($label);
 
     $this->actingAs($admin)->get(route('payees.show', $payee))->assertInertia(fn (Assert $page) => $page
-        ->has('transfers.data', 50)->where('transfers.total', 51)
+        ->has('transfers.data', 25)->where('transfers.total', 26)
         ->has('payouts.data', 25)->where('payouts.total', 26)
         ->has('statements.data', 25)->where('statements.total', 26));
 
@@ -89,7 +89,7 @@ test('a payee page pages and sorts the transfers, payouts and statements of the 
 
     $this->actingAs($admin)->get(route('payees.show', [$payee, 'transfers_sort' => 'amount', 'transfers_direction' => 'desc', 'payouts_sort' => 'total', 'payouts_direction' => 'desc']))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('transfers.data.0.total', fn (string $total): bool => (float) $total === 51.0)
+            ->where('transfers.data.0.total', fn (string $total): bool => (float) $total === 26.0)
             ->where('payouts.data.0.total', fn (string $total): bool => (float) $total === 26.0));
 });
 
@@ -161,14 +161,14 @@ test('a track page pages and sorts its airplay and its research log', function (
     foreach (range(1, 26) as $number) {
         Airplay::factory()->create(['label_id' => $label->id, 'track_id' => $track->id, 'station' => sprintf('Station %02d', $number), 'amount' => (string) $number]);
     }
-    foreach (range(1, 11) as $number) {
+    foreach (range(1, 26) as $number) {
         AirplaySearch::query()->create(['label_id' => $label->id, 'track_id' => $track->id, 'query' => "query {$number}", 'succeeded' => true, 'results' => []]);
     }
     $admin = labelAdmin($label);
 
     $this->actingAs($admin)->get(route('tracks.show', $track))->assertInertia(fn (Assert $page) => $page
         ->has('airplays.data', 25)->where('airplays.total', 26)->where('airplayTotals.plays', 26)
-        ->has('searches.data', 10)->where('searches.total', 11));
+        ->has('searches.data', 25)->where('searches.total', 26));
     $this->actingAs($admin)->get(route('tracks.show', [$track, 'airplays_page' => 2, 'searches_page' => 2]))->assertInertia(fn (Assert $page) => $page
         ->has('airplays.data', 1)->has('searches.data', 1));
     $this->actingAs($admin)->get(route('tracks.show', [$track, 'airplays_sort' => 'amount', 'airplays_direction' => 'desc', 'searches_sort' => 'query', 'searches_direction' => 'asc']))->assertInertia(fn (Assert $page) => $page
