@@ -173,6 +173,37 @@ test('the platform filter treats the spellings of one platform as one choice', f
             ->where('transactions.data', fn ($rows) => collect($rows)->pluck('memo')->all() === ['Fourth']));
 });
 
+test('a link with a statement\'s own spelling of the platform still filters', function () {
+    $label = Label::factory()->create();
+    Transaction::factory()->create(['label_id' => $label->id, 'memo' => 'First', 'retailer' => 'Example Store']);
+    Transaction::factory()->create(['label_id' => $label->id, 'memo' => 'Second', 'retailer' => 'Other Shop']);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('transactions.index', ['retailer' => 'Example Store']))
+        ->assertInertia(fn (Assert $page) => $page->where('transactions.data', fn ($rows) => collect($rows)->pluck('memo')->all() === ['First']));
+});
+
+test('an array given as a filter is refused or ignored, never an error', function (string $url) {
+    $label = Label::factory()->create();
+    Transaction::factory()->create(['label_id' => $label->id]);
+
+    // The transaction list refuses it with a validation message; the others read it as no text.
+    expect($this->actingAs(labelAdmin($label))->get($url)->status())->toBeIn([200, 302]);
+})->with([
+    'transactions search' => '/transactions?search[]=x',
+    'releases search' => '/releases?search[]=x',
+    'releases status' => '/releases?status[]=x',
+    'tracks search' => '/tracks?search[]=x',
+    'catalog search' => '/catalog?search[]=x',
+    'artists search' => '/artists?search[]=x',
+    'items search' => '/items?search[]=x',
+    'imports search' => '/data-imports?search[]=x&source[]=y',
+    'airplay search' => '/airplays?search[]=x&origin[]=y',
+    'overheads search' => '/label-costs?search[]=x',
+    'contracts search' => '/contracts?search[]=x',
+    'payees search' => '/payees?search[]=x',
+]);
+
 test('a transaction of each type can be entered by hand', function (string $type, string $typed, string $total) {
     $label = Label::factory()->create();
     $payee = Payee::factory()->create(['label_id' => $label->id]);

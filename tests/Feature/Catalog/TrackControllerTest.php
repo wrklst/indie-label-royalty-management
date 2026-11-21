@@ -162,3 +162,17 @@ test('deleting a track keeps its transactions on the release', function () {
     $this->assertModelMissing($track);
     $this->assertDatabaseHas('transactions', ['id' => $transaction->id, 'release_id' => $release->id, 'track_id' => null]);
 });
+
+test('the track list leaves out lyrics and credits, and the dialog fetches them for one track of this label', function () {
+    $label = Label::factory()->create();
+    $track = Track::factory()->create(['label_id' => $label->id, 'name' => 'Example Track', 'lyrics' => 'Example lyrics', 'credits' => ['composers' => ['Example Writer']]]);
+    $foreign = Track::factory()->create(['label_id' => Label::factory(), 'lyrics' => 'Secret']);
+    $admin = labelAdmin($label);
+
+    $this->actingAs($admin)->get(route('tracks.index'))->assertInertia(fn (Assert $page) => $page
+        ->where('tracks.data.0.name', 'Example Track')->missing('tracks.data.0.lyrics')->missing('tracks.data.0.credits'));
+
+    $this->actingAs($admin)->getJson(route('tracks.fields', $track->id))->assertOk()
+        ->assertJson(['lyrics' => 'Example lyrics', 'credits' => ['composers' => ['Example Writer']]]);
+    $this->actingAs($admin)->getJson(route('tracks.fields', $foreign->id))->assertNotFound();
+});

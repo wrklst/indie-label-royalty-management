@@ -1,5 +1,6 @@
-import { Link, setLayoutProps } from '@inertiajs/react';
+import { Link, setLayoutProps, usePage } from '@inertiajs/react';
 import { Amount } from '@/components/amount';
+import { FilterBar } from '@/components/filter-bar';
 import { EmptyState, Page, Panel, Stat } from '@/components/page';
 import { Pagination } from '@/components/pagination';
 import { SortableHead } from '@/components/sortable-head';
@@ -16,7 +17,7 @@ import { serverSorter, useTableSort } from '@/hooks/use-table-sort';
 import type { Sorter } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
 import { index, show } from '@/routes/portal';
-import type { Paginated } from '@/types';
+import type { Option, Paginated } from '@/types';
 
 type Statement = {
     id: number;
@@ -24,6 +25,7 @@ type Statement = {
     balance: string;
     payable: string;
     period: string | null;
+    payee: string | null;
     published_at: string | null;
 };
 
@@ -63,7 +65,9 @@ type Props = {
     view: 'admin' | 'payee' | 'unlinked';
     groups: Group[];
     statements: Paginated<Statement> | null;
-    filters: Record<string, string | null>;
+    filters: Record<string, string | number | null>;
+    periodOptions: Option[];
+    payeeOptions: Option[];
 };
 
 const LEDGER_COLUMNS = {
@@ -251,16 +255,24 @@ function StatementsTable({
     statements,
     sorter,
     currency,
+    withPayee = false,
 }: {
     statements: Paginated<Statement>;
     sorter: Sorter;
     currency?: string;
+    /** The preview of a label's admin lists every payee's statements, so the rows say whose they are. */
+    withPayee?: boolean;
 }) {
     return (
         <>
             <Table>
                 <TableHeader>
                     <TableRow>
+                        {withPayee && (
+                            <SortableHead column="payee" sorter={sorter}>
+                                Payee
+                            </SortableHead>
+                        )}
                         <SortableHead column="period" sorter={sorter}>
                             Period
                         </SortableHead>
@@ -292,6 +304,9 @@ function StatementsTable({
                 <TableBody>
                     {statements.data.map((statement) => (
                         <TableRow key={statement.id}>
+                            {withPayee && (
+                                <TableCell>{statement.payee ?? '–'}</TableCell>
+                            )}
                             <TableCell>
                                 <Link
                                     href={show(statement.id)}
@@ -334,7 +349,7 @@ function LabelGroup({
     filters,
 }: {
     group: Group;
-    filters: Record<string, string | null>;
+    filters: Props['filters'];
 }) {
     const { label, overview, payouts, statements } = group;
     const { apply } = useFilters(index.url(), filters);
@@ -402,10 +417,82 @@ function LabelGroup({
     );
 }
 
-export default function Portal({ view, groups, statements, filters }: Props) {
-    const title = 'My statements';
+/**
+ * What the payees of the label the user runs see: the published statements
+ * of every payee, to check before they look. Not the user's own.
+ */
+function Preview({
+    statements,
+    filters,
+    periodOptions,
+    payeeOptions,
+    heading,
+}: {
+    statements: Paginated<Statement>;
+    filters: Props['filters'];
+    periodOptions: Option[];
+    payeeOptions: Option[];
+    heading?: string;
+}) {
     const { apply } = useFilters(index.url(), filters);
-    const statementSorter = serverSorter(filters, apply, 'statements');
+    const sorter = serverSorter(filters, apply, 'statements');
+    const filtered = filters.period !== null || filters.payee !== null;
+
+    return (
+        <section className="grid gap-4" aria-label={heading} data-preview>
+            {heading && (
+                <h2 className="border-b pb-3 text-lg font-semibold tracking-tight">
+                    {heading}
+                </h2>
+            )}
+            <FilterBar
+                url={index.url()}
+                filters={filters}
+                selects={[
+                    {
+                        name: 'period',
+                        label: 'Period',
+                        placeholder: 'All periods',
+                        options: periodOptions,
+                    },
+                    {
+                        name: 'payee',
+                        label: 'Payee',
+                        placeholder: 'All payees',
+                        options: payeeOptions,
+                    },
+                ]}
+            />
+            {statements.total === 0 && !filtered ? (
+                <EmptyState
+                    title="No statements yet"
+                    description="Statements appear here, and in My statements of the payee, as soon as you publish them."
+                />
+            ) : statements.total === 0 ? (
+                <EmptyState title="No statement matches" />
+            ) : (
+                <Panel flush>
+                    <StatementsTable
+                        statements={statements}
+                        sorter={sorter}
+                        withPayee
+                    />
+                </Panel>
+            )}
+        </section>
+    );
+}
+
+export default function Portal({
+    view,
+    groups,
+    statements,
+    filters,
+    periodOptions,
+    payeeOptions,
+}: Props) {
+    const title = 'My statements';
+    const { label } = usePage().props;
 
     setLayoutProps({ breadcrumbs: [{ title, href: index() }] });
 
@@ -415,19 +502,12 @@ export default function Portal({ view, groups, statements, filters }: Props) {
                 title={title}
                 description="What payees can see: every published statement of this label. Each payee only gets their own."
             >
-                {statements.total === 0 ? (
-                    <EmptyState
-                        title="No statements yet"
-                        description="Statements appear here, and in My statements of the payee, as soon as you publish them."
-                    />
-                ) : (
-                    <Panel flush>
-                        <StatementsTable
-                            statements={statements}
-                            sorter={statementSorter}
-                        />
-                    </Panel>
-                )}
+                <Preview
+                    statements={statements}
+                    filters={filters}
+                    periodOptions={periodOptions}
+                    payeeOptions={payeeOptions}
+                />
             </Page>
         );
     }
@@ -446,12 +526,23 @@ export default function Portal({ view, groups, statements, filters }: Props) {
         );
     }
 
+    const both = statements !== null;
+
     return (
         <Page
             title={title}
-            description="What you earned, what you are owed and what you have been paid, according to the statements each of your labels has published."
+            description={
+                both
+                    ? 'Your own statements from the labels you are a payee of, and a preview of what the payees of the label you work in see.'
+                    : 'What you earned, what you are owed and what you have been paid, according to the statements each of your labels has published.'
+            }
             className="gap-10"
         >
+            {both && (
+                <h2 className="-mb-6 text-xl font-semibold tracking-tight">
+                    Your statements as a payee
+                </h2>
+            )}
             {groups.map((group) => (
                 <LabelGroup
                     key={group.label.id}
@@ -459,6 +550,15 @@ export default function Portal({ view, groups, statements, filters }: Props) {
                     filters={filters}
                 />
             ))}
+            {statements && (
+                <Preview
+                    heading={`What the payees of ${label?.name ?? 'this label'} see`}
+                    statements={statements}
+                    filters={filters}
+                    periodOptions={periodOptions}
+                    payeeOptions={payeeOptions}
+                />
+            )}
         </Page>
     );
 }

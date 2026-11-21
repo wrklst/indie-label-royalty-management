@@ -20,6 +20,7 @@ use App\Services\Releases\PlayableAudio;
 use App\Services\Releases\ZebralutionGenres;
 use App\Services\Reports\IncomeReport;
 use App\Support\CurrentLabel;
+use App\Support\Filters;
 use App\Support\Options;
 use App\Support\ReturnTo;
 use App\Support\Services;
@@ -50,13 +51,13 @@ class ReleaseController extends Controller
             ->with(['artist:id,name', 'artists:id,name', 'contract:id,name', 'cover:id,release_id'])
             ->withCount('tracks')
             ->withSum(['transactions as income' => fn ($query) => $query->where('type', 'income')], 'converted_total')
-            ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
+            ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where(fn ($query) => $query
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('catalog_number', 'like', "%{$search}%")
                 ->orWhere('upc', 'like', "%{$search}%")))
             ->when($request->integer('artist'), fn ($query, int $artist) => $query->where('artist_id', $artist))
             ->when($request->boolean('without_contract'), fn ($query) => $query->whereNull('contract_id'))
-            ->when(ReleaseStatus::tryFrom((string) $request->query('status')), fn ($query, ReleaseStatus $status) => $query->where('status', $status))
+            ->when(ReleaseStatus::tryFrom(Filters::text($request, 'status')), fn ($query, ReleaseStatus $status) => $query->where('status', $status))
             ->tap($sorting)
             ->paginate(50)
             ->withQueryString();
@@ -77,10 +78,10 @@ class ReleaseController extends Controller
         return Inertia::render('releases/index', [
             'releases' => $releases,
             'filters' => [
-                'search' => $request->string('search')->value(),
+                'search' => Filters::text($request, 'search'),
                 'artist' => $request->integer('artist') ?: null,
                 'without_contract' => $request->boolean('without_contract'),
-                'status' => ReleaseStatus::tryFrom((string) $request->query('status'))?->value,
+                'status' => ReleaseStatus::tryFrom(Filters::text($request, 'status'))?->value,
                 ...$sorting->toArray(),
             ],
             'artistOptions' => Options::artists(),

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Release;
 use App\Models\Track;
 use App\Support\CurrentLabel;
+use App\Support\Filters;
 use App\Support\Options;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,7 +23,7 @@ class CatalogController extends Controller
     {
         $releases = Release::query()
             ->with(['artist:id,name', 'tracks' => fn ($query) => $query->orderBy('track_number')->orderBy('id'), 'tracks.artist:id,name'])
-            ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
+            ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where(fn ($query) => $query
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('catalog_number', 'like', "%{$search}%")
                 ->orWhereHas('artist', fn ($query) => $query->where('name', 'like', "%{$search}%"))
@@ -47,7 +48,7 @@ class CatalogController extends Controller
         return Inertia::render('catalog/manager', [
             'releases' => $releases,
             'filters' => [
-                'search' => $request->string('search')->value(),
+                'search' => Filters::text($request, 'search'),
                 'without_contract' => $request->boolean('without_contract'),
             ],
             'uncovered' => Track::query()->whereNull('contract_id')->whereHas('release', fn ($query) => $query->whereNull('contract_id'))->count(),

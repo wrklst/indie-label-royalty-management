@@ -9,7 +9,9 @@ use Illuminate\Validation\Rule;
 /**
  * The dates a report is limited to: `from` and `to` in the query string,
  * and `date=paid` to count by paid date instead of sale date. One reading
- * for every page that has the control, with `to >= from` checked here.
+ * for every page that has the control. A live filter lets an inverted range
+ * match nothing (the fields keep showing what the figures are computed for);
+ * only the royalty tools, which need a real span, check `to >= from`.
  */
 final readonly class DateRange
 {
@@ -30,7 +32,7 @@ final readonly class DateRange
             ];
         }
 
-        return ['from' => ['nullable', 'date'], 'to' => ['nullable', 'date', 'after_or_equal:from']];
+        return ['from' => ['nullable', 'date'], 'to' => ['nullable', 'date']];
     }
 
     /**

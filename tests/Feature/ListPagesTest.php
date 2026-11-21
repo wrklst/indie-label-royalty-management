@@ -20,6 +20,7 @@ use App\Models\Track;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Royalties\Tools\ToolRuns;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /**
@@ -112,6 +113,46 @@ test('the files of play counts page, sort across pages, and say how many names a
         ->where('files.data.0.source_file', 'file-1.csv')
         ->where('files.data.0.unmatched.total', 32)
         ->has('files.data.0.unmatched.names', 30));
+});
+
+test('files of play counts that tie on the sorted column keep one order across pages, in a fixed number of queries', function () {
+    $label = Label::factory()->create();
+    foreach (range(1, 60) as $number) {
+        PlayCount::factory()->create(['label_id' => $label->id, 'batch' => sprintf('batch-%02d', $number), 'source_file' => 'same.csv', 'plays' => 5, 'platform' => 'spotify']);
+    }
+    $admin = labelAdmin($label);
+    $batches = [];
+
+    foreach ([1, 2] as $page) {
+        $this->actingAs($admin)->get(route('play-counts.index', ['sort' => 'plays', 'direction' => 'asc', 'page' => $page]))->assertInertia(function (Assert $inertia) use (&$batches) {
+            $batches = [...$batches, ...collect($inertia->toArray()['props']['files']['data'])->pluck('batch')->all()];
+        });
+    }
+
+    expect($batches)->toHaveCount(60)->and(array_unique($batches))->toHaveCount(60);
+
+    DB::enableQueryLog();
+    $this->get(route('play-counts.index', ['sort' => 'plays']));
+    $perRow = collect(DB::getQueryLog())->filter(fn (array $query): bool => str_contains($query['query'], 'play_counts'))->count();
+    DB::disableQueryLog();
+
+    expect($perRow)->toBeLessThan(25);
+});
+
+test('a page beyond the last one shows the last page, whatever the list calls its page parameter', function () {
+    $label = Label::factory()->create();
+    foreach (range(1, 51) as $number) {
+        Transaction::factory()->create(['label_id' => $label->id, 'type' => 'expense', 'recoupable' => false, 'release_id' => null, 'total' => '-1']);
+        PlayCount::factory()->create(['label_id' => $label->id, 'batch' => sprintf('batch-%02d', $number)]);
+    }
+    $admin = labelAdmin($label);
+
+    $this->actingAs($admin)->get(route('play-counts.index', ['page' => 9, 'sort' => 'plays']))->assertRedirect(route('play-counts.index', ['page' => 2, 'sort' => 'plays']));
+    $this->actingAs($admin)->get(route('label-costs.index', ['costs_page' => 9]))->assertRedirect(route('label-costs.index', ['costs_page' => 2]));
+    $this->actingAs($admin)->get(route('label-costs.index', ['costs_page' => 2]))->assertOk();
+    $this->actingAs($admin)->get(route('transactions.index', ['page' => 9]))->assertRedirect(route('transactions.index'));
+    // An empty list has no last page to go to.
+    $this->actingAs($admin)->get(route('releases.index', ['page' => 3]))->assertOk();
 });
 
 test('a track page pages and sorts its airplay and its research log', function () {
@@ -299,10 +340,12 @@ test('the transaction list can be narrowed to a track from its filter, every imp
 
     $this->actingAs($admin)->get(route('transactions.index', ['track' => $track->id]))->assertInertia(fn (Assert $page) => $page
         ->where('transactions.total', 2 - 1)->where('filters.track', (string) $track->id)->has('trackOptions', 1)->has('importOptions', 101));
-    $this->actingAs($admin)->get(route('transactions.index', ['from' => '2026-02-01', 'to' => '2026-01-01']))->assertSessionHasErrors('to');
+    // An inverted range matches nothing, and the fields show the range the figures are computed for.
+    $this->actingAs($admin)->get(route('transactions.index', ['from' => '2026-02-01', 'to' => '2026-01-01']))->assertSessionHasNoErrors()
+        ->assertInertia(fn (Assert $page) => $page->where('filters.from', '2026-02-01')->where('filters.to', '2026-01-01')->where('transactions.total', 0));
 });
 
-test('the dashboard keeps its last twelve months, shows the dates it uses and refuses a range that ends before it starts', function () {
+test('the dashboard keeps its last twelve months, shows the dates it uses and shows an inverted range as typed', function () {
     $this->travelTo('2026-06-15');
     $label = Label::factory()->create();
     Transaction::factory()->create(['label_id' => $label->id, 'timestamp' => '2026-05-10', 'paid_timestamp' => '2026-05-10']);
@@ -312,5 +355,9 @@ test('the dashboard keeps its last twelve months, shows the dates it uses and re
         ->where('filters', ['from' => '2025-07-01', 'to' => '2026-06-30', 'date' => null]));
     $this->actingAs($admin)->get(route('dashboard', ['from' => '2026-01-01', 'to' => '2026-03-31', 'date' => 'paid']))->assertInertia(fn (Assert $page) => $page
         ->where('filters', ['from' => '2026-01-01', 'to' => '2026-03-31', 'date' => 'paid'])->where('totals.transactions', 0));
-    $this->actingAs($admin)->get(route('dashboard', ['from' => '2026-03-01', 'to' => '2026-01-01']))->assertSessionHasErrors('to');
+    $this->actingAs($admin)->get(route('dashboard', ['from' => '2026-03-01', 'to' => '2026-01-01']))->assertSessionHasNoErrors()
+        ->assertInertia(fn (Assert $page) => $page->where('filters', ['from' => '2026-03-01', 'to' => '2026-01-01', 'date' => null])->where('totals.transactions', 0));
+    // Only an end date given: the start follows it, and the fields show both.
+    $this->actingAs($admin)->get(route('dashboard', ['to' => '2024-12-31']))->assertInertia(fn (Assert $page) => $page
+        ->where('filters', ['from' => '2024-01-01', 'to' => '2024-12-31', 'date' => null]));
 });

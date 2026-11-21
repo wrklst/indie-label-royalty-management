@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\BandcampConnection;
 use App\Models\Label;
 use App\Models\Release;
 use App\Support\Services;
@@ -81,6 +82,15 @@ test('the Bandcamp page and its sync refuse a label that switched Bandcamp off',
     $this->get(route('bandcamp.edit'))->assertNotFound();
     $this->post(route('bandcamp.sync'))->assertNotFound();
     $this->post(route('bandcamp.connect'), ['client_id' => 'example', 'client_secret' => 'example'])->assertNotFound();
+});
+
+test('a stored Bandcamp login can still be removed after Bandcamp was switched off', function () {
+    $label = labelWithout('bandcamp');
+    BandcampConnection::factory()->create(['label_id' => $label->id]);
+
+    $this->actingAs(labelAdmin($label))->delete(route('bandcamp.destroy'))->assertRedirect();
+
+    expect(BandcampConnection::query()->withoutGlobalScopes()->where('label_id', $label->id)->exists())->toBeFalse();
 });
 
 test('the shared label says which services it works with', function () {

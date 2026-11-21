@@ -6,7 +6,7 @@ import ReceiptController from '@/actions/App/Http/Controllers/ReceiptController'
 import TransactionController from '@/actions/App/Http/Controllers/TransactionController';
 import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
-import { Field, SelectInput } from '@/components/field';
+import { CheckField, Field, SelectInput } from '@/components/field';
 import { FilterBar } from '@/components/filter-bar';
 import { FileDrop } from '@/components/file-drop';
 import { FormDialog } from '@/components/form-dialog';
@@ -55,6 +55,8 @@ type Cost = {
     currency: string;
     /** The positive amount a cost is typed and shown as. */
     amount: string;
+    /** Stored positive: a refund or credit that reduces the costs. */
+    refund: boolean;
     conversion_rate: string | null;
     paid_timestamp: string;
     recurring: boolean;
@@ -90,6 +92,7 @@ type Props = {
         last_year: string;
         year: number;
         recurring_per_year: string;
+        recurring_without_rate: number;
     };
     filters: Record<string, string | null> & { search: string };
     recurring: Paginated<Recurring>;
@@ -97,6 +100,7 @@ type Props = {
     attachableCosts: AttachableCost[];
     receipts: Paginated<Receipt>;
     receiptReading: boolean;
+    receiptsBeingRead: boolean;
 };
 
 const plain = (value: string) => value.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
@@ -112,6 +116,7 @@ function AmountFields({
     errors,
     cost,
     amountLabel,
+    refund,
 }: {
     labelCurrency: string;
     categories: string[];
@@ -121,6 +126,8 @@ function AmountFields({
         'name' | 'amount' | 'currency' | 'category' | 'memo' | 'conversion_rate'
     >;
     amountLabel: string;
+    /** Offer "Refund or credit" (one-off costs), ticked or not. Recurring costs have none. */
+    refund?: boolean;
 }) {
     const [currency, setCurrency] = useState(cost?.currency ?? labelCurrency);
 
@@ -177,6 +184,15 @@ function AmountFields({
                     />
                 </Field>
             </div>
+            {refund !== undefined && (
+                <CheckField
+                    name="refund"
+                    withZero
+                    label="Refund or credit"
+                    hint="Tick it when the amount comes back to the label: it reduces the costs instead of adding to them."
+                    defaultChecked={refund}
+                />
+            )}
             {currency !== labelCurrency && (
                 <Field
                     label={`Rate to ${labelCurrency}`}
@@ -215,11 +231,59 @@ function AmountFields({
     );
 }
 
-/** Receipts are uploaded as they are dropped; each one is read on its own. */
-function ReceiptUpload() {
+const READ_CHOICE_KEY = 'receipt-upload-read';
+
+/**
+ * Receipts are uploaded as they are dropped. With an AI service connected
+ * each upload is a choice: read by the AI, or entered by hand. The last
+ * choice is remembered in this browser; the first is "Enter by hand", so
+ * no document goes to a third party unless it was chosen.
+ */
+function ReceiptUpload({ receiptReading }: { receiptReading: boolean }) {
+    const [read, setRead] = useState(() => {
+        try {
+            return window.localStorage.getItem(READ_CHOICE_KEY) === '1';
+        } catch {
+            return false;
+        }
+    });
+    const choose = (value: boolean) => {
+        setRead(value);
+
+        try {
+            window.localStorage.setItem(READ_CHOICE_KEY, value ? '1' : '0');
+        } catch {
+            // The choice is then not remembered.
+        }
+    };
+
     return (
-        <div data-receipt-upload className="grid gap-1">
+        <div data-receipt-upload className="grid gap-2">
+            {receiptReading && (
+                <fieldset className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+                    <legend className="sr-only">What happens to an upload</legend>
+                    <label className="flex items-center gap-2">
+                        <input
+                            type="radio"
+                            name="receipt-upload-read"
+                            checked={!read}
+                            onChange={() => choose(false)}
+                        />
+                        Enter by hand
+                    </label>
+                    <label className="flex items-center gap-2">
+                        <input
+                            type="radio"
+                            name="receipt-upload-read"
+                            checked={read}
+                            onChange={() => choose(true)}
+                        />
+                        Read with AI
+                    </label>
+                </fieldset>
+            )}
             <FileDrop
+                data={{ read: receiptReading && read ? '1' : '0' }}
                 url={ReceiptController.store.url()}
                 accept={[
                     'application/pdf',
@@ -232,6 +296,9 @@ function ReceiptUpload() {
             />
             <p className="text-xs text-muted-foreground">
                 PDF, JPEG, PNG or WebP, up to 20 MB each.
+                {receiptReading
+                    ? ' With Read with AI the file is sent to your AI service.'
+                    : ' Reading receipts with AI can be switched on under Settings → Connections.'}
             </p>
         </div>
     );
@@ -269,7 +336,8 @@ function ReceiptRow({
                     {receipt.original_name}
                 </a>
                 <div className="text-xs text-muted-foreground">
-                    {receipt.status === 'reading' && 'Being read…'}
+                    {receipt.status === 'reading' &&
+                        'Being read by the AI… You can book it by hand meanwhile.'}
                     {receipt.status === 'failed' &&
                         `Could not be read: ${receipt.error ?? 'unknown reason'}`}
                     {receipt.status === 'new' &&
@@ -293,7 +361,11 @@ function ReceiptRow({
             <div className="flex flex-wrap items-center gap-2">
                 <FormDialog
                     title="Book receipt as a cost"
-                    description="Check what was read off the receipt. The receipt is attached to the cost."
+                    description={
+                        receipt.status === 'read'
+                            ? 'What the AI read off the receipt is a proposal: check it and change what is wrong. The receipt is attached to the cost.'
+                            : 'Enter the cost. The receipt is attached to it.'
+                    }
                     form={LabelCostController.store.form()}
                     submitLabel="Book cost"
                     trigger={
@@ -315,6 +387,7 @@ function ReceiptRow({
                                 categories={categories}
                                 errors={errors}
                                 amountLabel="Amount"
+                                refund={false}
                                 cost={{
                                     name,
                                     amount: receipt.amount ?? '',
@@ -388,10 +461,9 @@ function ReceiptRow({
                 )}
                 {receiptReading && receipt.status !== 'reading' && (
                     <Button
-                        variant="ghost"
-                        size="icon"
-                        title="Read again"
-                        aria-label={`Read ${receipt.original_name} again`}
+                        variant="outline"
+                        size="sm"
+                        aria-label={`${receipt.status === 'read' ? 'Read again' : 'Read with AI'}: ${receipt.original_name}`}
                         onClick={() =>
                             router.post(
                                 ReceiptController.read.url(receipt.id),
@@ -400,7 +472,10 @@ function ReceiptRow({
                             )
                         }
                     >
-                        <ScanText className="text-muted-foreground" />
+                        <ScanText />
+                        {receipt.status === 'read'
+                            ? 'Read again'
+                            : 'Read with AI'}
                     </Button>
                 )}
                 <DeleteButton
@@ -424,11 +499,9 @@ export default function LabelCosts({
     attachableCosts,
     receipts,
     receiptReading,
+    receiptsBeingRead: reading,
 }: Props) {
     // What was read off a receipt arrives while the page is open.
-    const reading = receipts.data.some(
-        (receipt) => receipt.status === 'reading',
-    );
 
     useEffect(() => {
         if (!reading) {
@@ -438,7 +511,12 @@ export default function LabelCosts({
         const timer = window.setInterval(
             () =>
                 router.reload({
-                    only: ['receipts', 'costs', 'attachableCosts'],
+                    only: [
+                        'receipts',
+                        'receiptsBeingRead',
+                        'costs',
+                        'attachableCosts',
+                    ],
                 }),
             4000,
         );
@@ -470,6 +548,7 @@ export default function LabelCosts({
                         categories={categories}
                         errors={errors}
                         amountLabel="Amount"
+                        refund={false}
                     />
                     <Field
                         label="Paid date"
@@ -594,7 +673,11 @@ export default function LabelCosts({
                             currency={currency}
                         />
                     }
-                    hint="From the recurring costs still running"
+                    hint={
+                        totals.recurring_without_rate > 0
+                            ? `From the recurring costs still running, without ${plural(totals.recurring_without_rate, 'cost')} whose exchange rate is not available`
+                            : 'From the recurring costs still running, each in the label currency'
+                    }
                 />
             </div>
 
@@ -793,11 +876,11 @@ export default function LabelCosts({
                 title="Receipts"
                 description={
                     receiptReading
-                        ? 'Upload receipts and invoices. Vendor, date, amount and category are read off them as a proposal; you book each one as a cost or attach it to a cost that exists.'
-                        : 'Upload receipts and invoices, then book each one as a cost or attach it to a cost that exists. To have them read automatically, choose an AI service under Settings → Connections.'
+                        ? 'Upload receipts and invoices, then book each one as a cost by hand or attach it to a cost that exists. For each receipt you can choose to have an AI service read it; what it reads is only a proposal that you check and change.'
+                        : 'Upload receipts and invoices, then book each one as a cost or attach it to a cost that exists. To be able to have them read by an AI service, connect one under Settings → Connections.'
                 }
             >
-                <ReceiptUpload />
+                <ReceiptUpload receiptReading={receiptReading} />
 
                 {receipts.total > 0 && (
                     <div className="mt-4 rounded-lg border">
@@ -963,6 +1046,9 @@ export default function LabelCosts({
                                                                         errors
                                                                     }
                                                                     amountLabel="Amount"
+                                                                    refund={
+                                                                        cost.refund
+                                                                    }
                                                                     cost={{
                                                                         name:
                                                                             cost.source ??

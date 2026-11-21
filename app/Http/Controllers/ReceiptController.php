@@ -32,13 +32,15 @@ class ReceiptController extends Controller
     private const array TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 
     /**
-     * Store an uploaded file and, when the label has an AI service, have it read.
+     * Store an uploaded file. It is read by the AI service only when the request asks for it (`read`) and the
+     * label has a service connected; otherwise it waits to be booked by hand.
      * The page sends several files one after the other.
      */
     public function store(Request $request, CurrentLabel $currentLabel): RedirectResponse
     {
         $request->validate([
             'file' => ['required_without:upload', 'file', 'max:'.self::MAX_KILOBYTES, 'mimetypes:'.implode(',', self::TYPES)],
+            'read' => ['nullable', 'boolean'],
             ...IncomingFile::RULES,
         ], [
             'file.mimetypes' => __('A receipt has to be a PDF, JPEG, PNG or WebP file.'),
@@ -46,7 +48,7 @@ class ReceiptController extends Controller
         ]);
 
         $label = $currentLabel->get() ?? abort(404);
-        $reads = AiConnection::isConfigured($label);
+        $reads = $request->boolean('read') && AiConnection::isConfigured($label);
         $disk = WorkingCopy::disk();
         $file = IncomingFile::from($request, $label->id, self::MAX_KILOBYTES, self::TYPES, messages: [
             'type' => __('A receipt has to be a PDF, JPEG, PNG or WebP file.'),
@@ -67,7 +69,7 @@ class ReceiptController extends Controller
             ReadReceipt::dispatch($receipt->id);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => $reads ? __('Receipt uploaded. It is being read.') : __('Receipt uploaded.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $reads ? __('Receipt uploaded. It is being read; what it reads is a proposal.') : __('Receipt uploaded.')]);
 
         return back();
     }
@@ -117,7 +119,7 @@ class ReceiptController extends Controller
     }
 
     /**
-     * Have the receipt read again.
+     * Have the receipt read by the AI service, on request.
      */
     public function read(Receipt $receipt, CurrentLabel $currentLabel): RedirectResponse
     {

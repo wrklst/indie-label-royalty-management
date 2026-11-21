@@ -13,6 +13,7 @@ use App\Services\Royalties\ExchangeRates;
 use App\Services\Royalties\RecurringExpenseBooker;
 use App\Support\CurrentLabel;
 use App\Support\Decimal;
+use App\Support\Filters;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Expression;
@@ -31,6 +32,9 @@ use SortDirection;
  */
 class LabelCostController extends Controller
 {
+    /** The most costs the receipt dialog offers to attach a receipt to. */
+    private const int ATTACHABLE_COSTS = 200;
+
     public function __construct(private readonly CurrentLabel $currentLabel, private readonly RecurringExpenseBooker $booker, private readonly ExchangeRates $rates) {}
 
     public function index(Request $request): Response
@@ -40,7 +44,7 @@ class LabelCostController extends Controller
 
         $costs = fn () => Transaction::query()->where('type', TransactionType::Expense)->where('recoupable', false)->whereNull('release_id');
         $year = now()->year;
-        $search = $request->string('search')->trim()->value();
+        $search = trim(Filters::text($request, 'search'));
         $costSorting = Sorting::for($request, [
             'paid_timestamp' => 'paid_timestamp',
             'name' => fn (Builder $query, SortDirection $direction) => $query->orderBy(new Expression('COALESCE(source, memo)'), $direction),
@@ -64,12 +68,10 @@ class LabelCostController extends Controller
             ->tap($costSorting)
             ->paginate(50, pageName: 'costs_page')->withQueryString();
         $withReceipt = Receipt::query()->whereIn('transaction_id', $listed->getCollection()->modelKeys())->get()->keyBy('transaction_id');
-        // Every cost that has no receipt yet can have one attached, whichever page of costs it is on.
+        // A cost without a receipt can have one attached, whichever page of costs it is on; the newest are offered.
         $withoutReceipt = $costs()->whereNotIn('id', Receipt::query()->whereNotNull('transaction_id')->select('transaction_id'))
-            ->orderByDesc('paid_timestamp')->orderByDesc('id')->get();
-        $runningYearly = RecurringExpense::query()->where('currency', $label->currency)->get()
-            ->filter(fn (RecurringExpense $expense): bool => $expense->nextDueOn() !== null)
-            ->reduce(fn (string $sum, RecurringExpense $expense): string => Decimal::add($sum, Decimal::mul((string) $expense->amount, (string) (12 / $expense->interval->months()))), '0');
+            ->orderByDesc('paid_timestamp')->orderByDesc('id')->limit(self::ATTACHABLE_COSTS)->get();
+        [$runningYearly, $withoutRate] = $this->runningPerYear($label);
 
         return Inertia::render('label-costs/index', [
             'currency' => $label->currency,
@@ -80,6 +82,7 @@ class LabelCostController extends Controller
                 'last_year' => Decimal::parse($costs()->whereYear('paid_timestamp', $year - 1)->sum('converted_total')) ?? '0',
                 'year' => $year,
                 'recurring_per_year' => $runningYearly,
+                'recurring_without_rate' => $withoutRate,
             ],
             'filters' => ['search' => $search, ...$costSorting->toArray(), ...$recurringSorting->toArray()],
             'recurring' => RecurringExpense::query()->tap($recurringSorting)->paginate(25, pageName: 'recurring_page')->withQueryString()
@@ -94,8 +97,9 @@ class LabelCostController extends Controller
             'costs' => $listed->through(fn (Transaction $cost): array => [
                 ...$cost->only(['id', 'category', 'memo', 'source', 'total', 'converted_total', 'currency']),
                 'conversion_rate' => $cost->conversion_rate === null || $cost->currency === $label->currency ? null : rtrim(rtrim((string) $cost->conversion_rate, '0'), '.'),
-                // Typed and shown as the positive amount; a credit booked positive keeps its sign when saved.
+                // Typed and shown as the positive amount; a credit is stored positive.
                 'amount' => Decimal::abs($cost->total),
+                'refund' => Decimal::isPositive($cost->total),
                 'paid_timestamp' => $cost->paid_timestamp->toDateString(),
                 'recurring' => $cost->recurring_expense_id !== null,
                 'receipt_id' => $withReceipt->get($cost->id)?->id,
@@ -105,6 +109,8 @@ class LabelCostController extends Controller
                 'paid_timestamp' => $cost->paid_timestamp->toDateString(),
             ])->values(),
             'receiptReading' => AiConnection::isConfigured($label),
+            // Whether any receipt is being read, on whichever page it is: the page polls while it is.
+            'receiptsBeingRead' => Receipt::query()->whereNull('transaction_id')->where('status', 'reading')->exists(),
             // Receipts that belong to no cost yet, with what was read off them.
             'receipts' => Receipt::query()->whereNull('transaction_id')->orderByDesc('id')->paginate(10, pageName: 'receipts_page')->withQueryString()
                 ->through(fn (Receipt $receipt): array => [
@@ -125,12 +131,15 @@ class LabelCostController extends Controller
         $label = $this->label();
         $validated = $request->validate([
             ...$this->amountRules(),
+            'refund' => ['boolean'],
             'paid_timestamp' => ['required', 'date'],
             'receipt_id' => ['nullable', 'integer', Rule::exists('receipts', 'id')->where('label_id', $label->id)->whereNull('transaction_id')],
         ]);
 
         $currency = strtoupper($validated['currency']);
-        $total = Decimal::sub('0', Decimal::parse($validated['amount']));
+        $amount = Decimal::parse($validated['amount']);
+        // A cost is stored negative; a refund or credit reduces the costs and is stored positive.
+        $total = ($validated['refund'] ?? false) ? $amount : Decimal::sub('0', $amount);
         $rate = $this->rates->for($currency, $label->currency, $validated['conversion_rate'] ?? null, $validated['paid_timestamp']);
 
         $cost = Transaction::query()->create([
@@ -167,26 +176,29 @@ class LabelCostController extends Controller
 
         $validated = $request->validate([
             ...$this->amountRules(),
+            'refund' => ['boolean'],
             'paid_timestamp' => ['required', 'date'],
         ]);
 
         $label = $this->label();
         $currency = strtoupper($validated['currency']);
         $amount = Decimal::parse($validated['amount']);
-        // A cost is stored negative; a credit that was booked positive stays a credit.
-        $total = Decimal::isPositive($transaction->total) ? $amount : Decimal::sub('0', $amount);
+        $refund = $validated['refund'] ?? Decimal::isPositive($transaction->total);
+        $total = $refund ? $amount : Decimal::sub('0', $amount);
+        $shownName = $transaction->source ?? $transaction->memo;
         $rate = $this->rates->for($currency, $label->currency, $validated['conversion_rate'] ?? null, $validated['paid_timestamp']);
 
+        // Only what the dialog shows is written: the sale date stays unless it was the paid date, and the supplier unless the name changed.
         $transaction->update([
-            'timestamp' => $validated['paid_timestamp'],
+            ...($transaction->timestamp->toDateString() === $transaction->paid_timestamp->toDateString() ? ['timestamp' => $validated['paid_timestamp']] : []),
             'paid_timestamp' => $validated['paid_timestamp'],
             'total' => $total,
             'currency' => $currency,
             'conversion_rate' => $rate,
             'converted_total' => $rate === null ? null : Decimal::mul($total, $rate),
             'category' => $validated['category'] ?? null,
-            'source' => $validated['name'],
-            'memo' => $validated['memo'] ?? $validated['name'],
+            ...($validated['name'] !== $shownName || ($transaction->source === null && ! isset($validated['memo'])) ? ['source' => $validated['name']] : []),
+            'memo' => $validated['memo'] ?? null,
         ]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Cost saved.')]);
@@ -265,6 +277,33 @@ class LabelCostController extends Controller
             'conversion_rate' => ['nullable', 'numeric', 'decimal:0,10', 'min:0.0000000001', 'max:9999999999'],
             'memo' => ['nullable', 'string', 'max:1000'],
         ];
+    }
+
+    /**
+     * What the running recurring costs come to in a year, in the label's currency: each at its own
+     * rate or the current reference rate. Costs whose rate cannot be had are counted apart.
+     *
+     * @return array{0: string, 1: int}
+     */
+    private function runningPerYear(Label $label): array
+    {
+        $sum = '0';
+        $withoutRate = 0;
+
+        foreach (RecurringExpense::query()->get()->filter(fn (RecurringExpense $expense): bool => $expense->nextDueOn() !== null) as $expense) {
+            $rate = $this->rates->for($expense->currency, $label->currency, $expense->conversion_rate, today());
+
+            if ($rate === null) {
+                $withoutRate++;
+
+                continue;
+            }
+
+            $perYear = Decimal::mul((string) $expense->amount, (string) (12 / $expense->interval->months()));
+            $sum = Decimal::add($sum, Decimal::mul($perYear, $rate));
+        }
+
+        return [$sum, $withoutRate];
     }
 
     private function label(): Label

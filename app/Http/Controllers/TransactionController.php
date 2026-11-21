@@ -14,6 +14,7 @@ use App\Services\Royalties\ExchangeRates;
 use App\Support\CurrentLabel;
 use App\Support\DateRange;
 use App\Support\Decimal;
+use App\Support\Filters;
 use App\Support\Formats;
 use App\Support\Options;
 use App\Support\Platforms;
@@ -95,7 +96,7 @@ class TransactionController extends Controller
         return Inertia::render('transactions/form', [
             'transaction' => null,
             'defaults' => [
-                'type' => (TransactionType::tryFrom((string) $request->query('type')) ?? TransactionType::Income)->value,
+                'type' => (TransactionType::tryFrom(Filters::text($request, 'type')) ?? TransactionType::Income)->value,
                 'release_id' => $request->integer('release') ?: null,
                 'payee_id' => $request->integer('payee') ?: null,
                 'recoupable' => $request->boolean('recoupable', true),
@@ -157,7 +158,7 @@ class TransactionController extends Controller
     }
 
     /**
-     * Keep the lines of one platform by its key, whichever way the statements spell it ("Apple", "Apple/iTunes").
+     * Keep the lines of one platform by its key, whichever way the statements spell it ("Apple", "Apple/iTunes"). An older link may carry a statement's own spelling instead of a key; that filters too.
      *
      * @param  Builder<Transaction>  $query
      * @return Builder<Transaction>
@@ -165,7 +166,7 @@ class TransactionController extends Controller
     private function onPlatform(Builder $query, string $platform): Builder
     {
         $retailers = Transaction::query()->whereNotNull('retailer')->distinct()->pluck('retailer')
-            ->filter(fn (string $retailer): bool => Platforms::of($retailer)['key'] === $platform)->all();
+            ->filter(fn (string $retailer): bool => $retailer === $platform || Platforms::of($retailer)['key'] === $platform)->all();
 
         return $query->where(fn ($query) => $query->whereIn('retailer', $retailers)->when($platform === 'unknown', fn ($query) => $query->orWhereNull('retailer')));
     }
@@ -176,15 +177,15 @@ class TransactionController extends Controller
     private function filtered(Request $request): Builder
     {
         return DateRange::fromRequest($request)->apply(Transaction::query())
-            ->when(TransactionType::tryFrom((string) $request->input('type')), fn ($query, TransactionType $type) => $query->where('type', $type))
+            ->when(TransactionType::tryFrom(Filters::text($request, 'type')), fn ($query, TransactionType $type) => $query->where('type', $type))
             ->when($request->integer('release'), fn ($query, int $release) => $query->where('release_id', $release))
             ->when($request->integer('track'), fn ($query, int $track) => $query->whereIn('track_id', Track::query()->find($track)?->recordingIds() ?? [$track]))
             ->when($request->integer('import'), fn ($query, int $import) => $query->where('data_import_id', $import))
-            ->when($request->string('retailer')->value(), fn ($query, string $platform) => $this->onPlatform($query, $platform))
+            ->when(Filters::text($request, 'retailer'), fn ($query, string $platform) => $this->onPlatform($query, $platform))
             ->when($request->boolean('unassigned'), fn ($query) => $query->whereNull('release_id')->where('type', '<>', 'transfer')
                 ->where(fn ($query) => $query->where('type', '<>', 'expense')->orWhere('recoupable', true)))
             ->when($request->boolean('unconverted'), fn ($query) => $query->whereNull('converted_total'))
-            ->when($request->string('search')->trim()->value(), function ($query, string $search) {
+            ->when(trim(Filters::text($request, 'search')), function ($query, string $search) {
                 // Typed text is matched literally: % and _ are not wildcards.
                 $like = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%';
                 $isrc = Identifiers::isrc($search);

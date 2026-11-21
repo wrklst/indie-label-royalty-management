@@ -69,6 +69,34 @@ const trim = (value: string | number | null | undefined): string =>
     value || value === 0
         ? String(value).replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1')
         : '';
+/**
+ * The amount the form shows after the type changed, which is what gets
+ * stored under the new type's sign convention: an expense is typed positive,
+ * so leaving it for a transfer shows the cost as money paid out (negative,
+ * unless it was a refund); income and expense are typed positive.
+ */
+const totalForType = (
+    total: string,
+    from: TransactionType,
+    to: TransactionType,
+    refund: boolean,
+): string => {
+    const amount = total.replace(/^-/, '');
+
+    if (amount === '' || to === from) {
+        return total;
+    }
+
+    if (to === 'expense') {
+        return amount;
+    }
+
+    if (from === 'expense') {
+        return to === 'transfer' && !refund ? `-${amount}` : amount;
+    }
+
+    return total;
+};
 // The local date: toISOString() is UTC and gives yesterday shortly after midnight.
 
 export default function TransactionForm({
@@ -175,13 +203,23 @@ export default function TransactionForm({
                                 id="type"
                                 value={type}
                                 onChange={(event) =>
-                                    form.setData((data) => ({
-                                        ...data,
-                                        type: event.target
-                                            .value as TransactionType,
-                                        category: '',
-                                        refund: false,
-                                    }))
+                                    form.setData((data) => {
+                                        const next = event.target
+                                            .value as TransactionType;
+
+                                        return {
+                                            ...data,
+                                            type: next,
+                                            total: totalForType(
+                                                data.total,
+                                                data.type,
+                                                next,
+                                                data.refund,
+                                            ),
+                                            category: '',
+                                            refund: false,
+                                        };
+                                    })
                                 }
                                 className="capitalize"
                                 options={['income', 'expense', 'transfer']}
@@ -639,7 +677,7 @@ export default function TransactionForm({
                             </Field>
                         )}
                         <Field
-                            label={type === 'expense' ? 'Supplier' : 'Source'}
+                            label={type === 'expense' ? 'Supplier' : 'Paid by'}
                             htmlFor="source"
                             error={errors.source}
                             hint={

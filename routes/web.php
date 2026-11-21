@@ -69,6 +69,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('platform-links/detect', [PlatformLinkController::class, 'detect'])->middleware('throttle:20,1')->name('platform-links.detect');
             Route::put('platform-links/{platform_link}', [PlatformLinkController::class, 'update'])->name('platform-links.update');
             Route::delete('platform-links/{platform_link}', [PlatformLinkController::class, 'destroy'])->name('platform-links.destroy');
+            Route::get('tracks/{track}/fields', [TrackController::class, 'fields'])->name('tracks.fields');
             Route::resource('tracks', TrackController::class)->only(['index', 'show', 'update', 'destroy']);
             Route::resource('items', ItemController::class)->only(['index', 'update', 'destroy']);
             Route::resource('contracts', ContractController::class);

@@ -14,6 +14,7 @@ use App\Services\Airplay\ResearchState;
 use App\Services\Airplay\WebSearch;
 use App\Services\Releases\ArtistCredits;
 use App\Support\CurrentLabel;
+use App\Support\Filters;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Expression;
@@ -87,16 +88,16 @@ class AirplayController extends Controller
             'staleCount' => $research->stale(Track::query())->count(),
             'staleDays' => AirplayResearch::STALE_DAYS,
             'filters' => [
-                'search' => $request->string('search')->value(),
+                'search' => Filters::text($request, 'search'),
                 'track' => $only?->id,
-                'origin' => AirplayOrigin::tryFrom((string) $request->query('origin'))?->value,
+                'origin' => AirplayOrigin::tryFrom(Filters::text($request, 'origin'))?->value,
                 ...$sorting->toArray(),
             ],
             'airplays' => Airplay::query()->when($only, fn ($query) => $query->whereIn('track_id', $onlyIds))->with('track:id,artist_id')
-                ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
+                ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where(fn ($query) => $query
                     ->where('track_name', 'like', "%{$search}%")->orWhere('artist_name', 'like', "%{$search}%")
                     ->orWhere('station', 'like', "%{$search}%")->orWhere('isrc', 'like', '%'.str_replace('-', '', $search).'%')))
-                ->when(AirplayOrigin::tryFrom((string) $request->query('origin')), fn ($query, AirplayOrigin $origin) => $query->where('origin', $origin))
+                ->when(AirplayOrigin::tryFrom(Filters::text($request, 'origin')), fn ($query, AirplayOrigin $origin) => $query->where('origin', $origin))
                 ->tap($sorting)->paginate(50)->withQueryString()
                 ->through(fn (Airplay $airplay): array => [
                     ...$airplay->only(['id', 'origin', 'track_id', 'track_name', 'artist_name', 'isrc', 'station', 'media_type', 'region', 'society', 'amount', 'notes', 'data_import_id']),

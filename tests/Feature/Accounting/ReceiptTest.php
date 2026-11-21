@@ -7,6 +7,7 @@ use App\Models\Receipt;
 use App\Models\Transaction;
 use App\Services\Receipts\ReceiptReading;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -46,18 +47,58 @@ test('an uploaded receipt is stored for the label and waits to be booked', funct
     Queue::assertNothingPushed();
 });
 
-test('a label with an AI service has uploaded receipts read', function () {
+test('a label with an AI service has an upload read only when the upload asks for it', function () {
     Queue::fake();
     $label = readingLabel();
 
     $this->actingAs(labelAdmin($label))
-        ->post(route('receipts.store'), ['file' => UploadedFile::fake()->image('till-receipt.jpg')])
-        ->assertInertiaFlash('toast.message', 'Receipt uploaded. It is being read.');
+        ->post(route('receipts.store'), ['file' => UploadedFile::fake()->image('till-receipt.jpg'), 'read' => '1'])
+        ->assertInertiaFlash('toast.message', 'Receipt uploaded. It is being read; what it reads is a proposal.');
 
     $receipt = Receipt::query()->sole();
 
     expect($receipt->status)->toBe('reading');
     Queue::assertPushed(ReadReceipt::class, fn (ReadReceipt $job): bool => $job->receiptId === $receipt->id);
+});
+
+test('an upload entered by hand is not sent to the AI service, even when one is connected', function (array $input) {
+    Queue::fake();
+    Http::fake();
+    $label = readingLabel();
+
+    $this->actingAs(labelAdmin($label))
+        ->post(route('receipts.store'), ['file' => UploadedFile::fake()->image('till-receipt.jpg'), ...$input])
+        ->assertInertiaFlash('toast.message', 'Receipt uploaded.');
+
+    expect(Receipt::query()->sole()->status)->toBe('new');
+    Queue::assertNothingPushed();
+    Http::assertNothingSent();
+})->with(['asked not to' => [['read' => '0']], 'not asked' => [[]]]);
+
+test('an upload that asks to be read is not read without a connected service', function () {
+    Queue::fake();
+
+    $this->actingAs(labelAdmin(Label::factory()->create()))
+        ->post(route('receipts.store'), ['file' => UploadedFile::fake()->image('till-receipt.jpg'), 'read' => '1'])
+        ->assertInertiaFlash('toast.message', 'Receipt uploaded.');
+
+    expect(Receipt::query()->sole()->status)->toBe('new');
+    Queue::assertNothingPushed();
+});
+
+test('a receipt is booked by hand in every status, also one stuck in reading', function (string $status) {
+    $label = Label::factory()->create(['currency' => 'EUR']);
+    $receipt = Receipt::factory()->create(['label_id' => $label->id, 'status' => $status]);
+
+    $this->actingAs(labelAdmin($label))
+        ->post(route('label-costs.store'), ['name' => 'Example Hosting', 'amount' => '12', 'currency' => 'EUR', 'paid_timestamp' => '2026-03-01', 'receipt_id' => $receipt->id])
+        ->assertSessionHasNoErrors();
+
+    expect($receipt->refresh()->transaction_id)->not->toBeNull();
+})->with(['new', 'reading', 'read', 'failed']);
+
+test('reading on request is throttled', function () {
+    expect(app('router')->getRoutes()->getByName('receipts.read')->gatherMiddleware())->toContain('throttle:30,1');
 });
 
 test('a file that is no receipt is refused', function (UploadedFile $file) {

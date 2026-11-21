@@ -45,7 +45,7 @@ export function LabelSwitcher() {
                                 </span>
                                 <span className="truncate text-xs text-muted-foreground">
                                     {label
-                                        ? `Royalties · ${label.currency}`
+                                        ? label.currency
                                         : 'No label yet'}
                                 </span>
                             </div>

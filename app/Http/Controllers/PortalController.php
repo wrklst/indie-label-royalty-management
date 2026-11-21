@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Settings\LabelBrandingController;
 use App\Models\Label;
+use App\Models\Payee;
 use App\Models\Payout;
 use App\Models\Period;
 use App\Models\Statement;
 use App\Support\CurrentLabel;
 use App\Support\Decimal;
+use App\Support\Options;
 use App\Support\PayeeAccess;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
@@ -35,31 +37,49 @@ class PortalController extends Controller
         $groups = $access->labels();
         $isAdmin = $this->currentLabel->isAdmin();
 
+        // Someone who runs the label they work in sees what its payees see; a payee sees their own statements
+        // of every label. Someone who is both gets both, in separate sections.
         $view = match (true) {
             $groups->isNotEmpty() => 'payee',
-            $isAdmin && ! $access->isPayeeAnywhere() => 'admin',
+            $isAdmin => 'admin',
             default => 'unlinked',
         };
 
-        if ($view === 'admin') {
+        $preview = null;
+        $filters = [];
+
+        if ($isAdmin) {
             $sorting = Sorting::for($request, [
+                'payee' => Sorting::related(Payee::class, 'payee_id'),
                 'period' => Sorting::related(Period::class, 'period_id'),
                 'published_at' => 'published_at',
                 'balance' => 'balance',
                 'payable' => 'payable',
             ], fn (Builder $query) => $query->latest('id'), 'statements');
+            $filters = [
+                'period' => $request->integer('period') ?: null,
+                'payee' => $request->integer('payee') ?: null,
+                ...$sorting->toArray(),
+            ];
+            $preview = $this->adminStatements()->with(['period:id,name,starts_on,ends_on', 'payee:id,name'])
+                ->when($filters['period'], fn ($query, int $period) => $query->where('period_id', $period))
+                ->when($filters['payee'], fn ($query, int $payee) => $query->where('payee_id', $payee))
+                ->tap($sorting)
+                ->paginate(25, pageName: 'statements_page')->withQueryString()
+                ->through(fn (Statement $statement): array => $this->row($statement));
+        }
 
+        if ($view === 'admin') {
             return Inertia::render('portal/index', [
                 'view' => $view,
                 'groups' => [],
-                'statements' => $this->adminStatements()->with('period:id,name,starts_on,ends_on')->tap($sorting)
-                    ->paginate(25, pageName: 'statements_page')->withQueryString()
-                    ->through(fn (Statement $statement): array => $this->row($statement)),
-                'filters' => $sorting->toArray(),
+                'statements' => $preview,
+                'filters' => $filters,
+                'periodOptions' => Options::periods(),
+                'payeeOptions' => Options::payees(),
             ]);
         }
 
-        $filters = [];
         $payload = [];
 
         foreach ($groups as $label) {
@@ -103,8 +123,10 @@ class PortalController extends Controller
         return Inertia::render('portal/index', [
             'view' => $view,
             'groups' => $payload,
-            'statements' => null,
+            'statements' => $preview,
             'filters' => $filters,
+            'periodOptions' => $preview === null ? [] : Options::periods(),
+            'payeeOptions' => $preview === null ? [] : Options::payees(),
         ]);
     }
 
@@ -158,13 +180,14 @@ class PortalController extends Controller
     }
 
     /**
-     * @return array{id: int, name: string, balance: string, payable: string, period: string|null, published_at: string|null}
+     * @return array{id: int, name: string, balance: string, payable: string, period: string|null, payee: string|null, published_at: string|null}
      */
     private function row(Statement $statement): array
     {
         return [
             ...$statement->only(['id', 'name', 'balance', 'payable']),
             'period' => $statement->period?->name,
+            'payee' => $statement->relationLoaded('payee') ? $statement->payee?->name : null,
             'published_at' => $statement->published_at?->toDateString(),
         ];
     }

@@ -40,7 +40,7 @@ test('an admin sees the published statements of every payee in the portal', func
             ->where('statements.data.0.id', $second->id)
             ->where('statements.data.1', [
                 'id' => $first->id, 'name' => 'Example Artist – 2026 Q1', 'balance' => '70.000000000000000', 'payable' => '50.000000000000000',
-                'period' => '2026 Q1', 'published_at' => '2026-04-05',
+                'period' => '2026 Q1', 'payee' => null, 'published_at' => '2026-04-05',
             ]));
 });
 

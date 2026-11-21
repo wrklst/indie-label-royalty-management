@@ -154,3 +154,23 @@ test('the transaction form is handed the page it was opened from', function () {
     $this->actingAs($admin)->get(route('transactions.edit', ['transaction' => $transaction->id, 'return_to' => '//evil.example']))
         ->assertInertia(fn (Assert $page) => $page->where('returnTo', null));
 });
+
+test('changing the type of a saved transaction stores the amount the form shows under the new type', function (string $from, string $stored, string $to, string $typed, string $expected) {
+    $label = Label::factory()->create();
+    $payee = Payee::factory()->create(['label_id' => $label->id]);
+    $transaction = Transaction::factory()->create(['label_id' => $label->id, 'type' => $from, 'total' => $stored, 'converted_total' => $stored, 'currency' => 'EUR', 'payee_id' => $payee->id]);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('transactions.update', $transaction->id), typedExpense(['type' => $to, 'total' => $typed, 'payee_id' => $payee->id]))
+        ->assertSessionHasNoErrors();
+
+    expect($transaction->refresh()->total)->toBe($expected)
+        ->and($transaction->converted_total)->toBe($expected);
+})->with([
+    'a cost becomes income, shown as 250' => ['expense', '-250', 'income', '250', '250.000000000000000'],
+    'a cost becomes a transfer, shown as -250 so money still goes out' => ['expense', '-250', 'transfer', '-250', '-250.000000000000000'],
+    'income becomes a cost, typed 100' => ['income', '100', 'expense', '100', '-100.000000000000000'],
+    'a transfer given out becomes a cost, typed 500' => ['transfer', '-500', 'expense', '500', '-500.000000000000000'],
+    'a transfer becomes income as shown' => ['transfer', '75', 'income', '75', '75.000000000000000'],
+    'income becomes a transfer as shown' => ['income', '100', 'transfer', '100', '100.000000000000000'],
+]);

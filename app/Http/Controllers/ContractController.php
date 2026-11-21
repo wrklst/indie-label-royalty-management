@@ -8,6 +8,7 @@ use App\Models\ContractSplit;
 use App\Models\Release;
 use App\Models\Track;
 use App\Support\Decimal;
+use App\Support\Filters;
 use App\Support\Options;
 use App\Support\ReturnTo;
 use App\Support\Sorting;
@@ -34,7 +35,7 @@ class ContractController extends Controller
         $contracts = Contract::query()
             ->with(['splits.payee:id,name', 'splits.ledger:id,name'])
             ->withCount(['releases', 'tracks', 'items', 'children', 'parents'])
-            ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
+            ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
             ->when($request->boolean('unused'), fn ($query) => $query->doesntHave('releases')->doesntHave('tracks')->doesntHave('items')->doesntHave('parents'))
             ->tap($sorting)
             ->paginate(50)
@@ -51,7 +52,7 @@ class ContractController extends Controller
 
         return Inertia::render('contracts/index', [
             'contracts' => $contracts,
-            'filters' => ['search' => $request->string('search')->value(), 'unused' => $request->boolean('unused'), ...$sorting->toArray()],
+            'filters' => ['search' => Filters::text($request, 'search'), 'unused' => $request->boolean('unused'), ...$sorting->toArray()],
         ]);
     }
 

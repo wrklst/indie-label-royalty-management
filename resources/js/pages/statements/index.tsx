@@ -61,7 +61,7 @@ export default function Statements({
     return (
         <Page
             title="Statements"
-            description="A statement is a frozen copy of a payee's figures for a period. Later changes to transactions or contracts do not alter it; regenerate it to get a new revision. My statements shows what payees see of the published ones."
+            description="A statement is a frozen copy of a payee's figures for a period. Later changes to transactions or contracts do not alter it; regenerate it to get a new revision. My statements previews what your payees see of the published ones, and also lists your own statements if you are a payee of another label."
             actions={
                 <Button variant="outline" asChild>
                     <Link href={portal()}>My statements</Link>

@@ -3,9 +3,11 @@
 namespace App\Providers;
 
 use App\Services\Imports\ImporterRegistry;
+use App\Support\ClampedPaginator;
 use App\Support\CurrentLabel;
 use App\Support\InstallationSettings;
 use Carbon\CarbonImmutable;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -20,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->scoped(CurrentLabel::class);
         $this->app->singleton(ImporterRegistry::class);
+        $this->app->bind(LengthAwarePaginator::class, ClampedPaginator::class);
     }
 
     /**

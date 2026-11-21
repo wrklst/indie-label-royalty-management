@@ -17,6 +17,7 @@ use App\Services\Imports\Readers\ReaderFactory;
 use App\Services\Reports\IncomeReport;
 use App\Services\Royalties\MoneyFlow;
 use App\Support\CurrentLabel;
+use App\Support\Filters;
 use App\Support\Services;
 use App\Support\Sorting;
 use App\Support\WorkingCopy;
@@ -52,10 +53,10 @@ class DataImportController extends Controller
         return Inertia::render('data-imports/index', [
             'imports' => DataImport::query()
                 ->with('user:id,name')
-                ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
+                ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where(fn ($query) => $query
                     ->where('name', 'like', "%{$search}%")->orWhere('original_filename', 'like', "%{$search}%")))
-                ->when($request->string('source')->value(), fn ($query, string $source) => $query->where('importer', $source))
-                ->when(ImportStatus::tryFrom((string) $request->query('status')), fn ($query, ImportStatus $status) => $query->where('status', $status))
+                ->when(Filters::text($request, 'source'), fn ($query, string $source) => $query->where('importer', $source))
+                ->when(ImportStatus::tryFrom(Filters::text($request, 'status')), fn ($query, ImportStatus $status) => $query->where('status', $status))
                 ->tap($sorting)
                 ->paginate(50)
                 ->withQueryString()
@@ -68,9 +69,9 @@ class DataImportController extends Controller
                     'user' => $import->user?->name,
                 ]),
             'filters' => [
-                'search' => $request->string('search')->value(),
-                'source' => $request->string('source')->value(),
-                'status' => ImportStatus::tryFrom((string) $request->query('status'))?->value,
+                'search' => Filters::text($request, 'search'),
+                'source' => Filters::text($request, 'source'),
+                'status' => ImportStatus::tryFrom(Filters::text($request, 'status'))?->value,
                 ...$sorting->toArray(),
             ],
             'sourceOptions' => DataImport::query()->distinct()->orderBy('importer')->pluck('importer')

@@ -15,6 +15,7 @@ use App\Services\Releases\PlayableAudio;
 use App\Services\Reports\IncomeReport;
 use App\Support\CollectionPage;
 use App\Support\Decimal;
+use App\Support\Filters;
 use App\Support\Options;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
@@ -52,7 +53,7 @@ class ArtistController extends Controller
                     ->whereColumn('artist_release.release_id', 'releases.id')->whereColumn('artist_release.artist_id', 'artists.id'))
                 ->orWhereExists(fn ($query) => $query->from('tracks')->whereColumn('tracks.release_id', 'releases.id')->where($onTrack))), 'releases_count')
             ->selectSub(Track::query()->selectRaw('count(*)')->where($onTrack), 'tracks_count')
-            ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
+            ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where(fn ($query) => $query
                 ->where('name', 'like', "%{$search}%")->orWhereHas('aliases', fn ($query) => $query->where('name', 'like', "%{$search}%"))))
             ->tap($sorting)
             ->paginate(50)
@@ -65,7 +66,7 @@ class ArtistController extends Controller
 
         return Inertia::render('artists/index', [
             'artists' => $artists,
-            'filters' => ['search' => $request->string('search')->value(), 'aliases' => $request->boolean('aliases'), ...$sorting->toArray()],
+            'filters' => ['search' => Filters::text($request, 'search'), 'aliases' => $request->boolean('aliases'), ...$sorting->toArray()],
             'artistOptions' => Options::artists(),
         ]);
     }

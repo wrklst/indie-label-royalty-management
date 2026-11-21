@@ -12,6 +12,7 @@ use App\Models\Release;
 use App\Models\Statement;
 use App\Models\Transaction;
 use App\Services\Royalties\RoyaltyCalculator;
+use App\Support\Filters;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -34,7 +35,7 @@ class PayeeController extends Controller
 
         $payees = Payee::query()
             ->withCount(['splits', 'payouts', 'statements'])
-            ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
+            ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
             ->tap($sorting)
             ->paginate(50)
             ->withQueryString()
@@ -42,7 +43,7 @@ class PayeeController extends Controller
 
         return Inertia::render('payees/index', [
             'payees' => $payees,
-            'filters' => ['search' => $request->string('search')->value(), ...$sorting->toArray()],
+            'filters' => ['search' => Filters::text($request, 'search'), ...$sorting->toArray()],
         ]);
     }
 

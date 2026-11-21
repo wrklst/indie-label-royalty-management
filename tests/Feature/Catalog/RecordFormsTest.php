@@ -14,7 +14,7 @@ use App\Models\Track;
 use App\Models\Transaction;
 use Inertia\Testing\AssertableInertia as Assert;
 
-test('the track page, the tracks list and the release page all send what the track dialog edits', function () {
+test('the track page, the tracks list and the release page send what the track dialog edits, the list without its long texts', function () {
     $label = Label::factory()->create();
     $artist = Artist::factory()->create(['label_id' => $label->id]);
     $guest = Artist::factory()->create(['label_id' => $label->id]);
@@ -23,17 +23,17 @@ test('the track page, the tracks list and the release page all send what the tra
     $track->artists()->attach($guest->id, ['role' => 'featuring', 'position' => 0]);
     $admin = labelAdmin($label);
 
-    $editable = fn (Assert $row) => $row
+    $listed = fn (Assert $row) => $row
         ->where('id', $track->id)
         ->where('bpm', '120.5')
-        ->where('credits', ['composers' => ['Example Composer']])
         ->where('artists', [['artist_id' => $guest->id, 'role' => 'featuring']])
-        ->has('disc_number')->has('musical_key')->has('preview_start')->has('lyrics')->has('ai_recording')->has('p_line')->etc();
+        ->has('disc_number')->has('musical_key')->has('preview_start')->has('ai_recording')->has('p_line')->etc();
+    $editable = fn (Assert $row) => $listed($row->where('credits', ['composers' => ['Example Composer']])->has('lyrics'));
 
     $this->actingAs($admin)->get(route('tracks.show', $track->id))
         ->assertInertia(fn (Assert $page) => $page->has('track', $editable)->has('artistOptions', 2)->has('contractOptions'));
     $this->actingAs($admin)->get(route('tracks.index'))
-        ->assertInertia(fn (Assert $page) => $page->has('tracks.data.0', $editable)->has('artistOptions', 2));
+        ->assertInertia(fn (Assert $page) => $page->has('tracks.data.0', $listed)->missing('tracks.data.0.credits')->has('artistOptions', 2));
     $this->actingAs($admin)->get(route('releases.show', $release->id))
         ->assertInertia(fn (Assert $page) => $page->has('release.tracks.0', $editable));
 });

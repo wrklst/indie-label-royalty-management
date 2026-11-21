@@ -205,3 +205,55 @@ test('a payee cannot change anything in a label they are only a payee of', funct
     $this->actingAs($user)->post(route('statements.publish', $beta['statement']->id))->assertForbidden();
     $this->actingAs($user)->post(route('label-branding.store', 'logo'), ['file' => UploadedFile::fake()->image('logo.png')])->assertForbidden();
 });
+
+test('someone who runs a label and is a payee elsewhere sees both: their own statements and what the payees of their label see', function () {
+    $mine = Label::factory()->create(['name' => 'Example Own Label']);
+    $myPayee = Payee::factory()->create(['label_id' => $mine->id, 'name' => 'Example Payee One']);
+    $otherPayee = Payee::factory()->create(['label_id' => $mine->id, 'name' => 'Example Payee Two']);
+    $published = Statement::factory()->create(['label_id' => $mine->id, 'payee_id' => $myPayee->id, 'published_at' => now()]);
+    Statement::factory()->create(['label_id' => $mine->id, 'payee_id' => $otherPayee->id, 'published_at' => now()]);
+    Statement::factory()->create(['label_id' => $mine->id, 'payee_id' => $otherPayee->id]);
+    $other = labelWithPublishedStatement('Example Other Label');
+    labelWithPublishedStatement('Example Secret');
+    $user = userOfLabels(['payee' => $other], $mine);
+    $mine->users()->attach($user, ['role' => LabelRole::Admin->value]);
+
+    $this->actingAs($user)->get(route('portal.index'))->assertInertia(fn (Assert $page) => $page
+        ->where('view', 'payee')
+        ->has('groups', 1)->where('groups.0.label.name', 'Example Other Label')
+        ->has('statements.data', 2)
+        ->where('statements.data.0.payee', fn (?string $name): bool => in_array($name, ['Example Payee One', 'Example Payee Two'], true))
+        ->has('payeeOptions', 2));
+
+    $this->actingAs($user)->get(route('portal.index', ['payee' => $myPayee->id]))->assertInertia(fn (Assert $page) => $page
+        ->has('statements.data', 1)->where('statements.data.0.id', $published->id)->where('filters.payee', $myPayee->id));
+});
+
+test('a pure admin sees only the preview and a pure payee only their own statements', function () {
+    $mine = Label::factory()->create();
+    $payee = Payee::factory()->create(['label_id' => $mine->id]);
+    Statement::factory()->create(['label_id' => $mine->id, 'payee_id' => $payee->id, 'published_at' => now()]);
+
+    $this->actingAs(labelAdmin($mine))->get(route('portal.index'))->assertInertia(fn (Assert $page) => $page
+        ->where('view', 'admin')->has('groups', 0)->has('statements.data', 1));
+
+    $alpha = labelWithPublishedStatement('Example Alpha');
+    $this->actingAs(userOfLabels(['payee' => $alpha], $alpha['label']))->get(route('portal.index'))->assertInertia(fn (Assert $page) => $page
+        ->where('view', 'payee')->has('groups', 1)->where('statements', null));
+});
+
+test('an admin whose payee role elsewhere is not linked still gets the preview of their label', function () {
+    $mine = Label::factory()->create();
+    $other = Label::factory()->create();
+    $user = labelAdmin($mine);
+    $other->users()->attach($user, ['role' => LabelRole::Payee->value, 'payee_id' => null]);
+
+    $this->actingAs($user)->get(route('portal.index'))->assertInertia(fn (Assert $page) => $page->where('view', 'admin')->has('groups', 0));
+});
+
+test('someone removed from their last label who may not create one is told so, and cannot create', function () {
+    $user = User::factory()->create(['may_create_labels' => false]);
+
+    $this->actingAs($user)->get(route('labels.create'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('labels/none'));
+    $this->actingAs($user)->post(route('labels.store'), ['name' => 'Example Records', 'currency' => 'EUR'])->assertForbidden();
+});

@@ -3,6 +3,7 @@
 use App\Models\Label;
 use App\Models\Receipt;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 
 test('a receipt is uploaded on the label costs page and booked as a cost', function () {
@@ -24,6 +25,27 @@ test('a receipt is uploaded on the label costs page and booked as a cost', funct
         ->assertNoJavaScriptErrors();
 
     expect(Receipt::query()->sole()->transaction_id)->not->toBeNull();
+});
+
+test('with an AI service connected an upload is entered by hand unless reading is chosen, and each receipt offers both ways', function () {
+    Storage::fake('local');
+    Queue::fake();
+    $label = Label::factory()->create(['name' => 'Example Records', 'currency' => 'EUR', 'ai_provider' => 'anthropic', 'ai_key' => 'example-key']);
+    $file = sys_get_temp_dir().'/till-receipt-choice.png';
+    imagepng(imagecreatetruecolor(20, 20), $file);
+    $this->actingAs(labelAdmin($label));
+
+    visit('/label-costs')
+        ->assertSee('Enter by hand')
+        ->attach('[data-receipt-upload] input[type="file"]', $file)
+        ->assertSee('Receipt uploaded.')
+        ->assertSee('not read')
+        ->assertSee('Book as cost')
+        ->assertPresent('[aria-label^="Read with AI: "]')
+        ->assertNoJavaScriptErrors();
+
+    expect(Receipt::query()->sole()->status)->toBe('new');
+    Queue::assertNothingPushed();
 });
 
 test('the connections page offers the models of a service with their prices and shows a stored connection as a card', function () {

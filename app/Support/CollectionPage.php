@@ -43,10 +43,13 @@ final class CollectionPage
 
         $pageName = "{$prefix}_page";
         $current = Paginator::resolveCurrentPage($pageName);
-        $page = (new LengthAwarePaginator($rows->forPage($current, $perPage)->values(), $rows->count(), $perPage, $current, [
-            'path' => Paginator::resolveCurrentPath(),
-            'pageName' => $pageName,
-        ]))->withQueryString();
+        $page = app()->makeWith(LengthAwarePaginator::class, [
+            'items' => $rows->forPage($current, $perPage)->values(),
+            'total' => $rows->count(),
+            'perPage' => $perPage,
+            'currentPage' => $current,
+            'options' => ['path' => Paginator::resolveCurrentPath(), 'pageName' => $pageName],
+        ])->withQueryString();
 
         return [
             'page' => $page,

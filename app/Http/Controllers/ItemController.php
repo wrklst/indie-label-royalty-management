@@ -8,6 +8,7 @@ use App\Models\Item;
 use App\Models\Release;
 use App\Models\Track;
 use App\Models\Transaction;
+use App\Support\Filters;
 use App\Support\Options;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
@@ -35,7 +36,7 @@ class ItemController extends Controller
             ->with(['release:id,name,catalog_number', 'track:id,name', 'contract:id,name'])
             ->withCount('transactions')
             ->withSum('transactions as total', 'converted_total')
-            ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
+            ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where(fn ($query) => $query
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('isrc', 'like', "%{$search}%")
                 ->orWhere('upc', 'like', "%{$search}%")
@@ -56,7 +57,7 @@ class ItemController extends Controller
         return Inertia::render('items/index', [
             'items' => $items,
             'filters' => [
-                'search' => $request->string('search')->value(),
+                'search' => Filters::text($request, 'search'),
                 'unassigned' => $request->boolean('unassigned'),
                 'release' => $request->integer('release') ?: null,
                 ...$sorting->toArray(),

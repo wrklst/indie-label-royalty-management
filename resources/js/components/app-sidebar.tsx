@@ -191,11 +191,13 @@ function PayeeHeader() {
 export function AppSidebar() {
     const { label, labels, isPayee } = usePage().props;
     const runsLabel = labels.length > 0;
+    // Only someone who is a payee is headed with their own name; a new operator without a label sees "No label yet".
+    const payeeOnly = !runsLabel && isPayee;
 
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
-                {runsLabel ? <LabelSwitcher /> : <PayeeHeader />}
+                {payeeOnly ? <PayeeHeader /> : <LabelSwitcher />}
             </SidebarHeader>
 
             <SidebarContent>
@@ -205,7 +207,14 @@ export function AppSidebar() {
                             runsLabel
                                 ? [
                                       ...withTools(adminGroups, label.tools),
-                                      ...(isPayee ? payeeGroups : []),
+                                      ...(isPayee
+                                          ? [
+                                                {
+                                                    ...payeeGroups[0],
+                                                    title: 'As a payee',
+                                                },
+                                            ]
+                                          : []),
                                   ]
                                 : payeeGroups
                         }

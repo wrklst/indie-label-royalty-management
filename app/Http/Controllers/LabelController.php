@@ -14,7 +14,12 @@ class LabelController extends Controller
 {
     public function create(Request $request): Response
     {
-        abort_unless($request->user()->canCreateLabel(), 403);
+        if (! $request->user()->canCreateLabel()) {
+            // Someone removed from their last label is told so; anyone else has no business here.
+            abort_if($request->user()->labels()->exists(), 403);
+
+            return Inertia::render('labels/none');
+        }
 
         return Inertia::render('labels/create', [
             'isFirst' => ! $request->user()->labels()->exists(),

@@ -19,9 +19,11 @@ use App\Services\Imports\Identifiers;
 use App\Services\Releases\ArtistCredits;
 use App\Services\Releases\PlayableAudio;
 use App\Services\Reports\IncomeReport;
+use App\Support\Filters;
 use App\Support\Options;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -31,15 +33,17 @@ class TrackController extends Controller
 {
     /**
      * What the track dialog edits, for every page that opens it. The track needs its `artists` loaded.
+     * A list of many tracks leaves the lyrics and credits out (`$withText` false); the dialog fetches them from `fields()` when it opens.
      *
      * @return array<string, mixed>
      */
-    public static function editable(Track $track): array
+    public static function editable(Track $track, bool $withText = true): array
     {
         return [
             ...$track->only([
                 'id', 'name', 'isrc', 'iswc', 'track_number', 'disc_number', 'duration', 'artist_id', 'contract_id', 'version', 'genre',
-                'language', 'explicit', 'musical_key', 'preview_start', 'p_line', 'lyrics', 'credits', 'ai_recording', 'ai_composition', 'ai_lyrics',
+                'language', 'explicit', 'musical_key', 'preview_start', 'p_line', 'ai_recording', 'ai_composition', 'ai_lyrics',
+                ...($withText ? ['lyrics', 'credits'] : []),
             ]),
             'bpm' => $track->bpm === null ? null : rtrim(rtrim((string) $track->bpm, '0'), '.'),
             'artists' => $track->artists->map(fn (Artist $artist): array => ['artist_id' => $artist->id, 'role' => $artist->pivot->role])->values(),
@@ -61,7 +65,7 @@ class TrackController extends Controller
                 'artist:id,name', 'artists:id,name', 'contract:id,name', 'release:id,name,catalog_number,contract_id,artist_id', 'release.contract:id,name',
                 'release.artist:id,name', 'release.artists:id,name', 'release.cover:id,release_id',
             ])
-            ->when($request->string('search')->trim()->value(), fn ($query, string $search) => $query->where(fn ($query) => $query
+            ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where(fn ($query) => $query
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('isrc', 'like', '%'.str_replace('-', '', $search).'%')))
             // A recording on several releases is listed once, by its first entry;
@@ -77,7 +81,7 @@ class TrackController extends Controller
             ->with(['release:id,name,contract_id'])->orderBy('id')->get()->groupBy('isrc');
 
         $tracks = $tracks->through(fn (Track $track): array => [
-            ...self::editable($track),
+            ...self::editable($track, withText: false),
             ...$track->only(['mechanicals_rate', 'ppd_rate', 'release_id']),
             'artist' => $track->artist?->name,
             'release' => $track->release?->only(['id', 'name', 'catalog_number']),
@@ -95,11 +99,19 @@ class TrackController extends Controller
 
         return Inertia::render('tracks/index', [
             'tracks' => $tracks,
-            'filters' => ['search' => $request->string('search')->value(), 'release' => $request->integer('release') ?: null, ...$sorting->toArray()],
+            'filters' => ['search' => Filters::text($request, 'search'), 'release' => $request->integer('release') ?: null, ...$sorting->toArray()],
             'artistOptions' => Options::artists(),
             'contractOptions' => Options::contracts(),
             'releaseOptions' => Options::releases(),
         ]);
+    }
+
+    /**
+     * The long texts of a track that its list leaves out, for the dialog that opens on one.
+     */
+    public function fields(Track $track): JsonResponse
+    {
+        return response()->json($track->only(['lyrics', 'credits']));
     }
 
     /**

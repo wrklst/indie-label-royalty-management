@@ -305,3 +305,80 @@ test('only a cost of the label itself can be changed there', function () {
         $this->put(route('label-costs.update', $transaction->id), $payload)->assertNotFound();
     }
 });
+
+test('a refund or credit is booked and edited in the overheads dialogs like on the transaction form', function () {
+    $this->post(route('label-costs.store'), ['name' => 'Example Refund', 'amount' => '30', 'refund' => '1', 'currency' => 'EUR', 'paid_timestamp' => '2026-03-01'])->assertSessionHasNoErrors();
+    $this->post(route('label-costs.store'), ['name' => 'Example Hosting', 'amount' => '30', 'refund' => '0', 'currency' => 'EUR', 'paid_timestamp' => '2026-03-01']);
+
+    [$credit, $cost] = Transaction::query()->orderBy('id')->get()->all();
+
+    expect($credit->total)->toBe('30.000000000000000')
+        ->and($cost->total)->toBe('-30.000000000000000');
+
+    $this->get(route('label-costs.index'))->assertInertia(fn (Assert $page) => $page->where('costs.data.1.refund', true)->where('costs.data.0.refund', false));
+
+    $payload = ['name' => 'Example', 'amount' => '30', 'currency' => 'EUR', 'paid_timestamp' => '2026-03-01'];
+    $this->put(route('label-costs.update', $credit->id), [...$payload, 'refund' => '0'])->assertSessionHasNoErrors();
+    $this->put(route('label-costs.update', $cost->id), [...$payload, 'refund' => '1'])->assertSessionHasNoErrors();
+
+    expect($credit->refresh()->total)->toBe('-30.000000000000000')
+        ->and($credit->converted_total)->toBe('-30.000000000000000')
+        ->and($cost->refresh()->total)->toBe('30.000000000000000');
+});
+
+test('editing an overhead in its dialog leaves the sale date and the supplier alone', function () {
+    $cost = Transaction::factory()->labelCost()->create([
+        'label_id' => $this->label->id, 'total' => '-10', 'converted_total' => '-10', 'currency' => 'EUR',
+        'timestamp' => '2026-02-01', 'paid_timestamp' => '2026-03-01', 'source' => 'Example Supplier', 'memo' => 'Annual fee',
+    ]);
+
+    $this->put(route('label-costs.update', $cost->id), ['name' => 'Example Supplier', 'amount' => '12', 'currency' => 'EUR', 'memo' => 'Annual fee', 'paid_timestamp' => '2026-03-05'])->assertSessionHasNoErrors();
+
+    $cost->refresh();
+
+    expect($cost->timestamp->toDateString())->toBe('2026-02-01')
+        ->and($cost->paid_timestamp->toDateString())->toBe('2026-03-05')
+        ->and($cost->source)->toBe('Example Supplier')
+        ->and($cost->total)->toBe('-12.000000000000000');
+
+    $this->put(route('label-costs.update', $cost->id), ['name' => 'Example Supplier 2', 'amount' => '12', 'currency' => 'EUR', 'memo' => 'Annual fee', 'paid_timestamp' => '2026-03-05']);
+
+    expect($cost->refresh()->source)->toBe('Example Supplier 2');
+});
+
+test('an overhead without a supplier keeps it empty when only the amount changes', function () {
+    $cost = Transaction::factory()->labelCost()->create([
+        'label_id' => $this->label->id, 'total' => '-10', 'converted_total' => '-10', 'currency' => 'EUR', 'source' => null, 'memo' => 'Domain name',
+    ]);
+
+    $this->put(route('label-costs.update', $cost->id), ['name' => 'Domain name', 'amount' => '11', 'currency' => 'EUR', 'memo' => 'Domain name', 'paid_timestamp' => $cost->paid_timestamp->toDateString()])->assertSessionHasNoErrors();
+
+    expect($cost->refresh()->source)->toBeNull()
+        ->and($cost->total)->toBe('-11.000000000000000');
+});
+
+test('recurring per year converts costs in another currency and never adds currencies together', function () {
+    $this->travelTo('2026-04-20');
+    Http::fake(['api.frankfurter.dev/*' => Http::response(['rates' => ['EUR' => 0.5]])]);
+    $shared = ['label_id' => $this->label->id, 'interval' => 'monthly', 'starts_on' => '2026-01-15', 'occurrences_booked' => 4];
+    RecurringExpense::factory()->create([...$shared, 'amount' => '10', 'currency' => 'EUR', 'conversion_rate' => null]);
+    RecurringExpense::factory()->create([...$shared, 'amount' => '10', 'currency' => 'USD', 'conversion_rate' => '0.8']);
+    RecurringExpense::factory()->create([...$shared, 'amount' => '10', 'currency' => 'GBP', 'conversion_rate' => null]);
+
+    $this->get(route('label-costs.index'))->assertInertia(fn (Assert $page) => $page
+        ->where('totals.recurring_per_year', '276.000000000000000')
+        ->where('totals.recurring_without_rate', 0));
+});
+
+test('a recurring cost whose rate cannot be had is left out of the yearly figure and counted apart', function () {
+    $this->travelTo('2026-04-20');
+    Http::fake(['api.frankfurter.dev/*' => Http::response([], 500)]);
+    $shared = ['label_id' => $this->label->id, 'interval' => 'monthly', 'starts_on' => '2026-01-15', 'occurrences_booked' => 4];
+    RecurringExpense::factory()->create([...$shared, 'amount' => '10', 'currency' => 'EUR', 'conversion_rate' => null]);
+    RecurringExpense::factory()->create([...$shared, 'amount' => '10', 'currency' => 'USD', 'conversion_rate' => '0.8']);
+    RecurringExpense::factory()->create([...$shared, 'amount' => '10', 'currency' => 'GBP', 'conversion_rate' => null]);
+
+    $this->get(route('label-costs.index'))->assertInertia(fn (Assert $page) => $page
+        ->where('totals.recurring_per_year', '216.000000000000000')
+        ->where('totals.recurring_without_rate', 1));
+});
