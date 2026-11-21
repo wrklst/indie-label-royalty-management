@@ -88,7 +88,7 @@ Every import is therefore compared with what is booked already. Two things count
 - The lines of the file for one release, type, format group and paid month **add up to** bookings from another source, to the cent.
 - One line has the **same paid date and amount** as an existing booking of that release.
 
-When something is found, the import stops with the status **Review** and nothing is counted yet. For each proposal you choose:
+When something is found, the import stops with the status **Duplicates to review** and nothing is counted yet. For each proposal you choose:
 
 | Choice                                                              | Result                                                                                                                                                      |
 | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -134,7 +134,7 @@ php artisan royalties:import statement.csv --label=example-records --paid=2026-1
 php artisan royalties:import report.xlsx --label=example-records --importer=bandcamp --rate=0.92
 ```
 
-`--label` takes the label's slug or id. When the command finds possible duplicates it leaves the import in **Review**, to be decided in the interface.
+`--label` takes the label's slug or id. When the command finds possible duplicates it leaves the import in **Duplicates to review**, to be decided in the interface.
 
 ## Good to know
 

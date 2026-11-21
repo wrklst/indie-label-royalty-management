@@ -34,9 +34,9 @@ The connection itself (client ID and secret) is on its own page: follow the link
 
 Tick the distributors the label works with. What is built for a distributor is only shown when it is ticked:
 
-| Distributor | What it switches on                                                                                                                                                                                                                                                              |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Zebralution | The **Zebralution ZIP** under **Delivery** on a release, its genres as suggestions on the release form, its statement layouts in the list on **Data imports → New import**, the link to its analytics export on **Play counts**, and the section **Zebralution delivery** below. |
+| Distributor | What it switches on                                                                                                                                                                                                                                                                      |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Zebralution | The **Zebralution ZIP** under **Delivery** on a release, its genres as suggestions on the release form, its statement layouts in the list on **Data imports → Import a statement**, the link to its analytics export on **Play counts**, and the section **Zebralution delivery** below. |
 
 A label that never chose has all of them ticked. Switching one off hides its options and keeps what was imported or entered. A statement of a distributor that is switched off is still recognised when uploaded with **Detect automatically**.
 
@@ -88,4 +88,4 @@ A territory that contract splits refer to cannot be deleted: without it those sp
 
 - Settings belong to one label. In an installation with several labels each has its own currency and its own connections.
 - Categories and formats are the same for every label of an installation; they are not editable here.
-- What the server itself needs (database, mail, file storage) is not in the interface: see [Configuration](03-configuration.md).
+- What the server itself needs (database, mail) is not in the interface: see [Configuration](03-configuration.md). Where files are stored is set under [Connections](42-connections.md) by the person who runs the installation.

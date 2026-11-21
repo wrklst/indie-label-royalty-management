@@ -6,11 +6,11 @@ Where your tracks were played on the radio. Plays come from neighbouring rights 
 
 Every entry under **Catalog → Airplay** says in the column **Known from** how you know about it:
 
-| Known from    | Meaning                                                                                                 |
-| ------------- | ------------------------------------------------------------------------------------------------------- |
-| **Statement** | A line of an imported neighbouring rights statement (Rightz Audio). The amount is what the play earned. |
-| **Search**    | Found by a web research and kept by you.                                                                |
-| **Manual**    | Entered by hand.                                                                                        |
+| Known from                        | Meaning                                                                                                 |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Neighbouring rights statement** | A line of an imported neighbouring rights statement (Rightz Audio). The amount is what the play earned. |
+| **Web search**                    | Found by a web research and kept by you.                                                                |
+| **Entered by hand**               | Entered by hand.                                                                                        |
 
 ### From a statement
 
