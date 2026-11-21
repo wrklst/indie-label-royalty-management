@@ -64,10 +64,10 @@ test('a newer file replaces counts of the same track and platform for the days i
     $other = PlayCount::factory()->create(['platform' => 'spotify', 'track_name' => 'Example Track', 'period_start' => '2026-01-01', 'period_end' => '2026-01-31']);
 
     $this->actingAs(labelAdmin($label))->post(route('play-counts.store'), [
-        'file' => playCountFile("track,date,dsp,plays\nExample Track,2026-01-15,Spotify,7\nExample Track,2026-01-15,Example Jukebox,3\n"),
+        'file' => playCountFile("track,date,dsp,plays\nExample Track,2026-01-15,Spotify,7\nExample Track,2026-01-15,Example Jukebox,3\nExample Track,2026-01-15,qqmusic,4\n"),
     ])->assertSessionHasNoErrors();
 
-    expect(PlayCount::query()->withoutGlobalScope('label')->where('label_id', $label->id)->orderBy('plays')->get()->map(fn (PlayCount $count): string => "{$count->platform} {$count->plays}")->all())->toBe(['unknown 3', 'spotify 7', 'spotify 20', 'tidal 30'])
+    expect(PlayCount::query()->withoutGlobalScope('label')->where('label_id', $label->id)->orderBy('plays')->get()->map(fn (PlayCount $count): string => "{$count->platform} {$count->plays}")->all())->toBe(['unknown 3', 'tencent 4', 'spotify 7', 'spotify 20', 'tidal 30'])
         ->and($february->fresh())->not->toBeNull()
         ->and($tidal->fresh())->not->toBeNull()
         ->and($other->fresh())->not->toBeNull();

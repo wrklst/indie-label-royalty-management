@@ -37,7 +37,7 @@ class Platforms
         'qobuz' => 'qobuz', 'juno' => 'juno', 'traxsource' => 'traxsource', 'boomkat' => 'boomkat', 'bleep' => 'bleep',
         'pandora' => 'pandora', 'napster' => 'napster', 'anghami' => 'anghami', 'tiktok' => 'tiktok',
         'facebook' => 'facebook', 'instagram' => 'facebook', 'snap' => 'snapchat', 'netease' => 'netease',
-        'tencent' => 'tencent',
+        'tencent' => 'tencent', 'qqmusic' => 'tencent', 'qq music' => 'tencent', 'kugou' => 'tencent', 'kuwo' => 'tencent',
     ];
 
     public const string STREAMS = 'streams';
