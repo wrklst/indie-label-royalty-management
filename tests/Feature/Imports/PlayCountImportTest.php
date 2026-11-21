@@ -2,7 +2,9 @@
 
 use App\Models\Label;
 use App\Models\PlayCount;
+use App\Models\Release;
 use App\Models\Track;
+use App\Models\Transaction;
 use Illuminate\Http\UploadedFile;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -138,4 +140,39 @@ test('the page links to the Zebralution export from a week before the last count
     PlayCount::factory()->create(['period_start' => '2026-02-08', 'period_end' => '2026-02-08']);
 
     $this->actingAs($admin)->get(route('play-counts.index'))->assertInertia(fn (Assert $page) => $page->where('zebralutionExport', $url('2026-01-13')));
+});
+
+test('the page reports the counted plays by platform and month, against the statements, and by release and track', function () {
+    $label = Label::factory()->create();
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release']);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track']);
+    $other = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Sample Track']);
+    $count = fn (Track $track, string $platform, string $day, int $plays) => PlayCount::factory()->create([
+        'label_id' => $label->id, 'track_id' => $track->id, 'platform' => $platform, 'period_start' => $day, 'period_end' => $day, 'plays' => $plays,
+    ]);
+    $count($track, 'spotify', '2026-01-10', 100);
+    $count($track, 'spotify', '2026-03-05', 50);
+    $count($other, 'spotify', '2026-03-06', 30);
+    $count($other, 'deezer', '2026-02-01', 20);
+    PlayCount::factory()->create(['platform' => 'spotify', 'plays' => 999, 'period_start' => '2026-03-01', 'period_end' => '2026-03-01']);
+    Transaction::factory()->create([
+        'label_id' => $label->id, 'type' => 'income', 'retailer' => 'Spotify', 'format' => 'Stream', 'quantity' => 90,
+        'total' => '1', 'converted_total' => '1', 'timestamp' => '2026-01-31',
+    ]);
+
+    $this->actingAs(labelAdmin($label))->get(route('play-counts.index'))->assertInertia(fn (Assert $page) => $page
+        ->where('report.months', ['2026-01', '2026-02', '2026-03'])
+        ->has('report.platforms', 2)
+        ->where('report.platforms.0.key', 'spotify')
+        ->where('report.platforms.0.plays', 180)
+        ->where('report.platforms.0.series.streams', fn ($series): bool => collect($series)->map(fn ($plays): int => (int) $plays)->all() === [100, 0, 80])
+        ->where('report.platforms.0.reported_streams', fn ($streams): bool => (int) $streams === 90)
+        ->where('report.platforms.1.key', 'deezer')
+        ->has('releases.rows', 1)
+        ->where('releases.rows.0.label', 'Example Release')
+        ->where('releases.rows.0.total', fn ($plays): bool => (int) $plays === 200)
+        ->where('tracks.rows.0.label', 'Example Track')
+        ->where('tracks.rows.0.total', fn ($plays): bool => (int) $plays === 150)
+        ->where('tracks.rows.0.recent', fn ($plays): bool => (int) $plays === 150)
+        ->where('tracks.rows.1.label', 'Sample Track'));
 });

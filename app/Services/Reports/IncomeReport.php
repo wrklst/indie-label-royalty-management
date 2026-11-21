@@ -124,6 +124,97 @@ class IncomeReport
     }
 
     /**
+     * What the platforms counted themselves, in the shape of the income
+     * report so it is drawn the same way: a platform's streams are its
+     * counted plays, month by month, next to what the statements have
+     * for the same months.
+     *
+     * @param  Builder<PlayCount>  $plays
+     * @param  Builder<Transaction>  $transactions  The statements the counts are held against.
+     * @return array{months: list<string>, total: float, platforms: list<Platform>, kinds: array{}, regions: array{}}
+     */
+    public static function plays(Builder $plays, Builder $transactions): array
+    {
+        // A count over several months is booked in the month it ends.
+        $month = self::month('period_end');
+        $rows = $plays->clone()->toBase()->selectRaw("{$month} as month, platform, SUM(plays) as plays")->groupByRaw("{$month}, platform")->get();
+        $months = self::between($rows->min('month'), $rows->max('month'));
+        $place = array_flip($months);
+        $counted = [];
+        $platforms = [];
+
+        foreach ($rows as $row) {
+            $counted[(string) $row->platform][$place[$row->month]] = (float) $row->plays;
+        }
+
+        foreach (self::of($transactions, $plays)['platforms'] as $compared) {
+            if ($compared['plays'] !== null) {
+                $entry = self::platform($compared['key'], $compared['name'], [$compared['key'] => $compared['position']], array_fill(0, count($months), 0.0));
+                $entry['streams'] = (float) $compared['plays'];
+                $entry['series']['streams'] = array_replace($entry['series']['streams'], $counted[$compared['key']] ?? []);
+
+                $entry['plays'] = $compared['plays'];
+                $entry['plays_from'] = $compared['plays_from'];
+                $entry['plays_to'] = $compared['plays_to'];
+                $entry['reported_streams'] = $compared['reported_streams'];
+
+                $platforms[] = $entry;
+            }
+        }
+
+        usort($platforms, fn (array $a, array $b): int => $b['plays'] <=> $a['plays']);
+
+        return ['months' => $months, 'total' => 0.0, 'platforms' => $platforms, 'kinds' => [], 'regions' => []];
+    }
+
+    /**
+     * The tracks or releases that were played most, each with its last
+     * twelve months of counted plays, as movers() has them for income.
+     *
+     * @param  Builder<PlayCount>  $plays
+     * @param  'release_id'|'track_id'  $column
+     * @return array{months: list<string>, rows: list<Mover>}
+     */
+    public static function playMovers(Builder $plays, string $column, int $limit = 12): array
+    {
+        // ponytail: a recording on several releases counts for the release of its first entry only, as the import matches it.
+        $counted = $plays->clone()->toBase()->join('tracks', 'tracks.id', '=', 'play_counts.track_id');
+        $id = $column === 'release_id' ? 'tracks.release_id' : 'tracks.id';
+        $month = self::month('play_counts.period_end');
+        $top = $counted->clone()->whereNotNull($id)->selectRaw("{$id} as id, SUM(play_counts.plays) as plays")->groupByRaw($id)->orderByDesc('plays')->limit($limit)->pluck('plays', 'id');
+        $last = $counted->clone()->max('play_counts.period_end');
+
+        if ($top->isEmpty() || $last === null) {
+            return ['months' => [], 'rows' => []];
+        }
+
+        $end = CarbonImmutable::parse($last)->startOfMonth();
+        $months = self::between($end->subMonths(self::TREND - 1)->format('Y-m'), $end->format('Y-m'));
+        $place = array_flip($months);
+        $names = DB::table($column === 'release_id' ? 'releases' : 'tracks')->whereIn('id', $top->keys())->pluck('name', 'id');
+        $monthly = [];
+
+        foreach ($counted->clone()->whereIn($id, $top->keys())->selectRaw("{$id} as id, {$month} as month, SUM(play_counts.plays) as plays")->groupByRaw("{$id}, {$month}")->get() as $row) {
+            if (isset($place[$row->month])) {
+                $monthly[(int) $row->id][$place[$row->month]] = (float) $row->plays;
+            }
+        }
+
+        $rows = [];
+
+        foreach ($top as $key => $total) {
+            $series = array_replace(array_fill(0, self::TREND, 0.0), $monthly[(int) $key] ?? []);
+            $rows[] = [
+                'id' => (int) $key, 'label' => (string) ($names[$key] ?? ''), 'total' => (float) $total, 'streams' => 0.0, 'stream_total' => 0.0,
+                // The last three months against the three before them.
+                'recent' => (float) array_sum(array_slice($series, -3)), 'before' => (float) array_sum(array_slice($series, -6, 3)), 'series' => $series,
+            ];
+        }
+
+        return ['months' => $months, 'rows' => $rows];
+    }
+
+    /**
      * The releases or tracks of a selection that earned most, each with
      * its last twelve months, to see what is still moving.
      *

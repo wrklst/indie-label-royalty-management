@@ -94,6 +94,16 @@ Lines whose track is not in the catalogue are kept and listed under the file as 
 
 A newer file replaces earlier counts of the same track and platform for the days it covers, so nothing is counted twice. **Delete** removes everything one file brought; statements and income are not touched.
 
+### The report on the page
+
+Below the upload, **Royalties → Play counts** shows what was counted, drawn like the income report:
+
+- **How the plays developed**: the counted plays month by month, stacked by platform.
+- **Platforms**: what each platform counted, its share, its trend, the streams the statements have for the same months, and the days the count covers.
+- **Releases by plays** and **Tracks by plays**: the twelve that were played most, each with its last twelve months and the last three months held against the three before. A recording on several releases counts for the release of its first entry.
+
+Country and playlist are not kept, so there is no breakdown by them.
+
 ### Reading the comparison
 
 The count and the statements rarely match:

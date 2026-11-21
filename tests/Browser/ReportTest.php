@@ -34,3 +34,26 @@ test('the dashboard draws how income developed by platform and what a stream pai
         ->assertPresent('[data-development="rate"] svg path')
         ->assertNoJavaScriptErrors();
 });
+
+test('the play counts page draws how the plays developed by platform and what was played most', function () {
+    $label = Label::factory()->create(['name' => 'Example Records']);
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release']);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track']);
+
+    foreach (['2026-01-15' => 1, '2026-02-15' => 3, '2026-03-15' => 2] as $day => $factor) {
+        PlayCount::factory()->create(['label_id' => $label->id, 'track_id' => $track->id, 'platform' => 'spotify', 'plays' => 1000 * $factor, 'period_start' => $day, 'period_end' => $day]);
+        PlayCount::factory()->create(['label_id' => $label->id, 'track_id' => $track->id, 'platform' => 'youtube', 'plays' => 400 * $factor, 'period_start' => $day, 'period_end' => $day]);
+    }
+
+    Transaction::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'track_id' => $track->id, 'retailer' => 'Spotify', 'format' => 'Subscription Audio Stream', 'quantity' => 900, 'total' => '3', 'timestamp' => '2026-01-31']);
+    $this->actingAs(labelAdmin($label));
+
+    visit('/play-counts')
+        ->assertSee('How the plays developed')
+        ->assertSee('Releases by plays')
+        ->assertSee('Tracks by plays')
+        ->assertSee('8,400')
+        ->assertPresent('[data-development="streams"] [data-month="2026-03"]')
+        ->assertPresent('[data-play-report] [data-platform="youtube"] svg')
+        ->assertNoJavaScriptErrors();
+});

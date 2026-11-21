@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\DataImportRequest;
 use App\Models\PlayCount;
+use App\Models\Transaction;
 use App\Services\Imports\ImportException;
 use App\Services\Imports\PlayCountImport;
+use App\Services\Reports\IncomeReport;
 use App\Support\CurrentLabel;
 use App\Support\Platforms;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +35,9 @@ class PlayCountController extends Controller
         $from = $latest === null ? now()->subYear() : Carbon::parse($latest)->subWeek();
 
         return Inertia::render('play-counts/index', [
+            'report' => IncomeReport::plays(PlayCount::query(), Transaction::query()),
+            'tracks' => IncomeReport::playMovers(PlayCount::query(), 'track_id'),
+            'releases' => IncomeReport::playMovers(PlayCount::query(), 'release_id'),
             'zebralutionExport' => self::ZEBRALUTION_EXPORT.'?'.http_build_query([
                 'startdate' => $from->toDateString(), 'enddate' => now()->subDay()->toDateString(),
                 'resulttype' => 'streams', 'groupby_export' => 'track,dsp,date', 'fields' => 'streams',

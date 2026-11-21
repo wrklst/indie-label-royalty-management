@@ -3,6 +3,8 @@ import { Upload } from 'lucide-react';
 import PlayCountController from '@/actions/App/Http/Controllers/PlayCountController';
 import { DeleteButton } from '@/components/delete-button';
 import { Field } from '@/components/field';
+import { MoversPanel, PlayReport } from '@/components/income-report';
+import type { Movers, Report } from '@/components/income-report';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { PlatformIcon } from '@/components/platform-icon';
 import { Button } from '@/components/ui/button';
@@ -19,6 +21,9 @@ import { date, quantity } from '@/lib/format';
 import { index } from '@/routes/play-counts';
 
 type Props = {
+    report: Report;
+    tracks: Movers;
+    releases: Movers;
     zebralutionExport: string;
     files: {
         batch: string;
@@ -41,11 +46,17 @@ const SOURCES = [
     'Amazon Music for Artists: set the date range on a report page and export it.',
 ];
 
-export default function PlayCounts({ files, zebralutionExport }: Props) {
+export default function PlayCounts({
+    files,
+    report,
+    tracks,
+    releases,
+    zebralutionExport,
+}: Props) {
     return (
         <Page
             title="Play counts"
-            description="What the platforms themselves say was played, from the files their artist portals export. The reports hold these counts against the streams on your statements."
+            description="What the platforms themselves say was played: how it developed, on which platform, and which releases and tracks it was. Held against the streams on your statements."
         >
             <Panel
                 title="Add a file"
@@ -104,6 +115,20 @@ export default function PlayCounts({ files, zebralutionExport }: Props) {
                     )}
                 </Form>
             </Panel>
+
+            <PlayReport report={report} />
+            <MoversPanel
+                movers={releases}
+                to="release"
+                title="Releases by plays"
+                plays
+            />
+            <MoversPanel
+                movers={tracks}
+                to="track"
+                title="Tracks by plays"
+                plays
+            />
 
             {files.length === 0 ? (
                 <EmptyState

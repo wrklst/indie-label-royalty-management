@@ -170,15 +170,18 @@ function Development({
     colours,
     pointed,
     point,
+    only,
 }: {
     report: Report;
     shown: Platform[];
     colours: Map<string, string>;
     pointed: string | null;
     point: (key: string | null) => void;
+    /** Show this one figure and no switch. */
+    only?: Metric;
 }) {
     const grown = useGrown();
-    const [metric, setMetric] = useState<Metric>('total');
+    const [metric, setMetric] = useState<Metric>(only ?? 'total');
     const [month_, setMonth] = useState<number | null>(null);
     const months = report.months;
     const others = report.platforms.filter(
@@ -242,7 +245,10 @@ function Development({
                 <div
                     role="group"
                     aria-label="What the chart shows"
-                    className="inline-flex rounded-md border p-0.5 text-xs"
+                    className={cn(
+                        'inline-flex rounded-md border p-0.5 text-xs',
+                        only && 'invisible',
+                    )}
                 >
                     {METRICS.map((entry) => (
                         <button
@@ -795,6 +801,173 @@ export function IncomeReport({
 }
 
 /**
+ * What the platforms counted themselves, drawn as the income is: how the
+ * plays developed by platform, and each platform's count next to what
+ * the statements have for the same months.
+ */
+export function PlayReport({ report }: { report: Report }) {
+    const grown = useGrown();
+    const [pointed, point] = useState<string | null>(null);
+
+    if (report.platforms.length === 0) {
+        return null;
+    }
+
+    const shown = report.platforms
+        .slice(0, SHOWN)
+        .sort((a, b) => a.position - b.position);
+    const colours = new Map(
+        shown.map((platform) => [platform.key, colourAt(platform.position)]),
+    );
+    const all = report.platforms.reduce(
+        (total, platform) => total + platform.streams,
+        0,
+    );
+    const reported = report.platforms.reduce(
+        (total, platform) => total + (platform.reported_streams ?? 0),
+        0,
+    );
+    const share = (part: number, whole: number) =>
+        whole > 0 ? `${Math.round((part / whole) * 100)}%` : '–';
+
+    return (
+        <div data-play-report className="grid gap-6">
+            <Panel
+                title="How the plays developed"
+                description="What the platforms counted, month by month. Point at a platform to follow it."
+            >
+                <Development
+                    report={report}
+                    shown={shown}
+                    colours={colours}
+                    pointed={pointed}
+                    point={point}
+                    only="streams"
+                />
+            </Panel>
+
+            <Panel
+                title="Platforms"
+                description="What each platform counted, and the streams the statements have for the same months. Statements arrive late, so the last months are often missing there."
+                flush
+            >
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Platform</TableHead>
+                            <TableHead className="text-right">
+                                Counted by the platform
+                            </TableHead>
+                            <TableHead className="w-28">Share</TableHead>
+                            <TableHead>Trend</TableHead>
+                            <TableHead className="text-right">
+                                On statements
+                            </TableHead>
+                            <TableHead>Counted from</TableHead>
+                            <TableHead>to</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {report.platforms.map((platform) => (
+                            <TableRow
+                                key={platform.key}
+                                data-platform={platform.key}
+                                onMouseEnter={() =>
+                                    point(
+                                        colours.has(platform.key)
+                                            ? platform.key
+                                            : 'other',
+                                    )
+                                }
+                                onMouseLeave={() => point(null)}
+                            >
+                                <TableCell>
+                                    <span className="flex items-center gap-2">
+                                        <Dot
+                                            colour={
+                                                colours.get(platform.key) ??
+                                                GREY
+                                            }
+                                        />
+                                        <PlatformIcon
+                                            platform={platform.key}
+                                            name={platform.name}
+                                        />
+                                        {platform.name}
+                                    </span>
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">
+                                    {quantity(platform.streams)}
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                                            <div
+                                                className={cn(
+                                                    'h-full rounded-full',
+                                                    MOVING,
+                                                )}
+                                                style={{
+                                                    width: `${grown && all > 0 ? (platform.streams / all) * 100 : 0}%`,
+                                                    backgroundColor:
+                                                        colours.get(
+                                                            platform.key,
+                                                        ) ?? GREY,
+                                                }}
+                                            />
+                                        </div>
+                                        <span className="w-9 text-right text-xs text-muted-foreground tabular-nums">
+                                            {share(platform.streams, all)}
+                                        </span>
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <Sparkline
+                                        label={`Plays counted by ${platform.name}, month by month`}
+                                        values={platform.series.streams}
+                                    />
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">
+                                    {quantity(platform.reported_streams ?? 0)}
+                                    <span className="ml-1.5 text-xs text-muted-foreground">
+                                        {share(
+                                            platform.reported_streams ?? 0,
+                                            platform.streams,
+                                        )}
+                                    </span>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    {date(platform.plays_from)}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    {date(platform.plays_to)}
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                    <TableFooter>
+                        <TableRow>
+                            <TableCell>All platforms</TableCell>
+                            <TableCell className="text-right tabular-nums">
+                                {quantity(all)}
+                            </TableCell>
+                            <TableCell colSpan={2} />
+                            <TableCell className="text-right tabular-nums">
+                                {quantity(reported)}
+                                <span className="ml-1.5 text-xs text-muted-foreground">
+                                    {share(reported, all)}
+                                </span>
+                            </TableCell>
+                            <TableCell colSpan={2} />
+                        </TableRow>
+                    </TableFooter>
+                </Table>
+            </Panel>
+        </div>
+    );
+}
+
+/**
  * What earned most in a selection, with its last twelve months: what is
  * still moving and what has gone quiet.
  */
@@ -802,11 +975,17 @@ export function MoversPanel({
     movers,
     to,
     title,
+    plays = false,
 }: {
     movers: Movers;
     to: 'release' | 'track';
     title: string;
+    /** The figures are counted plays, not income. */
+    plays?: boolean;
 }) {
+    const figure = (value: number) =>
+        plays ? quantity(value) : <Amount value={value} />;
+
     if (movers.rows.length === 0) {
         return null;
     }
@@ -816,7 +995,7 @@ export function MoversPanel({
     return (
         <Panel
             title={title}
-            description={`By income, each with its twelve months up to ${month(last)}. The last three months are held against the three before.`}
+            description={`By ${plays ? 'counted plays' : 'income'}, each with its twelve months up to ${month(last)}. The last three months are held against the three before.`}
             flush
         >
             <Table data-movers>
@@ -829,9 +1008,19 @@ export function MoversPanel({
                         <TableHead className="text-right">
                             Last three months
                         </TableHead>
-                        <TableHead className="text-right">Streams</TableHead>
-                        <TableHead className="text-right">Per stream</TableHead>
-                        <TableHead className="text-right">Income</TableHead>
+                        {!plays && (
+                            <>
+                                <TableHead className="text-right">
+                                    Streams
+                                </TableHead>
+                                <TableHead className="text-right">
+                                    Per stream
+                                </TableHead>
+                            </>
+                        )}
+                        <TableHead className="text-right">
+                            {plays ? 'Counted' : 'Income'}
+                        </TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -854,7 +1043,7 @@ export function MoversPanel({
                                 </TableCell>
                                 <TableCell>
                                     <Sparkline
-                                        label={`Income of ${row.label}, month by month`}
+                                        label={`${plays ? 'Plays' : 'Income'} of ${row.label}, month by month`}
                                         values={row.series}
                                     />
                                 </TableCell>
@@ -872,28 +1061,34 @@ export function MoversPanel({
                                                     {change}%
                                                 </span>
                                             )}
-                                            <Amount value={row.recent} />
+                                            <span className="tabular-nums">
+                                                {figure(row.recent)}
+                                            </span>
                                         </span>
                                     ) : (
                                         <Badge variant="outline">quiet</Badge>
                                     )}
                                 </TableCell>
+                                {!plays && (
+                                    <>
+                                        <TableCell className="text-right tabular-nums">
+                                            {row.streams > 0
+                                                ? quantity(row.streams)
+                                                : '–'}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {paid === null ? (
+                                                <span className="text-muted-foreground">
+                                                    –
+                                                </span>
+                                            ) : (
+                                                <Amount value={paid} precise />
+                                            )}
+                                        </TableCell>
+                                    </>
+                                )}
                                 <TableCell className="text-right tabular-nums">
-                                    {row.streams > 0
-                                        ? quantity(row.streams)
-                                        : '–'}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    {paid === null ? (
-                                        <span className="text-muted-foreground">
-                                            –
-                                        </span>
-                                    ) : (
-                                        <Amount value={paid} precise />
-                                    )}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <Amount value={row.total} />
+                                    {figure(row.total)}
                                 </TableCell>
                             </TableRow>
                         );
