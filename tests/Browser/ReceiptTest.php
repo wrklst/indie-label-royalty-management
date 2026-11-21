@@ -53,8 +53,8 @@ test('the connections page offers the models of a service with their prices and 
     $label->update(['ai_provider' => 'infomaniak', 'ai_key' => 'example-key-9f3a', 'ai_endpoint' => '12345', 'ai_model' => 'example/small-vision']);
 
     visit('/settings/connections')
-        ->assertSeeIn('[data-connection="Infomaniak AI Tools"]', 'example/small-vision')
-        ->assertSeeIn('[data-connection="Infomaniak AI Tools"]', '9f3a')
+        ->assertSeeIn('[data-connection="Receipt reading"]', 'example/small-vision')
+        ->assertSeeIn('[data-connection="Receipt reading"]', '9f3a')
         ->assertDontSee('example-key-9f3a')
         ->assertMissing('#ai_key')
         ->assertPresent('[aria-label="Disconnect Infomaniak AI Tools"]')
@@ -75,7 +75,7 @@ test('the storage from the environment file is shown as the connection in use, w
     $this->actingAs($admin);
 
     visit('/settings/connections')
-        ->assertSeeIn('[data-connection="This server"]', "from the server's environment file")
+        ->assertSeeIn('[data-connection="File storage"]', "from the server's environment file")
         ->assertMissing('#storage_bucket')
         ->press('Connect a different storage')
         ->assertPresent('#storage_bucket')

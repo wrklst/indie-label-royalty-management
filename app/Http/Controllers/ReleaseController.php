@@ -20,9 +20,9 @@ use App\Services\Releases\PlayableAudio;
 use App\Services\Releases\ZebralutionGenres;
 use App\Services\Reports\IncomeReport;
 use App\Support\CurrentLabel;
-use App\Support\Distributors;
 use App\Support\Options;
 use App\Support\ReturnTo;
+use App\Support\Services;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -312,7 +312,7 @@ class ReleaseController extends Controller
             'statusOptions' => array_map(fn (ReleaseStatus $status): array => ['value' => $status->value, 'label' => $status->label()], ReleaseStatus::cases()),
             'typeOptions' => array_map(fn (ReleaseType $type): array => ['value' => $type->value, 'label' => $type->label()], ReleaseType::cases()),
             // The genres a distributor takes are suggested; without one the field is free text.
-            'genreOptions' => app(CurrentLabel::class)->get()?->usesDistributor(Distributors::ZEBRALUTION) ? ZebralutionGenres::names() : [],
+            'genreOptions' => app(CurrentLabel::class)->get()?->usesService(Services::ZEBRALUTION) ? ZebralutionGenres::names() : [],
             'roleOptions' => array_map(fn (ArtistRole $role): array => ['value' => $role->value, 'label' => $role->label()], ArtistRole::cases()),
         ];
     }

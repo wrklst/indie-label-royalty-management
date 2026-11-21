@@ -173,8 +173,8 @@ test('the Zebralution ZIP is refused with everything Zebralution would send the 
         ->assertSessionHasErrors(['zebralution_package' => implode("\n", [
             'The release has no cover.',
             'Track 1 “Opening” only has audio Zebralution does not accept (“one.flac”); it takes WAV with 16 bit, 44.1 kHz, stereo.',
-            'The Zebralution number of the label is missing. Enter it under Settings → Label.',
-            'The country the music comes from is missing. Enter it under Settings → Label.',
+            'The Zebralution number of the label is missing. Enter it under Settings → Connections.',
+            'The country the music comes from is missing. Enter it under Settings → Connections.',
             'The release has no UPC / EAN.',
             'The release has no main artist.',
             'The release has no release date.',

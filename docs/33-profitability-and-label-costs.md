@@ -6,17 +6,17 @@ The profitability report shows what the label itself is left with per release, a
 
 Label Office separates costs by who bears them:
 
-| Cost                    | Who bears it                          | Where it is entered                              | Effect                                                                  |
-| ----------------------- | ------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------- |
-| Recoupable expense      | Label and payees, each by their split | **Royalties → Transactions**, **New expense**    | Deducted from the release's income before the split.                    |
-| Label cost on a release | The label alone                       | **Royalties → Transactions**, **New label cost** | Does not touch payee earnings. Lowers the label result of that release. |
-| Overhead                | The label alone                       | **Royalties → Overheads**                        | Belongs to no release. Lowers the label result as a whole.              |
+| Cost                    | Who bears it                          | Where it is entered                               | Effect                                                                  |
+| ----------------------- | ------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------- |
+| Recoupable expense      | Label and payees, each by their split | **Accounting → Transactions**, **New expense**    | Deducted from the release's income before the split.                    |
+| Label cost on a release | The label alone                       | **Accounting → Transactions**, **New label cost** | Does not touch payee earnings. Lowers the label result of that release. |
+| Overhead                | The label alone                       | **Label → Overheads**                             | Belongs to no release. Lowers the label result as a whole.              |
 
 Technically all three are expense transactions. A label cost is any expense the label bears alone: the second and third have **Recoup from payees** switched off, and the third also has no release. See [Transactions](31-transactions.md).
 
 ## The profitability report
 
-Open **Royalties → Profitability**. Each row is a release:
+Open **Label → Profitability**. Each row is a release:
 
 | Column                  | Meaning                                                           |
 | ----------------------- | ----------------------------------------------------------------- |
@@ -37,7 +37,7 @@ margin       = label result ÷ income
 Releases are sorted by label result, best first; the headings re-sort the releases. Two special rows can follow at the end:
 
 - **Not assigned to a release**: income and recoupable expenses without a release.
-- **Overheads**: label costs without a release, that is everything from **Royalties → Overheads**.
+- **Overheads**: label costs without a release, that is everything from **Label → Overheads**.
 
 The last row is the **Total**. The four figures above the table repeat its **Income**, **Payee share**, **Label costs** and **Label result**.
 
@@ -83,7 +83,7 @@ Step by step for Example Release: net is 2,000 − 400 = 1,600. Payees earn 60% 
 
 ## Overheads
 
-**Royalties → Overheads** is for what it costs to run the label: subscriptions, software, hosting, accounting, fees. These are label costs that belong to no release, and they never reduce what payees earn.
+**Label → Overheads** is for what it costs to run the label: subscriptions, software, hosting, accounting, fees. These are label costs that belong to no release, and they never reduce what payees earn.
 
 The page shows the costs paid in the current and the previous year, what the recurring costs still running add up to per year, the list **Recurring costs** (25 to a page), the **Receipts** that wait for a cost (10 to a page) and the list **Booked costs** (50 to a page). **Booked costs** can be searched by name, memo or category and sorted by any heading; the sort covers every cost, not only the page you see.
 
@@ -112,14 +112,17 @@ Due dates in the past are booked right away. A monthly cost whose first payment 
 The list **Recurring costs** shows **Since**, the **Next payment** and how many payments are **Booked**; every heading sorts it.
 
 - **Change** edits the name, amount, currency, rate, category, memo and **Last payment**. It applies to payments from now on; payments already booked keep their amounts. The rhythm and the first payment cannot be changed. Stop the cost and add a new one instead.
-- **Stop** ends the cost. No further payments are booked; the ones already booked stay in the accounts. The bin opens **Delete {cost name}?**: with payments booked it offers to stop the cost and keep them, or to delete the cost together with its payments.
+- The bin on a row ends or removes the cost. It opens **Delete {cost name}?** and offers what fits:
+    - A cost with payments booked: **Stop, keep the payments** ends the cost, so no further payments are booked and the ones already booked stay in the accounts. **Delete with its N payments** removes the cost together with those N payments, for a cost entered by mistake; receipts attached to them go back to the list of receipts.
+    - A cost nothing was booked for yet: **Delete** removes it.
+- Stopping removes the cost from the list; it cannot be started again. Add a new one instead.
 
 ### How recurring costs are booked
 
 Each due date becomes one ordinary expense transaction, dated on the due date, borne by the label, without a release, with the name of the cost as its source. Each due date is booked exactly once. This happens:
 
 - once a day through the scheduled command `royalties:book-recurring-expenses`, which runs at 04:00,
-- whenever you open **Royalties → Overheads**,
+- whenever you open **Label → Overheads**,
 - when you add or change a recurring cost.
 
 The daily run needs Laravel's scheduler, which is set up once per installation by calling `php artisan schedule:run` every minute from cron. See [Installation](02-installation.md) and [Command line](50-command-line.md). You can also run the command by hand; it is safe to run as often as you like:
@@ -138,7 +141,7 @@ A cost with a release, or one that payees carry a share of, is not an overhead: 
 
 ## Receipts
 
-Under **Royalties → Overheads**, the panel **Receipts** collects the receipts and invoices behind your costs.
+Under **Label → Overheads**, the panel **Receipts** collects the receipts and invoices behind your costs.
 
 1. Drop one or more files (PDF, JPEG, PNG or WebP, up to 20 MB each) on the drop area, or click **browse**. Each file is uploaded as soon as it is added.
 2. Each receipt waits in the list until it belongs to a cost. For each one you either

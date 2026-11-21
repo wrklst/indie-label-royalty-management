@@ -76,7 +76,7 @@ test('the connections page shows stored connections as hints, never the secrets'
     $this->actingAs(labelAdmin($label))->get(route('connections.edit'))->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('settings/connections')
-            ->where('search', ['connected' => true, 'login' => 'exa•••••••••••••••••••com', 'from_environment' => false])
+            ->where('search', ['airplay_markets' => ['DE', 'GB', 'US'], 'connected' => true, 'login' => 'exa•••••••••••••••••••com', 'from_environment' => false])
             ->where('ai.connected', true)->where('ai.service', 'Infomaniak AI Tools')->where('ai.key_hint', '••••9f3a')
             ->where('ai.endpoint_label', 'Product ID')->where('ai.endpoint', '12345')->where('ai.model', 'example/small-vision')
             ->where('ai.trial.seconds', 3.2)
@@ -319,3 +319,118 @@ test('only who runs the installation may point the AI connection at the server o
     'plain http' => ['http://models.example.com/v1', ['203.0.114.10']],
     'a name that cannot be looked up' => ['https://models.example.com/v1', []],
 ]);
+
+test('the connections page lists every service with its switch and its options', function () {
+    $label = Label::factory()->create([
+        'airplay_markets' => ['FR'],
+        'importer_settings' => ['bandcamp' => ['disable_fee' => true]],
+        'delivery_settings' => ['distributors' => ['subvert' => false], 'zebralution' => ['number' => '1100a1']],
+    ]);
+
+    $this->actingAs(labelAdmin($label))->get(route('connections.edit'))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('services', fn ($services): bool => collect($services)->pluck('key')->all() === ['zebralution', 'bandcamp', 'subvert', 'rightz-audio']
+                && collect($services)->pluck('enabled')->all() === [true, true, false, true])
+            ->where('services.0.kind', 'Distributor')
+            ->where('zebralution.number', '1100a1')->where('zebralution.price_group', 20)
+            ->where('zebralution.work_rights_options.1', 'licensed to distributor by label')
+            ->where('bandcamp.disable_fee', true)->where('bandcamp.exclude_physical', false)
+            ->where('search.airplay_markets', ['FR'])
+            ->where('label.services', ['zebralution', 'bandcamp', 'rightz-audio']));
+});
+
+test('the Zebralution card stores its switch and its delivery fields and no other card changes', function () {
+    $label = Label::factory()->create([
+        'airplay_markets' => ['FR'],
+        'importer_settings' => ['bandcamp' => ['disable_fee' => true, 'exclude_physical' => true]],
+        'delivery_settings' => ['distributors' => ['bandcamp' => false]],
+    ]);
+    $this->actingAs(labelAdmin($label));
+
+    $this->put(route('connections.service', 'zebralution'), [
+        'enabled' => '1', 'number' => '1100a1', 'origin_country' => 'de', 'price_group' => '30', 'work_rights' => '',
+    ])->assertSessionHasNoErrors()->assertInertiaFlash('toast.message', 'Zebralution saved.');
+
+    $stored = ['number' => '1100a1', 'origin_country' => 'DE', 'price_group' => 30, 'work_rights' => 'administered by collecting society'];
+    $label->refresh();
+
+    expect($label->delivery_settings)->toBe(['distributors' => ['bandcamp' => false, 'zebralution' => true], 'zebralution' => $stored])
+        ->and($label->importer_settings)->toBe(['bandcamp' => ['disable_fee' => true, 'exclude_physical' => true]])
+        ->and($label->airplay_markets)->toBe(['FR']);
+
+    // A card that sends only its switch leaves the fields alone.
+    $this->put(route('connections.service', 'zebralution'), ['enabled' => '0'])->assertSessionHasNoErrors();
+
+    expect($label->refresh()->delivery_settings)->toBe(['distributors' => ['bandcamp' => false, 'zebralution' => false], 'zebralution' => $stored]);
+});
+
+test('the Bandcamp card stores its options and its switch and leaves Zebralution alone', function () {
+    $label = Label::factory()->create(['delivery_settings' => ['zebralution' => ['number' => '1100a1']]]);
+    $this->actingAs(labelAdmin($label));
+
+    $this->put(route('connections.service', 'bandcamp'), ['enabled' => '1', 'disable_fee' => '1', 'exclude_physical' => '0'])->assertSessionHasNoErrors();
+
+    expect($label->refresh()->importer_settings)->toBe(['bandcamp' => ['disable_fee' => true, 'exclude_physical' => false]])
+        ->and($label->delivery_settings)->toBe(['zebralution' => ['number' => '1100a1'], 'distributors' => ['bandcamp' => true]]);
+
+    // Switching an option off again, and a card without the options leaves them alone.
+    $this->put(route('connections.service', 'bandcamp'), ['disable_fee' => '0', 'exclude_physical' => '1'])->assertSessionHasNoErrors();
+    $this->put(route('connections.service', 'bandcamp'), ['enabled' => '0'])->assertSessionHasNoErrors();
+
+    expect($label->refresh()->importer_settings)->toBe(['bandcamp' => ['disable_fee' => false, 'exclude_physical' => true]])
+        ->and($label->usesService('bandcamp'))->toBeFalse();
+});
+
+test('a service card refuses what is not its own and a service this installation does not know', function (string $service, array $input, string $error) {
+    $label = Label::factory()->create();
+
+    $this->actingAs(labelAdmin($label))->put(route('connections.service', $service), $input)->assertSessionHasErrors($error);
+
+    expect($label->refresh()->delivery_settings)->toBeNull()->and($label->importer_settings)->toBeNull();
+})->with([
+    'a switch that is no boolean' => ['subvert', ['enabled' => 'maybe'], 'enabled'],
+    'a Bandcamp option that is no boolean' => ['bandcamp', ['disable_fee' => 'maybe'], 'disable_fee'],
+    'a Zebralution price group that does not exist' => ['zebralution', ['number' => '1', 'price_group' => 15], 'price_group'],
+    'Zebralution rights in other words' => ['zebralution', ['number' => '1', 'work_rights' => 'ours'], 'work_rights'],
+    'a country of origin that is no code' => ['zebralution', ['number' => '1', 'origin_country' => 'Germany'], 'origin_country'],
+]);
+
+test('a service this installation does not know has no card', function () {
+    $this->actingAs(labelAdmin(Label::factory()->create()))->put('/settings/connections/services/example', ['enabled' => '1'])->assertNotFound();
+});
+
+test('the airplay research countries are stored split, upper-cased and deduplicated, and only they change', function () {
+    $label = Label::factory()->create(['delivery_settings' => ['distributors' => ['zebralution' => false]]]);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('connections.search.markets'), ['airplay_markets' => 'de, gb us DE'])
+        ->assertSessionHasNoErrors()
+        ->assertInertiaFlash('toast.message', 'Airplay research countries saved.');
+
+    expect($label->refresh()->airplay_markets)->toBe(['DE', 'GB', 'US'])
+        ->and($label->delivery_settings)->toBe(['distributors' => ['zebralution' => false]]);
+});
+
+test('airplay research countries that are no country codes are rejected', function (string $value, string $error) {
+    $label = Label::factory()->create(['airplay_markets' => ['FR']]);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('connections.search.markets'), ['airplay_markets' => $value])
+        ->assertSessionHasErrors($error);
+
+    expect($label->refresh()->airplay_markets)->toBe(['FR']);
+})->with([
+    'a country name' => ['Germany', 'airplay_markets.0'],
+    'nothing' => ['', 'airplay_markets'],
+]);
+
+test('only a label admin can change a service', function () {
+    $label = Label::factory()->create();
+    $payee = User::factory()->create(['current_label_id' => $label->id]);
+    $label->users()->attach($payee, ['role' => LabelRole::Payee->value]);
+
+    $this->actingAs($payee)->put(route('connections.service', 'bandcamp'), ['enabled' => '0'])->assertForbidden();
+    $this->actingAs($payee)->put(route('connections.search.markets'), ['airplay_markets' => 'de'])->assertForbidden();
+
+    expect($label->refresh()->delivery_settings)->toBeNull();
+});

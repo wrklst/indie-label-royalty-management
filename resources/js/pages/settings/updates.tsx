@@ -1,8 +1,8 @@
-import { Form, Head, usePoll } from '@inertiajs/react';
+import { Form, usePoll } from '@inertiajs/react';
 import UpdatesController from '@/actions/App/Http/Controllers/Settings/UpdatesController';
 import AlertError from '@/components/alert-error';
 import { CheckField, Field, SelectInput } from '@/components/field';
-import Heading from '@/components/heading';
+import { Page, Panel } from '@/components/page';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { edit } from '@/routes/updates';
@@ -84,91 +84,98 @@ export default function Updates({
     usePoll(5000, {}, { autoStart: waiting });
 
     return (
-        <>
-            <Head title="Updates" />
-            <h1 className="sr-only">Updates</h1>
+        <Page
+            title="Updates"
+            description="The version this installation runs, and how it gets new ones."
+            className="p-0 md:p-0"
+        >
+            <Panel
+                title="Version"
+                description="What runs now and what is available."
+            >
+                <div className="space-y-6">
+                    <p className="flex flex-wrap items-center gap-2 text-sm">
+                        <span>
+                            Running <strong>{current}</strong>
+                        </span>
+                        {obstacle ? (
+                            <Badge variant="warning">
+                                Cannot update itself
+                            </Badge>
+                        ) : available ? (
+                            <Badge variant="warning">
+                                {latest} is available
+                            </Badge>
+                        ) : (
+                            <Badge variant="success">Up to date</Badge>
+                        )}
+                    </p>
 
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Updates"
-                    description="The version this installation runs, and how it gets new ones."
-                />
-
-                <p className="flex flex-wrap items-center gap-2 text-sm">
-                    <span>
-                        Running <strong>{current}</strong>
-                    </span>
-                    {obstacle ? (
-                        <Badge variant="warning">Cannot update itself</Badge>
-                    ) : available ? (
-                        <Badge variant="warning">{latest} is available</Badge>
-                    ) : (
-                        <Badge variant="success">Up to date</Badge>
+                    {obstacle && (
+                        <p className="text-sm text-muted-foreground">
+                            {obstacle}
+                        </p>
                     )}
-                </p>
 
-                {obstacle && (
-                    <p className="text-sm text-muted-foreground">{obstacle}</p>
-                )}
+                    {settings.last && <LastUpdate last={settings.last} />}
 
-                {settings.last && <LastUpdate last={settings.last} />}
-
-                {!obstacle && (
-                    <div className="flex flex-wrap items-center gap-3">
-                        {available && (
+                    {!obstacle && (
+                        <div className="flex flex-wrap items-center gap-3">
+                            {available && (
+                                <Form
+                                    {...UpdatesController.install.form()}
+                                    options={{ preserveScroll: true }}
+                                >
+                                    {({ errors, processing }) => (
+                                        <>
+                                            {errors.update && (
+                                                <AlertError
+                                                    title="Update"
+                                                    errors={[errors.update]}
+                                                />
+                                            )}
+                                            <Button
+                                                disabled={processing || waiting}
+                                            >
+                                                {waiting
+                                                    ? 'Update is on its way…'
+                                                    : `Update to ${latest}`}
+                                            </Button>
+                                        </>
+                                    )}
+                                </Form>
+                            )}
                             <Form
-                                {...UpdatesController.install.form()}
+                                {...UpdatesController.check.form()}
                                 options={{ preserveScroll: true }}
                             >
-                                {({ errors, processing }) => (
-                                    <>
-                                        {errors.update && (
-                                            <AlertError
-                                                title="Update"
-                                                errors={[errors.update]}
-                                            />
-                                        )}
-                                        <Button
-                                            disabled={processing || waiting}
-                                        >
-                                            {waiting
-                                                ? 'Update is on its way…'
-                                                : `Update to ${latest}`}
-                                        </Button>
-                                    </>
+                                {({ processing }) => (
+                                    <Button
+                                        variant="outline"
+                                        disabled={processing}
+                                    >
+                                        {processing ? 'Asking…' : 'Check again'}
+                                    </Button>
                                 )}
                             </Form>
-                        )}
-                        <Form
-                            {...UpdatesController.check.form()}
-                            options={{ preserveScroll: true }}
-                        >
-                            {({ processing }) => (
-                                <Button variant="outline" disabled={processing}>
-                                    {processing ? 'Asking…' : 'Check again'}
-                                </Button>
-                            )}
-                        </Form>
-                    </div>
-                )}
+                        </div>
+                    )}
 
-                <p className="text-sm text-muted-foreground">
-                    An update backs up the database, puts the site in
-                    maintenance mode for a few minutes, installs the new version
-                    and goes back to the previous one by itself when a step
-                    fails. Only versions the repository has tagged are
-                    installed.
-                </p>
-            </div>
+                    <p className="text-sm text-muted-foreground">
+                        An update backs up the database, puts the site in
+                        maintenance mode for a few minutes, installs the new
+                        version and goes back to the previous one by itself when
+                        a step fails. Only versions the repository has tagged
+                        are installed.
+                    </p>
+                </div>
+            </Panel>
 
             {!obstacle && (
-                <div className="space-y-6">
-                    <Heading
-                        variant="small"
-                        title="Automatic updates"
-                        description="Install each new version without being asked."
-                    />
+                <Panel
+                    title="Automatic updates"
+                    description="Install each new version without being asked."
+                >
                     <Form
                         {...UpdatesController.update.form()}
                         options={{ preserveScroll: true }}
@@ -216,9 +223,9 @@ export default function Updates({
                             </>
                         )}
                     </Form>
-                </div>
+                </Panel>
             )}
-        </>
+        </Page>
     );
 }
 

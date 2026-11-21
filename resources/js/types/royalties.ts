@@ -20,7 +20,7 @@ export type CurrentLabel = {
     role: 'admin' | 'payee' | null;
     logo_url: string | null;
     signet_url: string | null;
-    distributors: string[];
+    services: string[];
     tools: { mechanicals: boolean; ppd: boolean; reserves: boolean };
 };
 

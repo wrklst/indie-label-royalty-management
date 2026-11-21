@@ -60,7 +60,7 @@ No platform offers these figures to a label's own software. They have to be down
 
 Zebralution counts every platform it delivers to, so one export covers most of them.
 
-The short way: sign in to [Zebralution Tools](https://zebralution.tools), then on **Royalties → Play counts** follow the link **download the streams since the last import**. It asks Zebralution for the streams by track, platform and day, from a week before the last counted day until yesterday, or for the last year when nothing was counted yet. The week is fetched again because the latest days are still filling up; the import replaces them.
+The short way: sign in to [Zebralution Tools](https://zebralution.tools), then on **Importing → Play counts** follow the link **download the streams since the last import**. It asks Zebralution for the streams by track, platform and day, from a week before the last counted day until yesterday, or for the last year when nothing was counted yet. The week is fetched again because the latest days are still filling up; the import replaces them.
 
 By hand: in its analytics, set the date filter to the months you want and remove every other filter, then open **Datenexport** and tick:
 
@@ -75,7 +75,7 @@ With **DSP** ticked the export takes only the kind of figure that is active in t
 
 ### Importing a file
 
-1. Open **Royalties → Play counts**.
+1. Open **Importing → Play counts**.
 2. Choose the file: CSV or Excel.
 3. **Import play counts**.
 
@@ -102,7 +102,7 @@ A newer file replaces earlier counts of the same track and platform for the days
 
 ### The report on the page
 
-Below the upload, **Royalties → Play counts** shows what was counted, drawn like the income report:
+Below the upload, **Importing → Play counts** shows what was counted, drawn like the income report:
 
 - **How the plays developed**: the counted plays month by month, stacked by platform.
 - **Platforms**: what each platform counted, its share, its trend, the streams the statements have for the same months, and the days the count covers.

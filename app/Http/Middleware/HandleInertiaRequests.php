@@ -53,7 +53,7 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * @return array{id: int, name: string, currency: string, role: string|null, logo_url: string|null, signet_url: string|null, distributors: list<string>, tools: array<string, bool>}|null
+     * @return array{id: int, name: string, currency: string, role: string|null, logo_url: string|null, signet_url: string|null, services: list<string>, tools: array<string, bool>}|null
      */
     private function currentLabel(Request $request): ?array
     {
@@ -75,8 +75,8 @@ class HandleInertiaRequests extends Middleware
             'role' => $role,
             'logo_url' => LabelBrandingController::url($label, 'logo'),
             'signet_url' => LabelBrandingController::url($label, 'signet'),
-            // Whose delivery, export and import options are shown.
-            'distributors' => $label->distributors(),
+            // Which services the label works with; what is built for the others is hidden.
+            'services' => $label->services(),
             // Which of the mechanicals, PPD and reserves tools the label uses.
             'tools' => array_combine(
                 array_map(fn (RoyaltyTool $tool): string => $tool->value, RoyaltyTool::cases()),

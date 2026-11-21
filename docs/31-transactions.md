@@ -1,6 +1,6 @@
 # Transactions
 
-Every amount in Label Office is a transaction: a line of income, an expense or a transfer. This page explains the types, the fields that decide how a transaction is counted, and how to enter and find transactions under **Royalties → Transactions**.
+Every amount in Label Office is a transaction: a line of income, an expense or a transfer. This page explains the types, the fields that decide how a transaction is counted, and how to enter and find transactions under **Accounting → Transactions**.
 
 ## Types
 
@@ -33,7 +33,7 @@ Example: a release earns 1,000 and has a mastering bill of 200. The artist has a
 
 Only an expense can be switched off this way. Income and transfers ignore the switch.
 
-A label-borne expense on a release counts against that release in the profitability report. One without a release is an overhead; those are easier to enter under **Royalties → Overheads**. See [Profitability and overheads](33-profitability-and-label-costs.md).
+A label-borne expense on a release counts against that release in the profitability report. One without a release is an overhead; those are easier to enter under **Label → Overheads**. See [Profitability and overheads](33-profitability-and-label-costs.md).
 
 ### Transfers
 
@@ -106,7 +106,7 @@ Categories and formats do not change who is paid; contracts do that. Formats mat
 
 ## Entering a transaction by hand
 
-The buttons at the top of **Royalties → Transactions** open the same form with a different starting point: **New income**, **New expense**, **New transfer** and **New label cost** (an expense with **Recoup from payees** switched off).
+The buttons at the top of **Accounting → Transactions** open the same form with a different starting point: **New income**, **New expense**, **New transfer** and **New label cost** (an expense with **Recoup from payees** switched off).
 
 1. Choose the button for what you want to book.
 2. In **Amount**, enter the **Total** and the **Currency**. Income and expenses are typed positive; for an expense tick **Refund or credit** if the money comes back. A transfer is typed with its sign. Enter the **Rate** if the currency is not your label currency.
@@ -173,5 +173,5 @@ Ten thousand lines of 0.0033 are therefore worth 33.00, not 0.00.
 - Editing or deleting a transaction changes the live figures of its period immediately. Statements already generated keep their figures until you regenerate them.
 - The **Unassigned** filter leaves out transfers and label-borne expenses, because neither needs a release.
 - **Total** in the summary adds up everything that matches, including transfers. Filter by type for a meaningful sum.
-- The category **Payout** on a transfer is only a label. A transfer never appears under **Royalties → Payouts**.
+- The category **Payout** on a transfer is only a label. A transfer never appears under **Accounting → Payouts**.
 - Transactions are edited one at a time; there is no bulk edit.

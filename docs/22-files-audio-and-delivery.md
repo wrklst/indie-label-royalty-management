@@ -1,6 +1,6 @@
 # Files, audio and delivery
 
-This page covers the files kept with a release, covers and their thumbnails, audio masters and their MP3 playback copies, the audio player, and the four downloads for delivering a release: the metadata CSV, the full package, the Subvert ZIP and the Bandcamp ZIP.
+This page covers the files kept with a release, covers and their thumbnails, audio masters and their MP3 playback copies, the audio player, and the downloads for delivering a release: the metadata CSV, the full package, and the ZIPs for Subvert, Bandcamp and Zebralution.
 
 ## Who can see files
 
@@ -240,18 +240,36 @@ If the release is not ready, no file is downloaded. A dialog **The Subvert ZIP c
 | A file is missing from storage.           | Upload it again.                              |
 | The files add up to more than 2 GB.       | Subvert does not accept larger ZIP files.     |
 
-## Good to know
+## The Zebralution ZIP
 
-- Deleting a file removes it from storage for good, together with its playback copy and thumbnails. Download it first if you have no other copy. Deleting a release deletes all its files the same way.
-- Leaving the release page during an upload cancels the file being sent and all files after it. Files already finished are kept.
-- Uploads are sent in one request per file and cannot be resumed.
-- An image is never made the cover automatically. Images uploaded with **Detect type** become Artwork.
-- Changing a file from Audio to another type removes its track and its playback copy. Changing a file to Audio starts a conversion.
-- Thumbnails need image support on the server. Without it, the full-size cover is loaded instead. Images of more than 40 megapixels are not reduced, so such a cover does not show in lists, in the player or on the release page; the original can still be opened from the file table.
-- The **Metadata CSV** button in the release list always exports all releases. Search and filters of the list do not apply to it.
-- Packages are built while you wait. For a release with several gigabytes of masters this can take minutes; keep the tab open. The server needs free temporary space of about the size of the release.
-- A file whose stored copy is missing is left out of the full package without a message. The Subvert ZIP reports it instead.
-- If a master is replaced while its track is in the queue, press **Play now** on the track again to load the new file.
+**Delivery → Zebralution ZIP** prepares one release the way Zebralution asks for it: its metadata sheet filled in, the cover, and the WAV masters under the names its FTP server expects. Zebralution takes no archives: unpack the ZIP, send the folder to its FTP server and the sheet and the cover by email.
+
+```text
+Example Release - Zebralution.zip
+  Zebralution_Metadata_0123456789012.xlsx
+  0123456789012.jpg
+  0123456789012/
+    1-1 Opening.wav
+    1-2 Second Track.wav
+```
+
+- The name of the folder and of the cover is the release's UPC / EAN. Each master is named by disc, track number and title: `1-2 Second Track.wav`. Characters Zebralution does not allow are left out of the title.
+- The sheet is Zebralution's own metadata sheet for music, with one line per track, the columns in its order and under its names. Every cell is filled, because Zebralution reads an empty cell as the one above: what has no value is `-`.
+- What goes into the sheet comes from the release, its tracks and the **Zebralution** card under **Settings → Connections**: the **Zebralution number**, the **Country of origin**, the **Price group** (for tracks and the release alike) and the **Rights in compositions and lyrics**. See [Connections](42-connections.md).
+- Only WAV masters are used; Zebralution asks for 16 bit, 44.1 kHz, stereo. The ZIP is not limited in size.
+- The Zebralution ZIP and the genres Zebralution accepts, offered as suggestions in the genre fields of the release form, are only shown while the label works with Zebralution; see [Connections](42-connections.md#services).
+
+If Zebralution would send the release back, no file is downloaded. A dialog **The Zebralution ZIP cannot be made yet** lists every reason. Besides what the Subvert ZIP needs (a cover, tracks, an audio file for each) these are:
+
+| Reason                                                                      | What to do                                                                   |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| The Zebralution number or the country of origin of the label is missing.    | Enter them on the Zebralution card under **Settings → Connections**.         |
+| The release has no UPC / EAN, main artist, release date, language or genre. | Enter them on the release form. The language is a code such as `en` or `de`. |
+| The © or ℗ line does not start with the year.                               | Write it as `2026 Example Label`.                                            |
+| The release or a track does not say whether it is AI-generated.             | Answer the AI questions on the release form and on the track.                |
+| A genre is not one of Zebralution's.                                        | Pick one of the genres the field suggests.                                   |
+| A track has no ISRC, no length or no lyricist.                              | Enter them, or set the language of an instrumental track to `zxx`.           |
+| The cover is not a square JPEG of at least 3000 × 3000 pixels.              | Upload a cover that is.                                                      |
 
 ## The Bandcamp ZIP
 
@@ -269,3 +287,16 @@ Example Release - Bandcamp.zip
 - `release.txt` is the same sheet as in the full package: title, artist, catalog number, UPC / EAN, release date, genre, the track list with ISRCs, the press release and the key facts.
 - Sizes are not checked. Bandcamp's limit per track depends on your account there.
 - Prices, tags and lyrics are entered on Bandcamp.
+
+## Good to know
+
+- Deleting a file removes it from storage for good, together with its playback copy and thumbnails. Download it first if you have no other copy. Deleting a release deletes all its files the same way.
+- Leaving the release page during an upload cancels the file being sent and all files after it. Files already finished are kept.
+- Uploads are sent in one request per file and cannot be resumed.
+- An image is never made the cover automatically. Images uploaded with **Detect type** become Artwork.
+- Changing a file from Audio to another type removes its track and its playback copy. Changing a file to Audio starts a conversion.
+- Thumbnails need image support on the server. Without it, the full-size cover is loaded instead. Images of more than 40 megapixels are not reduced, so such a cover does not show in lists, in the player or on the release page; the original can still be opened from the file table.
+- The **Metadata CSV** button in the release list always exports all releases. Search and filters of the list do not apply to it.
+- Packages are built while you wait. For a release with several gigabytes of masters this can take minutes; keep the tab open. The server needs free temporary space of about the size of the release.
+- A file whose stored copy is missing is left out of the full package without a message. The Subvert ZIP reports it instead.
+- If a master is replaced while its track is in the queue, press **Play now** on the track again to load the new file.

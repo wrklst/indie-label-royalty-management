@@ -4,19 +4,19 @@ This page explains who gets paid (payees), on what terms (contracts and their sp
 
 ## The pieces and how they fit
 
-| Piece     | What it is                                                                                               | Where                   |
-| --------- | -------------------------------------------------------------------------------------------------------- | ----------------------- |
-| Payee     | Someone you owe royalties to: an artist, remixer, producer, sub-label.                                   | **Catalog → Payees**    |
-| Contract  | A named deal. It holds splits and is assigned to releases, tracks, items or single transactions.         | **Catalog → Contracts** |
-| Split     | One line of a contract: a payee, a percentage, optionally a ledger and a territory.                      | On the contract         |
-| Ledger    | A separate running balance for a payee. Every split books to the primary ledger unless you pick another. | **Catalog → Ledgers**   |
-| Territory | A named group of countries, used to limit a split to part of the world.                                  | **Settings → Label**    |
+| Piece     | What it is                                                                                               | Where                 |
+| --------- | -------------------------------------------------------------------------------------------------------- | --------------------- |
+| Payee     | Someone you owe royalties to: an artist, remixer, producer, sub-label.                                   | **Deals → Payees**    |
+| Contract  | A named deal. It holds splits and is assigned to releases, tracks, items or single transactions.         | **Deals → Contracts** |
+| Split     | One line of a contract: a payee, a percentage, optionally a ledger and a territory.                      | On the contract       |
+| Ledger    | A separate running balance for a payee. Every split books to the primary ledger unless you pick another. | **Deals → Ledgers**   |
+| Territory | A named group of countries, used to limit a split to part of the world.                                  | **Settings → Label**  |
 
 A payee earns nothing by existing. They earn through splits on contracts, and a contract earns nothing until it is assigned to something that has income.
 
 ## Payees
 
-1. Open **Catalog → Payees** and choose **New payee**.
+1. Open **Deals → Payees** and choose **New payee**.
 2. Enter a **Name**. **Email**, **Tags** (separated by commas) and **Notes** are optional and only for your reference.
 3. Choose **Create payee**.
 
@@ -35,7 +35,7 @@ Click a payee to open their page. It shows:
 
 A split is a percentage of **net income**: income minus the recoupable expenses booked on the same release or track. What the splits do not hand out stays with the label.
 
-1. Open **Catalog → Contracts** and choose **New contract**.
+1. Open **Deals → Contracts** and choose **New contract**.
 2. Give it a **Name** that describes the deal, for example "Example Artist album deal 50/50". **Memo** is a free note.
 3. Under **Splits**, choose **Add split** for each payee and fill in:
     - **Payee**,
@@ -89,7 +89,7 @@ A ledger is a running balance for one payee:
 balance = previous balance + share earned + transfers − payouts
 ```
 
-Every payee has a primary ledger automatically. Add another under **Catalog → Ledgers** with **New ledger** when a deal's balance must not mix with the payee's other earnings. The usual case is an advance that should be recouped only from the release it was paid for.
+Every payee has a primary ledger automatically. Add another under **Deals → Ledgers** with **New ledger** when a deal's balance must not mix with the payee's other earnings. The usual case is an advance that should be recouped only from the release it was paid for.
 
 Three rules apply to every ledger:
 

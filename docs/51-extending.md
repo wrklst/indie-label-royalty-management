@@ -62,7 +62,7 @@ What you do not have to handle: the encoding, the delimiter, title lines above t
 - `category` and `format` must be values from `config/royalties.php`.
 - Strip personal data: do not put buyer names, emails or addresses into `raw`.
 
-A distributor becomes a choice under **Settings → Label → Distributors** by an entry in `App\\Support\\Distributors::NAMES`, keyed by the `source()` of its importers. Anything built only for it asks `$label->usesDistributor('key')` on the server and `label.distributors.includes('key')` on a page.
+A service becomes a card with a switch under **Settings → Connections** by an entry in `App\\Support\\Services::ALL` (its name, its kind, what it is for and what it shows), keyed by the `source()` of its importers when it has any. Anything built only for it asks `$label->usesService('key')` on the server and `label.services.includes('key')` on a page; a route that is only for it takes the middleware `service:key`, which answers 404 when the label has switched the service off. Its options, if it has any, are added to the card on the Connections page and to `ConnectionsController::service`.
 
 Read `BaseImporter` and the existing importers (`ZebralutionImporter` is a good model) before writing your own, and add a test with a small invented sample file under `tests/Fixtures`.
 

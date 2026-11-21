@@ -78,7 +78,7 @@ Emails, audio conversions, the airplay research and the Bandcamp sync all depend
 
 - `storage/logs/laravel.log`: every error of the application.
 - `/horizon`: background jobs, running and failed.
-- **Royalties → Data imports → an import**: what a file created and what was left out.
+- **Importing → Data imports → an import**: what a file created and what was left out.
 - `php artisan about`: the environment the application actually runs with.
 
 ## Reporting a problem

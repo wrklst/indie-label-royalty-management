@@ -1,14 +1,14 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import ConnectionsController from '@/actions/App/Http/Controllers/Settings/ConnectionsController';
-import { ConnectionCard } from '@/components/connection-card';
 import { CheckField, Field, SelectInput } from '@/components/field';
-import Heading from '@/components/heading';
+import { Page } from '@/components/page';
+import { ServiceCard } from '@/components/service-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { date, money } from '@/lib/format';
+import { date, dateTime, money } from '@/lib/format';
 import { edit as editBandcamp } from '@/routes/bandcamp';
 import { edit } from '@/routes/connections';
 
@@ -35,11 +35,30 @@ type Model = {
     released: string | null;
 };
 
+const CONNECTED = { label: 'Connected', variant: 'success' } as const;
+const NOT_CONNECTED = { label: 'Not connected', variant: 'warning' } as const;
+
 type Props = {
+    services: {
+        key: string;
+        name: string;
+        kind: string;
+        purpose: string;
+        gates: string;
+        enabled: boolean;
+    }[];
+    zebralution: {
+        number: string | null;
+        origin_country: string | null;
+        price_group: number;
+        work_rights: string;
+        work_rights_options: string[];
+    };
     search: {
         connected: boolean;
         login: string | null;
         from_environment: boolean;
+        airplay_markets: string[];
     };
     ai: {
         connected: boolean;
@@ -57,6 +76,8 @@ type Props = {
         connected: boolean;
         enabled: boolean;
         last_sync_at: string | null;
+        disable_fee: boolean;
+        exclude_physical: boolean;
     };
     storage: {
         disk: string;
@@ -77,103 +98,144 @@ function WebSearch({ search }: { search: Props['search'] }) {
     const [open, setOpen] = useState(!search.from_environment);
 
     return (
-        <section className="space-y-6">
-            <Heading
-                variant="small"
-                title="Web search"
-                description="The airplay research looks tracks up on Google through DataForSEO. Every search is billed to your DataForSEO account."
-            />
-            {search.connected ? (
-                <ConnectionCard
-                    title="DataForSEO"
-                    facts={[
-                        ['API login', search.login],
-                        ['API password', 'stored, not shown'],
-                    ]}
-                    disconnect={ConnectionsController.destroySearch.url()}
-                    disconnectLabel="Disconnect DataForSEO"
-                    confirm="The stored login is deleted. To connect again you enter it anew."
-                />
-            ) : (
-                <>
-                    {search.from_environment && (
-                        <ConnectionCard
-                            title="DataForSEO"
-                            facts={[['Login', 'set on the server']]}
-                            note="This is the connection from the server's environment file. It stays in use until you connect your own login here."
-                        >
-                            {!open && (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setOpen(true)}
-                                >
-                                    Connect a different login
-                                </Button>
-                            )}
-                        </ConnectionCard>
-                    )}
-                    {open && (
-                        <Form
-                            {...ConnectionsController.search.form()}
-                            options={{ preserveScroll: true }}
-                            className="grid gap-6"
-                        >
-                            {({ errors, processing }) => (
-                                <>
-                                    <Field
-                                        label="DataForSEO API login"
-                                        htmlFor="search_login"
-                                        error={errors.login}
-                                        hint="In your DataForSEO dashboard under API Access."
-                                        required
-                                    >
-                                        <Input
-                                            id="search_login"
-                                            name="login"
-                                            autoComplete="off"
-                                            required
-                                        />
-                                    </Field>
-                                    <Field
-                                        label="DataForSEO API password"
-                                        htmlFor="search_password"
-                                        error={errors.password}
-                                        hint="The API password shown there, not the one you sign in to their website with."
-                                        required
-                                    >
-                                        <Input
-                                            id="search_password"
-                                            name="password"
-                                            type="password"
-                                            autoComplete="new-password"
-                                            required
-                                        />
-                                    </Field>
-                                    <div className="flex gap-2">
-                                        <Button disabled={processing}>
-                                            {processing
-                                                ? 'Testing the login…'
-                                                : 'Test and connect'}
-                                        </Button>
-                                        {search.from_environment && (
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                onClick={() => setOpen(false)}
-                                            >
-                                                Cancel
-                                            </Button>
-                                        )}
-                                    </div>
-                                </>
-                            )}
-                        </Form>
-                    )}
-                </>
+        <ServiceCard
+            title="Web search"
+            kind="Login"
+            description="The airplay research looks tracks up on Google through DataForSEO. Every search is billed to your DataForSEO account."
+            status={
+                search.connected
+                    ? CONNECTED
+                    : search.from_environment
+                      ? { label: 'Set on the server', variant: 'success' }
+                      : NOT_CONNECTED
+            }
+            facts={
+                search.connected
+                    ? [
+                          ['API login', search.login],
+                          ['API password', 'stored, not shown'],
+                      ]
+                    : search.from_environment
+                      ? [['Login', 'set on the server']]
+                      : []
+            }
+            note={
+                !search.connected && search.from_environment
+                    ? "This is the connection from the server's environment file. It stays in use until you connect your own login here."
+                    : undefined
+            }
+            disconnect={
+                search.connected
+                    ? ConnectionsController.destroySearch.url()
+                    : undefined
+            }
+            disconnectLabel="Disconnect DataForSEO"
+            confirm="The stored login is deleted. To connect again you enter it anew."
+        >
+            {!search.connected && search.from_environment && !open && (
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOpen(true)}
+                >
+                    Connect a different login
+                </Button>
             )}
-        </section>
+            {!search.connected && open && (
+                <Form
+                    {...ConnectionsController.search.form()}
+                    options={{ preserveScroll: true }}
+                    className="grid gap-6"
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <Field
+                                label="DataForSEO API login"
+                                htmlFor="search_login"
+                                error={errors.login}
+                                hint="In your DataForSEO dashboard under API Access."
+                                required
+                            >
+                                <Input
+                                    id="search_login"
+                                    name="login"
+                                    autoComplete="off"
+                                    required
+                                />
+                            </Field>
+                            <Field
+                                label="DataForSEO API password"
+                                htmlFor="search_password"
+                                error={errors.password}
+                                hint="The API password shown there, not the one you sign in to their website with."
+                                required
+                            >
+                                <Input
+                                    id="search_password"
+                                    name="password"
+                                    type="password"
+                                    autoComplete="new-password"
+                                    required
+                                />
+                            </Field>
+                            <div className="flex gap-2">
+                                <Button disabled={processing}>
+                                    {processing
+                                        ? 'Testing the login…'
+                                        : 'Test and connect'}
+                                </Button>
+                                {search.from_environment && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        onClick={() => setOpen(false)}
+                                    >
+                                        Cancel
+                                    </Button>
+                                )}
+                            </div>
+                        </>
+                    )}
+                </Form>
+            )}
+            <Form
+                {...ConnectionsController.markets.form()}
+                options={{ preserveScroll: true }}
+                className="grid gap-3 border-t pt-4"
+            >
+                {({ errors, processing }) => (
+                    <>
+                        <Field
+                            label="Airplay research countries"
+                            htmlFor="airplay_markets"
+                            error={
+                                errors.airplay_markets ??
+                                Object.entries(errors).find(([key]) =>
+                                    key.startsWith('airplay_markets.'),
+                                )?.[1]
+                            }
+                            hint="Two-letter country codes separated by spaces or commas. Every track is searched once per country, and each search is billed."
+                            required
+                        >
+                            <Input
+                                id="airplay_markets"
+                                name="airplay_markets"
+                                defaultValue={search.airplay_markets.join(' ')}
+                                placeholder="DE GB US"
+                                className="font-mono uppercase"
+                                required
+                            />
+                        </Field>
+                        <div>
+                            <Button variant="outline" disabled={processing}>
+                                Save countries
+                            </Button>
+                        </div>
+                    </>
+                )}
+            </Form>
+        </ServiceCard>
     );
 }
 
@@ -373,38 +435,41 @@ function ReceiptReading({ ai }: { ai: Props['ai'] }) {
     const service = ai.services.find((entry) => entry.value === provider);
 
     return (
-        <section className="space-y-6">
-            <Heading
-                variant="small"
-                title="Receipt reading"
-                description="An AI service reads vendor, date, amount and category off receipts you upload under Overheads. The receipts are sent to the service you choose and billed to your account there. Without a service, receipts are stored and booked by hand."
-            />
+        <ServiceCard
+            title="Receipt reading"
+            kind="Login"
+            description="An AI service reads vendor, date, amount and category off receipts you upload under Overheads. The receipts are sent to the service you choose and billed to your account there. Without a service, receipts are stored and booked by hand."
+            status={ai.connected ? CONNECTED : NOT_CONNECTED}
+            facts={
+                ai.connected
+                    ? [
+                          ['Service', ai.service ?? 'AI service'],
+                          ['Model', ai.model ?? '–'],
+                          ...(ai.endpoint_label
+                              ? ([[ai.endpoint_label, ai.endpoint ?? '–']] as [
+                                    string,
+                                    ReactNode,
+                                ][])
+                              : []),
+                          ['API key', ai.key_hint ?? 'stored'],
+                      ]
+                    : []
+            }
+            note={
+                ai.connected && ai.trial
+                    ? ai.trial.missed.length === 0
+                        ? `Tested ${date(ai.trial.at)}: read the sample receipt correctly in ${ai.trial.seconds} seconds.`
+                        : `Tested ${date(ai.trial.at)}: got ${ai.trial.missed.join(', ')} wrong on the sample receipt (${ai.trial.seconds} seconds). Another model may read better.`
+                    : undefined
+            }
+            disconnect={
+                ai.connected ? ConnectionsController.destroyAi.url() : undefined
+            }
+            disconnectLabel={`Disconnect ${ai.service ?? 'the AI service'}`}
+            confirm="The stored key is deleted and receipts are no longer read. To connect again you enter the key anew."
+        >
             {ai.connected ? (
-                <ConnectionCard
-                    title={ai.service ?? 'AI service'}
-                    facts={[
-                        ['Model', ai.model ?? '–'],
-                        ...(ai.endpoint_label
-                            ? ([[ai.endpoint_label, ai.endpoint ?? '–']] as [
-                                  string,
-                                  ReactNode,
-                              ][])
-                            : []),
-                        ['API key', ai.key_hint ?? 'stored'],
-                    ]}
-                    note={
-                        ai.trial
-                            ? ai.trial.missed.length === 0
-                                ? `Tested ${date(ai.trial.at)}: read the sample receipt correctly in ${ai.trial.seconds} seconds.`
-                                : `Tested ${date(ai.trial.at)}: got ${ai.trial.missed.join(', ')} wrong on the sample receipt (${ai.trial.seconds} seconds). Another model may read better.`
-                            : undefined
-                    }
-                    disconnect={ConnectionsController.destroyAi.url()}
-                    disconnectLabel={`Disconnect ${ai.service ?? 'the AI service'}`}
-                    confirm="The stored key is deleted and receipts are no longer read. To connect again you enter the key anew."
-                >
-                    <ChangeModel ai={ai} />
-                </ConnectionCard>
+                <ChangeModel ai={ai} />
             ) : (
                 <Form
                     {...ConnectionsController.ai.form()}
@@ -499,7 +564,7 @@ function ReceiptReading({ ai }: { ai: Props['ai'] }) {
                     )}
                 </Form>
             )}
-        </section>
+        </ServiceCard>
     );
 }
 
@@ -509,64 +574,47 @@ function Storage({ storage }: { storage: NonNullable<Props['storage']> }) {
     const [open, setOpen] = useState(false);
 
     return (
-        <section className="space-y-6">
-            <Heading
-                variant="small"
-                title="File storage"
-                description="Where release files, receipts and statement files of every label on this installation are stored. Only you, as the installation's admin, see this section."
-            />
-            {storage.from_environment ? (
-                <ConnectionCard
-                    title={
-                        storage.disk === 's3'
-                            ? 'S3-compatible bucket'
-                            : 'This server'
-                    }
-                    facts={
-                        storage.disk === 's3'
-                            ? [
-                                  ['Bucket', storage.bucket ?? '–'],
-                                  ['Endpoint', storage.endpoint ?? 'Amazon S3'],
-                                  ['Region', storage.region ?? '–'],
-                                  ['Access key', storage.key_hint ?? 'stored'],
-                              ]
-                            : [['New files', 'are stored on this server']]
-                    }
-                    note="This is the connection from the server's environment file. It stays in use until you connect a different storage here."
+        <ServiceCard
+            title="File storage"
+            kind="Installation"
+            description="Where release files, receipts and statement files of every label on this installation are stored. Only you, as the installation's admin, see this card."
+            status={CONNECTED}
+            facts={
+                storage.disk === 's3'
+                    ? [
+                          ['Storage', 'S3-compatible bucket'],
+                          ['Bucket', storage.bucket ?? '–'],
+                          ['Endpoint', storage.endpoint ?? 'Amazon S3'],
+                          ['Region', storage.region ?? '–'],
+                          ['Access key', storage.key_hint ?? 'stored'],
+                      ]
+                    : [
+                          ['Storage', 'This server'],
+                          ['New files', 'are stored on this server'],
+                      ]
+            }
+            note={
+                storage.from_environment
+                    ? "This is the connection from the server's environment file. It stays in use until you connect a different storage here."
+                    : 'Applies to new files. Files stored before stay where they are; move them with php artisan royalties:move-files.'
+            }
+            disconnect={
+                storage.from_environment
+                    ? undefined
+                    : ConnectionsController.destroyStorage.url()
+            }
+            disconnectLabel="Disconnect this file storage"
+            confirm="The server's environment file decides again where new files go. Files already stored are not touched, but files in this bucket are unreachable while another storage is in use."
+        >
+            {storage.from_environment && !open && (
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOpen(true)}
                 >
-                    {!open && (
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setOpen(true)}
-                        >
-                            Connect a different storage
-                        </Button>
-                    )}
-                </ConnectionCard>
-            ) : (
-                <ConnectionCard
-                    title={
-                        storage.disk === 's3'
-                            ? 'S3-compatible bucket'
-                            : 'This server'
-                    }
-                    facts={
-                        storage.disk === 's3'
-                            ? [
-                                  ['Bucket', storage.bucket ?? '–'],
-                                  ['Endpoint', storage.endpoint ?? 'Amazon S3'],
-                                  ['Region', storage.region ?? '–'],
-                                  ['Access key', storage.key_hint ?? 'stored'],
-                              ]
-                            : [['New files', 'are stored on this server']]
-                    }
-                    note="Applies to new files. Files stored before stay where they are; move them with php artisan royalties:move-files."
-                    disconnect={ConnectionsController.destroyStorage.url()}
-                    disconnectLabel="Disconnect this file storage"
-                    confirm="The server's environment file decides again where new files go. Files already stored are not touched, but files in this bucket are unreachable while another storage is in use."
-                />
+                    Connect a different storage
+                </Button>
             )}
             {storage.direct_uploads !== null && (
                 <div className="flex flex-wrap items-center gap-3 text-sm">
@@ -732,71 +780,260 @@ function Storage({ storage }: { storage: NonNullable<Props['storage']> }) {
                     )}
                 </Form>
             )}
-        </section>
+        </ServiceCard>
     );
 }
 
-export default function Connections({ search, ai, bandcamp, storage }: Props) {
+type ServiceInfo = Props['services'][number];
+
+/**
+ * The switch of one service with its options. The card saves only its
+ * own fields: another service's settings are never part of the form.
+ */
+function ServiceForm({
+    service,
+    children,
+}: {
+    service: ServiceInfo;
+    children?: (state: {
+        errors: Record<string, string>;
+        enabled: boolean;
+    }) => ReactNode;
+}) {
+    const [enabled, setEnabled] = useState(service.enabled);
+
+    return (
+        <Form
+            {...ConnectionsController.service.form(service.key)}
+            options={{ preserveScroll: true }}
+            className="grid gap-4"
+        >
+            {({ errors, processing }) => (
+                <>
+                    <CheckField
+                        withZero
+                        name="enabled"
+                        label={`The label works with ${service.name}`}
+                        hint={`Switched off, the label no longer sees its ${service.gates} What is imported stays.`}
+                        defaultChecked={service.enabled}
+                        onChange={(event) => setEnabled(event.target.checked)}
+                    />
+                    {children?.({ errors, enabled })}
+                    <div>
+                        <Button disabled={processing}>Save</Button>
+                    </div>
+                </>
+            )}
+        </Form>
+    );
+}
+
+function ZebralutionOptions({
+    zebralution,
+    errors,
+    enabled,
+}: {
+    zebralution: Props['zebralution'];
+    errors: Record<string, string>;
+    enabled: boolean;
+}) {
+    return (
+        <div className={enabled ? 'grid gap-4 sm:grid-cols-2' : 'hidden'}>
+            <Field
+                label="Zebralution number"
+                htmlFor="zebralution_number"
+                error={errors.number}
+                hint="The number Zebralution gave the label. It goes into every metadata sheet made under Delivery on a release."
+            >
+                <Input
+                    id="zebralution_number"
+                    name="number"
+                    defaultValue={zebralution.number ?? ''}
+                    className="font-mono"
+                />
+            </Field>
+            <Field
+                label="Country of origin"
+                htmlFor="zebralution_origin_country"
+                error={errors.origin_country}
+                hint="Where the label's music comes from, as a two-letter code."
+            >
+                <Input
+                    id="zebralution_origin_country"
+                    name="origin_country"
+                    defaultValue={zebralution.origin_country ?? ''}
+                    placeholder="DE"
+                    maxLength={2}
+                    className="font-mono uppercase"
+                />
+            </Field>
+            <Field
+                label="Price group"
+                htmlFor="zebralution_price_group"
+                error={errors.price_group}
+                hint="For tracks and releases alike."
+            >
+                <SelectInput
+                    id="zebralution_price_group"
+                    name="price_group"
+                    defaultValue={String(zebralution.price_group)}
+                >
+                    <option value="5">5: back</option>
+                    <option value="10">10: mid</option>
+                    <option value="20">20: standard</option>
+                    <option value="25">25: standard plus</option>
+                    <option value="30">30: high</option>
+                    <option value="35">35: high plus</option>
+                </SelectInput>
+            </Field>
+            <Field
+                label="Rights in compositions and lyrics"
+                htmlFor="zebralution_work_rights"
+                error={errors.work_rights}
+            >
+                <SelectInput
+                    id="zebralution_work_rights"
+                    name="work_rights"
+                    defaultValue={zebralution.work_rights}
+                >
+                    {zebralution.work_rights_options.map((rights) => (
+                        <option key={rights} value={rights}>
+                            {rights}
+                        </option>
+                    ))}
+                </SelectInput>
+            </Field>
+        </div>
+    );
+}
+
+function BandcampOptions({
+    bandcamp,
+    enabled,
+}: {
+    bandcamp: Props['bandcamp'];
+    enabled: boolean;
+}) {
+    return (
+        <div className={enabled ? 'grid gap-3' : 'hidden'}>
+            <CheckField
+                withZero
+                name="disable_fee"
+                label="Do not deduct 1% from Bandcamp net amounts"
+                hint="By default 1% is taken off each Bandcamp line to cover payout fees."
+                defaultChecked={bandcamp.disable_fee}
+            />
+            <CheckField
+                withZero
+                name="exclude_physical"
+                label="Skip physical and merch sales"
+                hint="Import downloads only, for labels that account physical sales elsewhere."
+                defaultChecked={bandcamp.exclude_physical}
+            />
+        </div>
+    );
+}
+
+function ServiceCards({
+    services,
+    zebralution,
+    bandcamp,
+}: Pick<Props, 'services' | 'zebralution' | 'bandcamp'>) {
     return (
         <>
-            <Head title="Connections" />
-            <h1 className="sr-only">Connections</h1>
+            {services.map((service) => {
+                const isBandcamp = service.key === 'bandcamp';
 
-            <div className="space-y-12">
-                <WebSearch search={search} />
-                <ReceiptReading ai={ai} />
-
-                <section className="space-y-6">
-                    <Heading
-                        variant="small"
-                        title="Bandcamp"
-                        description="Fetches your Bandcamp sales every week instead of you uploading sales reports."
-                    />
-                    {bandcamp.connected ? (
-                        <ConnectionCard
-                            title="Bandcamp"
-                            facts={[
-                                [
-                                    'Weekly sync',
-                                    bandcamp.enabled ? 'on' : 'off',
-                                ],
-                                [
-                                    'Last sync',
-                                    bandcamp.last_sync_at
-                                        ? date(
-                                              bandcamp.last_sync_at.slice(
-                                                  0,
-                                                  10,
-                                              ),
-                                          )
-                                        : 'not yet',
-                                ],
-                            ]}
-                            note={
+                return (
+                    <ServiceCard
+                        key={service.key}
+                        title={service.name}
+                        kind={service.kind}
+                        description={service.purpose}
+                        status={
+                            !service.enabled
+                                ? { label: 'Switched off', variant: 'outline' }
+                                : isBandcamp
+                                  ? bandcamp.connected
+                                      ? CONNECTED
+                                      : NOT_CONNECTED
+                                  : undefined
+                        }
+                        facts={
+                            isBandcamp && service.enabled && bandcamp.connected
+                                ? [
+                                      [
+                                          'Weekly sync',
+                                          bandcamp.enabled ? 'on' : 'off',
+                                      ],
+                                      [
+                                          'Last sync',
+                                          bandcamp.last_sync_at
+                                              ? dateTime(bandcamp.last_sync_at)
+                                              : 'not yet',
+                                      ],
+                                  ]
+                                : []
+                        }
+                        note={
+                            isBandcamp && service.enabled ? (
                                 <Link
                                     href={editBandcamp()}
                                     className="underline underline-offset-4"
                                 >
-                                    Account, start date, sync and disconnect
+                                    {bandcamp.connected
+                                        ? 'Accounts, start date, sync and disconnect'
+                                        : 'Connect your Bandcamp account'}
                                 </Link>
+                            ) : undefined
+                        }
+                    >
+                        <ServiceForm service={service}>
+                            {({ errors, enabled }) =>
+                                service.key === 'zebralution' ? (
+                                    <ZebralutionOptions
+                                        zebralution={zebralution}
+                                        errors={errors}
+                                        enabled={enabled}
+                                    />
+                                ) : isBandcamp ? (
+                                    <BandcampOptions
+                                        bandcamp={bandcamp}
+                                        enabled={enabled}
+                                    />
+                                ) : null
                             }
-                        />
-                    ) : (
-                        <p className="flex flex-wrap items-center gap-3 text-sm">
-                            <Badge variant="warning">Not connected</Badge>
-                            <Link
-                                href={editBandcamp()}
-                                className="underline underline-offset-4"
-                            >
-                                Connect your Bandcamp account
-                            </Link>
-                        </p>
-                    )}
-                </section>
-
-                {storage && <Storage storage={storage} />}
-            </div>
+                        </ServiceForm>
+                    </ServiceCard>
+                );
+            })}
         </>
+    );
+}
+
+export default function Connections({
+    services,
+    zebralution,
+    search,
+    ai,
+    bandcamp,
+    storage,
+}: Props) {
+    return (
+        <Page
+            title="Connections"
+            description="Everything the label works with: the services that deliver and sell its music, and the logins of outside services. Switch a service off to hide what is built for it."
+            className="p-0 md:p-0"
+        >
+            <ServiceCards
+                services={services}
+                zebralution={zebralution}
+                bandcamp={bandcamp}
+            />
+            <WebSearch search={search} />
+            <ReceiptReading ai={ai} />
+            {storage && <Storage storage={storage} />}
+        </Page>
     );
 }
 

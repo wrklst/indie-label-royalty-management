@@ -58,7 +58,7 @@ A role belongs to the combination of a person and a label. There are two.
 | Contracts, payees, ledgers                      | Yes                  | No                  |
 | Profitability, overheads, optional tools        | Yes                  | No                  |
 | All statements, drafts and live figures         | Yes                  | No                  |
-| **Settings → Label**, **Team**, **Bandcamp**    | Yes                  | No                  |
+| **Settings → Label**, **Team**, **Connections** | Yes                  | No                  |
 | Own **published** statements and their download | Yes, for every payee | Yes, only their own |
 | Payouts recorded for them                       | Yes, for every payee | Yes, only their own |
 | Own **Profile**, **Security**, **Appearance**   | Yes                  | Yes                 |
@@ -88,7 +88,7 @@ Someone who already has access to the label is not added again.
 
 ### Linking a user to a payee
 
-A payee record under **Catalog → Payees** and a user account are two different things. The payee record holds contracts and balances; the user account lets a person sign in. The link between them is made on the team page:
+A payee record under **Deals → Payees** and a user account are two different things. The payee record holds contracts and balances; the user account lets a person sign in. The link between them is made on the team page:
 
 - when adding the person, through the **Payee** field, or
 - later, with **Change** next to their name.
@@ -195,7 +195,7 @@ Payees see **Profile**, **Security** and **Appearance** only. Admins also see **
 
 - Invitations, sign-in codes and reset links are emails. If mail is not configured or the queue worker is not running, nobody new can sign in. See [Configuration](03-configuration.md) and [Troubleshooting](52-troubleshooting.md).
 - **Settings → Security** and **Delete account** ask for your password. An account that has only ever used codes has to set a password through **Forgot your password?** first.
-- The **Email** field of a payee record under **Catalog → Payees** gives no access and receives nothing. Access always goes through **Settings → Team**.
+- The **Email** field of a payee record under **Deals → Payees** gives no access and receives nothing. Access always goes through **Settings → Team**.
 - Publishing a statement sends no notification. Tell your payees when there is something to read.
 - Someone invited only as a payee cannot create a label. Someone who runs a label can create further ones with **New label**.
 - A label always keeps at least one admin: neither the team page nor **Delete account** lets its last admin go.

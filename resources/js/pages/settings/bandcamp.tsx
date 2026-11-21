@@ -1,14 +1,15 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import BandcampController from '@/actions/App/Http/Controllers/Settings/BandcampController';
 import AlertError from '@/components/alert-error';
-import { ConnectionCard } from '@/components/connection-card';
 import { CheckField, Field, SelectInput } from '@/components/field';
-import Heading from '@/components/heading';
+import { Page, Panel } from '@/components/page';
+import { ServiceCard } from '@/components/service-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { edit } from '@/routes/bandcamp';
+import { edit as editConnections } from '@/routes/connections';
 import { index as dataImports } from '@/routes/data-imports';
 import { dateTime } from '@/lib/format';
 
@@ -262,33 +263,38 @@ export default function Bandcamp({
     connection: Connection | null;
 }) {
     return (
-        <>
-            <Head title="Bandcamp" />
-            <h1 className="sr-only">Bandcamp</h1>
-
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Bandcamp"
-                    description="Import your Bandcamp sales automatically instead of uploading sales reports."
-                />
-
-                {connection ? (
-                    <ConnectionCard
-                        title="Bandcamp"
-                        facts={[
-                            ['Client ID', connection.client_id_hint],
-                            ['Client secret', 'stored, not shown'],
-                        ]}
-                        disconnect={BandcampController.destroy.url()}
-                        disconnectLabel="Disconnect Bandcamp"
-                        confirm="The stored client ID, secret and tokens are deleted and the weekly sync stops. Imported sales stay. To connect again you need your client ID and secret, and you may have to regenerate the client on Bandcamp."
-                    />
-                ) : (
+        <Page
+            title="Bandcamp"
+            description="Import your Bandcamp sales automatically instead of uploading sales reports. Whether the label works with Bandcamp and how its sales are counted is set under Connections."
+            className="p-0 md:p-0"
+        >
+            <ServiceCard
+                title="Bandcamp"
+                kind="Shop"
+                description="Bandcamp grants API access on request."
+                status={
+                    connection
+                        ? { label: 'Connected', variant: 'success' }
+                        : { label: 'Not connected', variant: 'warning' }
+                }
+                facts={
+                    connection
+                        ? [
+                              ['Client ID', connection.client_id_hint],
+                              ['Client secret', 'stored, not shown'],
+                          ]
+                        : []
+                }
+                disconnect={
+                    connection ? BandcampController.destroy.url() : undefined
+                }
+                disconnectLabel="Disconnect Bandcamp"
+                confirm="The stored client ID, secret and tokens are deleted and the weekly sync stops. Imported sales stay. To connect again you need your client ID and secret, and you may have to regenerate the client on Bandcamp."
+            >
+                {!connection && (
                     <>
                         <p className="text-sm text-muted-foreground">
-                            Bandcamp grants API access on request: write to them
-                            through{' '}
+                            Write to Bandcamp through{' '}
                             <a
                                 href="https://bandcamp.com/contact?subj=API%20Access"
                                 target="_blank"
@@ -306,62 +312,65 @@ export default function Bandcamp({
                         <Credentials />
                     </>
                 )}
-            </div>
+            </ServiceCard>
 
             {connection && (
                 <>
-                    <div className="mt-10 space-y-6">
-                        <Heading
-                            variant="small"
-                            title="What to import"
-                            description="Connected. Choose the account and where to start."
-                        />
-                        <SyncSettings
-                            key={`${connection.band_id}-${connection.bands.length}`}
-                            connection={connection}
-                        />
-                        <Form
-                            {...BandcampController.bands.form()}
-                            options={{ preserveScroll: true }}
-                            className="grid gap-3"
-                        >
-                            {({ errors, processing }) => (
-                                <>
-                                    <BandcampError message={errors.bandcamp} />
-                                    <div>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            disabled={processing}
-                                        >
-                                            {processing
-                                                ? 'Asking Bandcamp…'
-                                                : 'Load accounts from Bandcamp again'}
-                                        </Button>
-                                    </div>
-                                </>
-                            )}
-                        </Form>
-                    </div>
+                    <Panel
+                        title="What to import"
+                        description="Connected. Choose the account and where to start."
+                    >
+                        <div className="space-y-6">
+                            <SyncSettings
+                                key={`${connection.band_id}-${connection.bands.length}`}
+                                connection={connection}
+                            />
+                            <Form
+                                {...BandcampController.bands.form()}
+                                options={{ preserveScroll: true }}
+                                className="grid gap-3"
+                            >
+                                {({ errors, processing }) => (
+                                    <>
+                                        <BandcampError
+                                            message={errors.bandcamp}
+                                        />
+                                        <div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                disabled={processing}
+                                            >
+                                                {processing
+                                                    ? 'Asking Bandcamp…'
+                                                    : 'Load accounts from Bandcamp again'}
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
+                            </Form>
+                        </div>
+                    </Panel>
 
-                    <div className="mt-10 space-y-6">
-                        <Heading
-                            variant="small"
-                            title="Sync"
-                            description={
-                                connection.last_synced_until
-                                    ? `Sales up to ${dateTime(connection.last_synced_until)} are imported`
-                                    : 'Nothing has been fetched yet'
-                            }
-                        />
+                    <Panel
+                        title="Sync"
+                        description={
+                            connection.last_synced_until
+                                ? `Sales up to ${dateTime(connection.last_synced_until)} are imported.`
+                                : 'Nothing has been fetched yet.'
+                        }
+                    >
                         <SyncStatus connection={connection} />
-                    </div>
+                    </Panel>
                 </>
             )}
-        </>
+        </Page>
     );
 }
 
 Bandcamp.layout = {
-    breadcrumbs: [{ title: 'Bandcamp', href: edit() }],
+    breadcrumbs: [
+        { title: 'Connections', href: editConnections() },
+        { title: 'Bandcamp', href: edit() },
+    ],
 };

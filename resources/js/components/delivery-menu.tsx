@@ -47,25 +47,34 @@ export function DeliveryMenu({ releaseId }: { releaseId: number }) {
         .filter((problem) => problem !== '');
     const [open, setOpen] = useState(problems.length > 0);
 
+    const uses = (service: string) => label?.services.includes(service);
     const options = [
         {
             label: 'Full package',
             description: 'All masters, cover, artwork, documents and metadata.',
             href: packageMethod.url(releaseId),
         },
-        {
-            label: 'Subvert ZIP',
-            description:
-                "Cover and one audio file per track, ready for Subvert's upload form.",
-            href: subvertPackage.url(releaseId),
-        },
-        {
-            label: 'Bandcamp ZIP',
-            description:
-                'Cover, one lossless file per track and a sheet to copy from, to unpack and add on Bandcamp.',
-            href: bandcampPackage.url(releaseId),
-        },
-        ...(label?.distributors.includes('zebralution')
+        ...(uses('subvert')
+            ? [
+                  {
+                      label: 'Subvert ZIP',
+                      description:
+                          "Cover and one audio file per track, ready for Subvert's upload form.",
+                      href: subvertPackage.url(releaseId),
+                  },
+              ]
+            : []),
+        ...(uses('bandcamp')
+            ? [
+                  {
+                      label: 'Bandcamp ZIP',
+                      description:
+                          'Cover, one lossless file per track and a sheet to copy from, to unpack and add on Bandcamp.',
+                      href: bandcampPackage.url(releaseId),
+                  },
+              ]
+            : []),
+        ...(uses('zebralution')
             ? [
                   {
                       label: 'Zebralution ZIP',

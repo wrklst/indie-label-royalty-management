@@ -77,11 +77,11 @@ class ZebralutionSheet
         $label = $release->label;
 
         if (blank($label->deliverySetting('zebralution.number'))) {
-            $problems[] = 'The Zebralution number of the label is missing. Enter it under Settings → Label.';
+            $problems[] = 'The Zebralution number of the label is missing. Enter it under Settings → Connections.';
         }
 
         if (blank($label->deliverySetting('zebralution.origin_country'))) {
-            $problems[] = 'The country the music comes from is missing. Enter it under Settings → Label.';
+            $problems[] = 'The country the music comes from is missing. Enter it under Settings → Connections.';
         }
 
         foreach ([

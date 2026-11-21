@@ -1,13 +1,55 @@
 # Connections
 
-The outside services a label works with are set up under **Settings → Connections**, by an admin of the label: the web search for the airplay research, the AI service that reads receipts, and Bandcamp. The installation's own admin also chooses the file storage there. Nothing on this page needs access to the server.
+The services a label works with and the logins of the outside services it uses are set up under **Settings → Connections**, by an admin of the label: Zebralution, Bandcamp, Subvert and Rightz Audio, the web search for the airplay research and the AI service that reads receipts. The installation's own admin also chooses the file storage there. Nothing on this page needs access to the server.
 
-## How every connection works
+## How the page works
+
+**Settings → Connections**, by an admin of the label, shows everything the label works with as cards. Every card says what the service is, what it is for and whether it is connected, and holds its own switch, options or credentials. A card saves only what it shows: saving one never changes another card or **Settings → Label**.
+
+There are two kinds of card:
+
+- A **service** the label can work with: Zebralution, Bandcamp, Subvert and Rightz Audio. Each has a switch, **The label works with …**, and a **Save** button.
+- A **login** to an outside service: the web search, receipt reading and, for the installation's admin, the file storage.
+
+A login card has two states.
 
 - **Not connected**: a form. **Test and connect** tests what you entered against the service and stores it only when the test passes.
-- **Connected**: a card that names the service and shows a hint of what is stored, such as the last four characters of a key. The cross on the card disconnects: a dialog **Disconnect {service}?** says what is deleted, and **Disconnect** confirms. The stored secrets are deleted, and the form comes back for a new connection.
+- **Connected**: the card names the service and shows a hint of what is stored, such as the last four characters of a key. The cross on the card disconnects: a dialog **Disconnect {card}?** says what is deleted, and **Disconnect** confirms. The stored secrets are deleted and the form comes back for a new connection.
 
-Secrets are stored encrypted and never shown again. To change a connection, disconnect it and connect anew.
+Secrets are stored encrypted and never shown again.
+
+### Changing a connection
+
+- **Receipt reading**: **Change model** switches the model without entering the key again; see below.
+- **Web search** and **File storage**, when they come from the server's environment file: the card says so and offers **Connect a different login** or **Connect a different storage**. The environment's connection stays in use until the new one passes its test.
+- **Bandcamp**: the account, the start date and the weekly sync are changed on the Bandcamp page, and **Load accounts from Bandcamp again** fetches the list anew; see [Bandcamp](11-bandcamp.md).
+- Anything else: disconnect it and connect anew.
+
+## Services
+
+A label that never chose works with all four, so nothing disappears for an existing label. Switching a service off hides what is built for it and keeps everything already imported or entered. The generic delivery package and the metadata CSV are never hidden.
+
+| Service          | Kind           | What the switch shows                                                                                                                                                                                                               |
+| ---------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Zebralution**  | Distributor    | The **Zebralution ZIP** under **Delivery** on a release, its genres as suggestions on the release form, its statement layouts in the source list on **Import a statement**, and the link to its analytics export on **Play counts** |
+| **Bandcamp**     | Shop           | The **Bandcamp ZIP** under **Delivery**, its statement layouts in the source list, the weekly sync and the Bandcamp page                                                                                                            |
+| **Subvert**      | Shop           | The **Subvert ZIP** under **Delivery**                                                                                                                                                                                              |
+| **Rightz Audio** | Rights society | Its statement layouts in the source list; its airplay comes in with them                                                                                                                                                            |
+
+A download of a switched-off service answers "not found", and the weekly Bandcamp sync skips the label. A statement of a switched-off service is still recognised when uploaded with **Detect automatically**.
+
+### Zebralution
+
+Besides the switch, the card holds what goes into every metadata sheet: **Zebralution number** (the number Zebralution gave the label), **Country of origin**, **Price group** and **Rights in compositions and lyrics**. See [Files, audio and delivery](22-files-audio-and-delivery.md#the-zebralution-zip).
+
+### Bandcamp
+
+Besides the switch, the card holds the two options that apply to uploaded Bandcamp reports and to the automatic sync alike:
+
+- **Do not deduct 1% from Bandcamp net amounts.** By default 1% is taken off each Bandcamp line to cover payout fees. Tick it to book the net amount as reported.
+- **Skip physical and merch sales.** Imports downloads only, for labels that account physical sales elsewhere.
+
+When the label is connected the card also shows the weekly sync and the last sync, with a link to the Bandcamp page; when it is not, the link reads **Connect your Bandcamp account**. The page, with the credentials, the account and the sync, is described in [Bandcamp](11-bandcamp.md).
 
 ## Web search
 
@@ -19,11 +61,11 @@ The airplay research looks tracks up on Google through [DataForSEO](https://data
 
 The login is checked with DataForSEO; one it refuses is not stored.
 
-Which countries the research searches in is a setting of the label: **Settings → Label → Airplay research countries**. What the research does and costs is described in [Airplay](23-airplay.md).
+The same card holds the **Airplay research countries**: two-letter country codes separated by spaces or commas, for example `DE GB US`. Every track is searched once per country, and each search is billed. **Save countries** stores them, and only them. What the research does and costs is described in [Airplay](23-airplay.md).
 
 ## Receipt reading
 
-An AI service can read vendor, date, amount and category off the receipts you upload under **Royalties → Overheads**. Without a service, receipts are stored and booked by hand.
+An AI service can read vendor, date, amount and category off the receipts you upload under **Label → Overheads**. Without a service, receipts are stored and booked by hand.
 
 | Service                                                   | What you enter                                           |
 | --------------------------------------------------------- | -------------------------------------------------------- |
@@ -75,15 +117,11 @@ Receipts are billed to your account with the service, per document read. The cro
 
 > **Note:** Reading PDFs needs the programs `pdftotext` and `pdftoppm` on the server (package `poppler-utils`). Images work without them.
 
-## Bandcamp
-
-Shows whether the label is connected to Bandcamp and links to the connection, which has its own page. See [Bandcamp](11-bandcamp.md).
-
 ## File storage
 
-This section is shown only to the **admin of the installation**: the first account that was created with `php artisan royalties:create-user`. It decides where the files of every label on the installation go.
+This card is shown only to the **admin of the installation**: the first account that was created with `php artisan royalties:create-user`. It decides where the files of every label on the installation go.
 
-While nothing is connected here, the server's `.env` decides, as described in [Configuration](03-configuration.md). The section then shows that connection as a card, marked as coming from the environment file, and offers **Connect a different storage**, which opens the form.
+While nothing is connected here, the server's `.env` decides, as described in [Configuration](03-configuration.md). The card then shows that connection, marked as coming from the environment file, and offers **Connect a different storage**, which opens the form.
 
 | Choice                         | Meaning                                                                                        |
 | ------------------------------ | ---------------------------------------------------------------------------------------------- |
@@ -119,5 +157,5 @@ Two things to know before changing it:
 
 - Connections belong to one label. In an installation with several labels each enters its own logins and keys.
 - All stored secrets are encrypted with the installation's `APP_KEY`. If that key is lost, they have to be entered again.
-- A web search login in the server's environment file is used for labels that have none of their own; the page says so.
+- A web search login in the server's environment file is used for labels that have none of their own; the card says so.
 - Adding another AI service is a small change in the code; see [Extending](51-extending.md).

@@ -8,7 +8,6 @@ use App\Services\Releases\ReleaseMetadataExport;
 use App\Services\Releases\ReleasePackage;
 use App\Services\Releases\SubvertPackage;
 use App\Services\Releases\ZebralutionPackage;
-use App\Support\Distributors;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -86,8 +85,6 @@ class ReleaseExportController extends Controller
      */
     public function zebralutionPackage(Release $release, ZebralutionPackage $package): BinaryFileResponse|RedirectResponse
     {
-        abort_unless($release->label->usesDistributor(Distributors::ZEBRALUTION), 404);
-
         return $this->storePackage($release, $package, 'zebralution_package');
     }
 

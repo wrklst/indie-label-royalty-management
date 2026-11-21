@@ -19,7 +19,7 @@ Bandcamp sales can also be fetched automatically, without uploading anything: se
 
 ## Importing a file
 
-1. Open **Royalties → Data imports** and choose **Import a statement**.
+1. Open **Importing → Data imports** and choose **Import a statement**.
 2. **Where is the file from?** Leave it on automatic detection, or pick the source. The layout is recognised by the columns of the file, so the two Zebralution layouts are one entry.
 3. **File.** Drop the file on the field or click **browse**. It is sent when you choose **Import**. The name of the import defaults to the file name.
 4. **Dates.** Enter the **Paid date**: the day the money reached your bank account. It decides which accounting period the lines count in. For sources that carry no payment date it is required. Tick **Use this paid date for every line** to override dates the file does contain.
@@ -123,7 +123,7 @@ On the upload form, choosing the spreadsheet template as the source shows the li
 
 ## The list of imports
 
-**Royalties → Data imports** lists every upload, 50 to a page, with the columns **File**, **Source**, **Status**, **Paid date**, **Rows**, **Transactions**, **Skipped duplicates**, **Total** and **Uploaded**. Click a heading to sort by it. Above the table, search a name or file name, choose a **Source** or a **Status**, and use **Clear filters** to start over. The same columns, with the same name **Uploaded**, are used for the files of [Play counts](12-reports-and-play-counts.md) and the earlier runs of the [royalty tools](34-mechanicals-ppd-and-reserves.md).
+**Importing → Data imports** lists every upload, 50 to a page, with the columns **File**, **Source**, **Status**, **Paid date**, **Rows**, **Transactions**, **Skipped duplicates**, **Total** and **Uploaded**. Click a heading to sort by it. Above the table, search a name or file name, choose a **Source** or a **Status**, and use **Clear filters** to start over. The same columns, with the same name **Uploaded**, are used for the files of [Play counts](12-reports-and-play-counts.md) and the earlier runs of the [royalty tools](34-mechanicals-ppd-and-reserves.md).
 
 ## Undoing an import
 

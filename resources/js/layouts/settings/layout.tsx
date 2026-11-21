@@ -6,7 +6,6 @@ import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
-import { edit as editBandcamp } from '@/routes/bandcamp';
 import { edit as editConnections } from '@/routes/connections';
 import { edit as editLabel } from '@/routes/label-settings';
 import { edit } from '@/routes/profile';
@@ -49,11 +48,6 @@ const labelNavItems: NavItem[] = [
         href: editConnections(),
         icon: null,
     },
-    {
-        title: 'Bandcamp',
-        href: editBandcamp(),
-        icon: null,
-    },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
@@ -75,7 +69,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
         <div className="px-4 py-6">
             <Heading
                 title="Settings"
-                description="Manage your account, your label and who has access"
+                description="Manage your account, your label and who has access."
             />
 
             <div className="flex flex-col lg:flex-row lg:space-x-12">

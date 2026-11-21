@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Support\Distributors;
+use App\Support\Services;
 use Carbon\CarbonImmutable;
 use Database\Factories\LabelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -26,7 +26,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property array<string, mixed>|null $importer_settings
  * @property array<string, mixed>|null $royalty_tool_settings
  * @property list<string>|null $airplay_markets
- * @property array<string, mixed>|null $delivery_settings What the label has agreed with its distributors, by distributor.
+ * @property array<string, mixed>|null $delivery_settings What the label has agreed with its services, by service.
  * @property string|null $dataforseo_login
  * @property string|null $dataforseo_password
  * @property string|null $ai_provider The AI service receipts are read with, a key of AiConnection::SERVICES.
@@ -84,28 +84,22 @@ class Label extends Model
     }
 
     /**
-     * Whether the label works with a distributor, so what is built for
-     * that distributor is shown. A label that never chose has them all.
+     * Whether the label works with a service, so what is built for it is
+     * shown. A label that never chose has them all. The choice is kept
+     * under "distributors" in the delivery settings, where it was first
+     * stored for Zebralution.
      */
-    public function usesDistributor(string $key): bool
+    public function usesService(string $key): bool
     {
-        return isset(Distributors::NAMES[$key]) && (bool) $this->deliverySetting("distributors.{$key}", true);
+        return Services::has($key) && (bool) $this->deliverySetting("distributors.{$key}", true);
     }
 
     /**
-     * @return list<string> The keys of the distributors the label works with.
+     * @return list<string> The keys of the services the label works with.
      */
-    public function distributors(): array
+    public function services(): array
     {
-        $used = [];
-
-        foreach (array_keys(Distributors::NAMES) as $key) {
-            if ($this->usesDistributor($key)) {
-                $used[] = $key;
-            }
-        }
-
-        return $used;
+        return array_values(array_filter(Services::keys(), $this->usesService(...)));
     }
 
     /**

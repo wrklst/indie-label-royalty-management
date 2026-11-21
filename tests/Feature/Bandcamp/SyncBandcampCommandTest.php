@@ -81,3 +81,18 @@ test('the command succeeds quietly when no label is connected', function () {
 test('the sync is scheduled weekly', function () {
     $this->artisan('schedule:list')->expectsOutputToContain('royalties:sync-bandcamp');
 });
+
+test('the command skips a label that switched Bandcamp off under Connections', function () {
+    Storage::fake('local');
+    $this->travelTo('2026-02-10 12:00:00');
+    BandcampConnection::factory()->create([
+        'label_id' => Label::factory()->create(['name' => 'Off Records', 'delivery_settings' => ['distributors' => ['bandcamp' => false]]]),
+        'band_id' => 3000003, 'sync_from' => '2026-02-01',
+    ]);
+
+    $this->artisan('royalties:sync-bandcamp')
+        ->expectsOutputToContain('Off Records: Bandcamp is switched off.')
+        ->assertSuccessful();
+
+    Http::assertNothingSent();
+});

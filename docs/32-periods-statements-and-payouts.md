@@ -5,14 +5,14 @@ An accounting period is the time span you settle with your payees, usually a qua
 ## The routine
 
 1. Import the statements that were paid in the period and enter expenses and advances. See [Importing statements](10-importing-statements.md) and [Transactions](31-transactions.md).
-2. Create the period under **Royalties → Periods**.
+2. Create the period under **Accounting → Periods**.
 3. Work through **1. Check the data** on the period page until nothing is listed.
 4. Generate the statements, read them, publish them.
 5. Pay your payees and record each payment as a payout.
 
 ## Creating a period
 
-1. Open **Royalties → Periods** and choose **New period**.
+1. Open **Accounting → Periods** and choose **New period**.
 2. Enter a **Name** and the dates **From** and **To**. The form suggests the quarter after your latest period, or the last full quarter if you have none.
 3. Choose **Create period**.
 
@@ -128,7 +128,7 @@ Generating again creates a new revision instead of changing the old statement:
 - A statement that replaced an earlier one is marked **Revised** in the list.
 - **Regenerate all statements** also archives the draft of a payee who no longer has anything to state.
 
-**Royalties → Statements** lists the current statements with **Payee**, **Period**, **Status**, **Generated**, **Balance** and **Payable**. Choose a **Period** or a **Payee** to narrow the list, and tick **Archived** to include the history. **Clear filters** resets them. An archived revision cannot be published. The button **My statements** above the list shows what payees see of the published ones.
+**Accounting → Statements** lists the current statements with **Payee**, **Period**, **Status**, **Generated**, **Balance** and **Payable**. Choose a **Period** or a **Payee** to narrow the list, and tick **Archived** to include the history. **Clear filters** resets them. An archived revision cannot be published. The button **My statements** above the list shows what payees see of the published ones.
 
 ## Publishing and downloading
 
@@ -162,13 +162,13 @@ Rules:
 - It is booked against the payee's ledgers, largest balance first. Unrecouped ledgers are never touched.
 - An amount already paid on a later period cannot be paid again on an earlier one.
 
-**Royalties → Payouts** lists all payouts with the ledgers they were **Booked to** and who recorded them, 50 to a page. Choose a **Period** or a **Payee** to narrow the list; **Clear filters** resets it.
+**Accounting → Payouts** lists all payouts with the ledgers they were **Booked to** and who recorded them, 50 to a page. Choose a **Period** or a **Payee** to narrow the list; **Clear filters** resets it.
 
 ## Deleting
 
 | What                                      | Effect                                                                                              | Limits                                                                                                              |
 | ----------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| A payout (**Royalties → Payouts**)        | The amount becomes payable again.                                                                   | Statements already generated keep showing it until you regenerate them.                                             |
+| A payout (**Accounting → Payouts**)       | The amount becomes payable again.                                                                   | Statements already generated keep showing it until you regenerate them.                                             |
 | A statement (**Delete** on the statement) | The payee loses access to it. Transactions and payouts are not affected; you can generate it again. | None. Published statements can be deleted too.                                                                      |
 | A period (**Delete** on the period page)  | Its statements are deleted with it. Transactions are not touched.                                   | Not possible while the period has payouts or published statements: the button is disabled and its tooltip says why. |
 

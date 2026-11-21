@@ -3,16 +3,20 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AirplayMarketsRequest;
+use App\Http\Requests\ServiceSettingsRequest;
 use App\Models\BandcampConnection;
 use App\Models\Label;
 use App\Services\Airplay\WebSearch;
 use App\Services\Receipts\AiConnection;
 use App\Services\Receipts\ModelCatalogue;
 use App\Services\Receipts\SampleReceipt;
+use App\Services\Releases\ZebralutionSheet;
 use App\Support\CurrentLabel;
 use App\Support\DirectUploads;
 use App\Support\InstallationSettings;
 use App\Support\PublicAddress;
+use App\Support\Services;
 use App\Support\WorkingCopy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,8 +29,9 @@ use RuntimeException;
 use Throwable;
 
 /**
- * The outside services a label works with, and for the installation's
- * own admins the file storage. Secrets are stored encrypted and never
+ * Everything a label connects or switches on: its services, the web
+ * search, the AI service, and for the installation's own admins the
+ * file storage. Secrets are stored encrypted and never
  * sent back to the page; an empty secret field keeps the stored one.
  */
 class ConnectionsController extends Controller
@@ -38,8 +43,25 @@ class ConnectionsController extends Controller
         $storage = InstallationSettings::storage();
 
         return Inertia::render('settings/connections', [
+            // Each service with its switch; the options of the ones that have any follow below.
+            'services' => collect(Services::ALL)->map(fn (array $service, string $key): array => [
+                'key' => $key,
+                'name' => $service['name'],
+                'kind' => $service['kind'],
+                'purpose' => $service['purpose'],
+                'gates' => $service['gates'],
+                'enabled' => $label->usesService($key),
+            ])->values(),
+            'zebralution' => [
+                'number' => $label->deliverySetting('zebralution.number'),
+                'origin_country' => $label->deliverySetting('zebralution.origin_country'),
+                'price_group' => (int) $label->deliverySetting('zebralution.price_group', 20),
+                'work_rights' => $label->deliverySetting('zebralution.work_rights', ZebralutionSheet::WORK_RIGHTS[0]),
+                'work_rights_options' => ZebralutionSheet::WORK_RIGHTS,
+            ],
             // A stored connection is shown as what it is, with secrets cut down to a hint.
             'search' => [
+                'airplay_markets' => $label->airplayMarkets(),
                 'connected' => filled($label->dataforseo_login),
                 'login' => filled($label->dataforseo_login) ? Str::mask((string) $label->dataforseo_login, '•', 3, max(0, mb_strlen((string) $label->dataforseo_login) - 6)) : null,
                 'from_environment' => blank($label->dataforseo_login) && filled(config('services.dataforseo.login')),
@@ -61,6 +83,8 @@ class ConnectionsController extends Controller
                 'connected' => $bandcamp !== null,
                 'enabled' => (bool) $bandcamp?->enabled,
                 'last_sync_at' => $bandcamp?->last_sync_at?->toIso8601String(),
+                'disable_fee' => (bool) $label->importerSetting('bandcamp.disable_fee', false),
+                'exclude_physical' => (bool) $label->importerSetting('bandcamp.exclude_physical', false),
             ],
             'storage' => $request->user()->installation_admin ? [
                 'disk' => WorkingCopy::disk(),
@@ -74,6 +98,52 @@ class ConnectionsController extends Controller
                 'origin' => $request->getSchemeAndHttpHost(),
             ] : null,
         ]);
+    }
+
+    /**
+     * The switch and the options of one service. A card that does not
+     * send a field leaves it alone, and no card touches another one's.
+     */
+    public function service(ServiceSettingsRequest $request, CurrentLabel $currentLabel, string $service): RedirectResponse
+    {
+        abort_unless(Services::has($service), 404);
+
+        $label = $this->label($currentLabel);
+        $delivery = $label->delivery_settings ?? [];
+        $importer = $label->importer_settings ?? [];
+
+        if ($request->has('enabled')) {
+            $delivery['distributors'][$service] = $request->boolean('enabled');
+        }
+
+        if ($service === Services::ZEBRALUTION && $request->has('number')) {
+            $delivery['zebralution'] = [
+                'number' => $request->validated('number'),
+                'origin_country' => $request->validated('origin_country'),
+                'price_group' => (int) ($request->validated('price_group') ?? 20),
+                'work_rights' => $request->validated('work_rights') ?? ZebralutionSheet::WORK_RIGHTS[0],
+            ];
+        }
+
+        foreach ($service === Services::BANDCAMP ? ['disable_fee', 'exclude_physical'] : [] as $option) {
+            if ($request->has($option)) {
+                $importer['bandcamp'][$option] = $request->boolean($option);
+            }
+        }
+
+        $label->update(['delivery_settings' => $delivery ?: null, 'importer_settings' => $importer ?: null]);
+
+        return $this->saved(__(':service saved.', ['service' => Services::ALL[$service]['name']]));
+    }
+
+    /**
+     * The countries the airplay research searches in; the web search card holds them.
+     */
+    public function markets(AirplayMarketsRequest $request, CurrentLabel $currentLabel): RedirectResponse
+    {
+        $this->label($currentLabel)->update(['airplay_markets' => $request->validated('airplay_markets')]);
+
+        return $this->saved(__('Airplay research countries saved.'));
     }
 
     /**

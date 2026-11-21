@@ -17,7 +17,7 @@ use App\Services\Imports\Readers\ReaderFactory;
 use App\Services\Reports\IncomeReport;
 use App\Services\Royalties\MoneyFlow;
 use App\Support\CurrentLabel;
-use App\Support\Distributors;
+use App\Support\Services;
 use App\Support\Sorting;
 use App\Support\WorkingCopy;
 use Illuminate\Database\Eloquent\Builder;
@@ -82,8 +82,8 @@ class DataImportController extends Controller
     public function create(ImporterRegistry $importers, CurrentLabel $currentLabel): Response
     {
         return Inertia::render('data-imports/create', [
-            // The layouts of a distributor the label does not work with are not offered; a file in one is still recognised.
-            'sources' => array_values(array_filter($importers->sources(), fn (array $source): bool => ! isset(Distributors::NAMES[$source['key']]) || $currentLabel->get()->usesDistributor($source['key']))),
+            // The layouts of a service the label does not work with are not offered; a file in one is still recognised.
+            'sources' => array_values(array_filter($importers->sources(), fn (array $source): bool => ! Services::has($source['key']) || $currentLabel->get()->usesService($source['key']))),
             'currency' => $currentLabel->get()->currency,
         ]);
     }

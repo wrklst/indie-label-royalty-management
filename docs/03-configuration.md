@@ -179,7 +179,7 @@ Nothing to configure here. Each label chooses its service and enters its key und
 
 ## Bandcamp
 
-Nothing to configure here. Each label connects its own Bandcamp account under **Settings → Bandcamp**; see [Bandcamp](11-bandcamp.md).
+Nothing to configure here. Each label connects its own Bandcamp account from the **Bandcamp** card under **Settings → Connections**; see [Bandcamp](11-bandcamp.md).
 
 ## All settings at a glance
 

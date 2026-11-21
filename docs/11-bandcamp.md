@@ -14,7 +14,7 @@ The Bandcamp API is not open to everyone. Bandcamp gives access to labels and to
 
 ## Connecting
 
-1. Open **Settings → Bandcamp**. You also reach it from **Settings → Label**, in the section "Bandcamp imports".
+1. Open **Settings → Connections** and follow **Connect your Bandcamp account** on the **Bandcamp** card. That opens the Bandcamp page, which holds the credentials, the account and the sync. If the card says **Switched off**, switch the label's Bandcamp on there first: a label that never chose has it on.
 2. Enter the **Client ID** and the **Client secret** and choose **Test and connect**. The credentials are proven against Bandcamp right away; if Bandcamp refuses them, nothing is stored.
 3. Under **What to import** choose:
     - **Bandcamp account**: the label or artist account whose sales are imported.
@@ -37,9 +37,9 @@ The first sync creates one import per week since 1 October, named like "Bandcamp
 ## What a sync does
 
 - It fetches the sales since the last sync and imports them like an uploaded Bandcamp report: each sale is a transaction with its date as the paid date.
-- Each run is an ordinary import under **Royalties → Data imports**. Deleting it removes its transactions.
+- Each run is an ordinary import under **Importing → Data imports**. Deleting it removes its transactions.
 - Sales that are in already are not imported twice, whether they came from an earlier sync, from an uploaded sales report or from another royalty system you moved over from, such as an Infinite Catalog export. A sale carried over from another system is recognised by Bandcamp's order number and by whether it was an album, a track or something physical. The same holds for a sales report you upload.
-- The two options under **Settings → Label → Bandcamp imports** apply to the sync as well: the 1% deduction for payout fees, and skipping physical and merch sales.
+- The two options on the **Bandcamp** card under **Settings → Connections** apply to the sync as well: the 1% deduction for payout fees, and skipping physical and merch sales.
 
 The **Sync** section of the page shows when the last sync ran, up to which day sales are in, and the message of the last run if it failed.
 

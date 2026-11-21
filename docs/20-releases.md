@@ -48,7 +48,7 @@ The **Metadata CSV** button above the list downloads the metadata of all release
 
 You land on the page of the new release. Every new release also gets an item called `[Additionals]`, which carries income and costs you enter by hand; see [Tracks, artists and items](21-tracks-artists-and-items.md).
 
-Example: for the label Example Records you create a release named `Example Release` by `Example Artist` with catalog number `EX001`, add the tracks `Opening` and `Second Track`, and leave everything else empty. The release appears in the list with the status **To do** and the contract `none`.
+Example: for the label Example Records you create a release named `Example Release` by `Example Artist` with catalog number `EX001`, add the tracks `Opening` and `Second Track`, and leave everything else empty. The release appears in the list with the status **To do** and the contract **No contract**.
 
 ## Edit or delete a release
 
@@ -161,19 +161,19 @@ Click a release name anywhere to open its page. The heading shows the name (with
 
 **Cover and figures.** Next to the cover there are four tiles:
 
-| Tile             | What it shows                                         |
-| ---------------- | ----------------------------------------------------- |
-| Income to date   | The sum of all income transactions of the release.    |
-| Expenses to date | The sum of all expense transactions (shown negative). |
-| Net              | Income plus expenses.                                 |
-| Contract         | The contract of the release, linked, or **None**.     |
+| Tile             | What it shows                                            |
+| ---------------- | -------------------------------------------------------- |
+| Income to date   | The sum of all income transactions of the release.       |
+| Expenses to date | The sum of all expense transactions (shown negative).    |
+| Net              | Income plus expenses.                                    |
+| Contract         | The contract of the release, linked, or **No contract**. |
 
 Example: with 1,250.00 of income and −400.00 of expenses, **Net** shows 850.00.
 
 **Tracks.** The table has the columns `#`, **Title**, **Artist**, **ISRC**, **Length**, **Listen**, **Contract**, **Units** and **Income**. Click a heading to sort.
 
 - **Units** and **Income** are the quantity and amount of the income transactions booked on that track.
-- **Contract** shows the track's own contract, **Release contract** when it uses the one of the release, or `none`.
+- **Contract** shows the track's own contract, **Release contract** when it uses the one of the release, or **No contract**.
 - **Listen** holds the play buttons, or **No audio** when no audio file is attached to the track.
 - The pencil at the end of a row opens the track dialog **Edit {track title}** with all track details, the same one as in the track list and on the track page.
 - If income was booked on the release without a track, a last line reads **Booked on the release as a whole (album sales, additionals)** with that amount.

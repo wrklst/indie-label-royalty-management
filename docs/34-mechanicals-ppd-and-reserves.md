@@ -16,7 +16,7 @@ Three optional tools calculate mechanical royalties, royalties on the published 
 2. Under **Accounting features**, tick **Mechanicals**, **PPD** and/or **Reserves**.
 3. Set the options that appear (see below) and choose **Save**.
 
-Each tool you switch on adds an entry under **Royalties** in the sidebar and its fields to the release form.
+Each tool you switch on adds an entry under **Accounting** in the sidebar and its fields to the release form.
 
 | Setting                                      | Appears with       | What it does                                                                                                                         |
 | -------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -28,7 +28,7 @@ Each tool you switch on adds an entry under **Royalties** in the sidebar and its
 
 The steps are the same for all three:
 
-1. Open the tool under **Royalties**.
+1. Open the tool under **Accounting**.
 2. In **Report**, enter **Paid from** and **Paid until** and choose **Show report**.
 3. Read the report and the notices above it. They tell you what was left out and why.
 4. Choose **Book transactions**, enter the date or dates asked for, and choose **Book**.
@@ -47,7 +47,7 @@ The tables of a report and of the rates page sort by a click on a heading. The o
 
 ### Undoing a run
 
-Every tool page lists its **Earlier runs**, 25 to a page and sortable, with the paid dates it **Covers**, the **Paid date** it was booked on, the number of **Rows** (transactions), the total and when it was **Uploaded**. Deleting a run there deletes its transactions; periods that included them change accordingly. The same runs appear under **Royalties → Data imports**, named after the tool, and can be deleted there as well.
+Every tool page lists its **Earlier runs**, 25 to a page and sortable, with the paid dates it **Covers**, the **Paid date** it was booked on, the number of **Rows** (transactions), the total and when it was **Uploaded**. Deleting a run there deletes its transactions; periods that included them change accordingly. The same runs appear under **Importing → Data imports**, named after the tool, and can be deleted there as well.
 
 ## Mechanicals
 

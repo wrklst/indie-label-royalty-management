@@ -80,3 +80,47 @@ test('the handbook is for label admins only', function () {
     $this->actingAs($payee)->get(route('handbook'))->assertRedirect(route('portal.index'));
     $this->actingAs($payee)->get(route('handbook.panel', '23-airplay'))->assertRedirect(route('portal.index'));
 });
+
+test('the sidebar groups are the handbook chapters of the same name, in its order', function () {
+    preg_match_all("/\n        title: '([^']+)',\n        items:/", file_get_contents(resource_path('js/components/app-sidebar.tsx')), $groups);
+    $chapters = app(Handbook::class)->articles()->pluck('chapter')->unique()->values()->all();
+
+    expect($groups[1])->toBe(['Importing', 'Accounting', 'Deals', 'Catalog', 'Label'])
+        ->and(array_values(array_intersect($chapters, $groups[1])))->toBe($groups[1])
+        ->and($chapters[0])->toBe('Setup');
+});
+
+test('every chapter sits in the group its pages are in', function () {
+    $chapter = fn (string $slug): string => app(Handbook::class)->find($slug)['chapter'];
+
+    expect($chapter('10-importing-statements'))->toBe('Importing')
+        ->and($chapter('12-reports-and-play-counts'))->toBe('Importing')
+        ->and($chapter('31-transactions'))->toBe('Accounting')
+        ->and($chapter('32-periods-statements-and-payouts'))->toBe('Accounting')
+        ->and($chapter('34-mechanicals-ppd-and-reserves'))->toBe('Accounting')
+        ->and($chapter('30-contracts-payees-and-ledgers'))->toBe('Deals')
+        ->and($chapter('20-releases'))->toBe('Catalog')
+        ->and($chapter('23-airplay'))->toBe('Catalog')
+        ->and($chapter('33-profitability-and-label-costs'))->toBe('Label')
+        ->and($chapter('42-connections'))->toBe('People and settings');
+});
+
+test('the handbook names a page by the sidebar group it is in', function () {
+    $paths = app(Handbook::class)->articles()->flatMap(function (array $article): array {
+        preg_match_all('/\*\*(\w[\w ]*) → ([\w ]+)\*\*/', $article['body'], $matches, PREG_SET_ORDER);
+
+        return array_map(fn (array $match): string => "{$match[1]} → {$match[2]}", $matches);
+    });
+    $groupOf = [
+        'Data imports' => 'Importing', 'Play counts' => 'Importing', 'Transactions' => 'Accounting', 'Periods' => 'Accounting', 'Statements' => 'Accounting',
+        'Payouts' => 'Accounting', 'Contracts' => 'Deals', 'Payees' => 'Deals', 'Ledgers' => 'Deals', 'Catalog manager' => 'Catalog', 'Releases' => 'Catalog',
+        'Tracks' => 'Catalog', 'Artists' => 'Catalog', 'Items' => 'Catalog', 'Airplay' => 'Catalog', 'Profitability' => 'Label', 'Overheads' => 'Label',
+    ];
+    $wrong = $paths->filter(function (string $path) use ($groupOf): bool {
+        [$group, $page] = explode(' → ', $path);
+
+        return isset($groupOf[$page]) && $groupOf[$page] !== $group;
+    });
+
+    expect($paths)->not->toBeEmpty()->and($wrong->values()->all())->toBe([]);
+});

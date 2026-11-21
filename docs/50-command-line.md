@@ -33,7 +33,7 @@ php artisan royalties:import statement.csv --label=example-records --paid=2026-1
 | `--paid=`     | Paid date (`Y-m-d`) for sources without one                                                                                       |
 | `--rate=`     | Conversion rate for lines in another currency                                                                                     |
 
-When possible duplicates are found, nothing is counted and the import waits for your decision under **Royalties → Data imports**.
+When possible duplicates are found, nothing is counted and the import waits for your decision under **Importing → Data imports**.
 
 ### royalties:sync-bandcamp
 

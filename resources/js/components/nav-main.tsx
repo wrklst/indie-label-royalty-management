@@ -9,7 +9,8 @@ import {
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import type { NavItem } from '@/types';
 
-export type NavGroup = { title: string; items: NavItem[] };
+/** A group without a title stands above the others. */
+export type NavGroup = { title?: string; items: NavItem[] };
 
 export function NavMain({ groups }: { groups: NavGroup[] }) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
@@ -17,8 +18,10 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
     return (
         <>
             {groups.map((group) => (
-                <SidebarGroup key={group.title} className="px-2 py-0">
-                    <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
+                <SidebarGroup key={group.title ?? 'top'} className="px-2 py-0">
+                    {group.title && (
+                        <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
+                    )}
                     <SidebarMenu>
                         {group.items.map((item) => (
                             <SidebarMenuItem key={item.title}>

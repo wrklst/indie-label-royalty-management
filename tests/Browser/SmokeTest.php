@@ -71,12 +71,23 @@ test('every page of a label with data renders without browser errors', function 
         '/ledgers' => 'Only the primary ledger so far',
         '/my-statements' => 'My statements',
         '/settings/label' => 'Territories',
+        '/settings/connections' => 'Receipt reading',
+        '/settings/bandcamp' => 'Bandcamp',
         '/settings/team' => 'Add a person',
     ];
 
     foreach ($pages as $url => $text) {
         visit($url)->assertSee($text)->assertNoSmoke();
     }
+});
+
+test('the sidebar groups are the chapters of the handbook', function () {
+    $scenario = royaltyScenario();
+    $this->actingAs($scenario['admin']);
+
+    $groups = visit('/dashboard')->script("[...document.querySelectorAll('[data-sidebar=\"group-label\"]')].map((el) => el.textContent)");
+
+    expect($groups)->toBe(['Importing', 'Accounting', 'Deals', 'Catalog', 'Label']);
 });
 
 test('a payee only gets the statement portal and can read a published statement', function () {
@@ -111,7 +122,7 @@ test('the settings opened from the profile list everything that belongs to the l
         ->assertSeeIn('nav[aria-label="Settings"]', 'Profile')
         ->assertSeeIn('nav[aria-label="Settings"]', 'Team')
         ->assertSeeIn('nav[aria-label="Settings"]', 'Connections')
-        ->assertSeeIn('nav[aria-label="Settings"]', 'Bandcamp')
+        ->assertDontSeeIn('nav[aria-label="Settings"]', 'Bandcamp')
         ->click('nav[aria-label="Settings"] a[href$="/settings/connections"]')
         ->assertPathIs('/settings/connections')
         ->assertSee('Receipt reading')

@@ -9,8 +9,8 @@ use App\Services\Imports\ImportException;
 use App\Services\Imports\PlayCountImport;
 use App\Services\Reports\IncomeReport;
 use App\Support\CurrentLabel;
-use App\Support\Distributors;
 use App\Support\Platforms;
+use App\Support\Services;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -58,7 +58,7 @@ class PlayCountController extends Controller
             'report' => IncomeReport::plays(PlayCount::query(), Transaction::query()),
             'tracks' => IncomeReport::playMovers(PlayCount::query(), 'track_id'),
             'releases' => IncomeReport::playMovers(PlayCount::query(), 'release_id'),
-            'zebralutionExport' => ! $currentLabel->get()->usesDistributor(Distributors::ZEBRALUTION) ? null : self::ZEBRALUTION_EXPORT.'?'.http_build_query([
+            'zebralutionExport' => ! $currentLabel->get()->usesService(Services::ZEBRALUTION) ? null : self::ZEBRALUTION_EXPORT.'?'.http_build_query([
                 'startdate' => $from->toDateString(), 'enddate' => now()->subDay()->toDateString(),
                 'resulttype' => 'streams', 'groupby_export' => 'track,dsp,date', 'fields' => 'streams',
             ]),

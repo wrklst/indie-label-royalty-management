@@ -7,6 +7,7 @@ use App\Models\Label;
 use App\Services\Bandcamp\BandcampException;
 use App\Services\Bandcamp\BandcampSync;
 use App\Support\CurrentLabel;
+use App\Support\Services;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -34,7 +35,7 @@ class SyncBandcamp extends Command
             $connections = $connections->where('label_id', $label->id)->get();
 
             if ($connections->isEmpty()) {
-                $this->error("{$label->name} has no Bandcamp connection. Set it up under Settings → Bandcamp.");
+                $this->error("{$label->name} has no Bandcamp connection. Set it up under Settings → Connections → Bandcamp.");
 
                 return self::FAILURE;
             }
@@ -48,11 +49,19 @@ class SyncBandcamp extends Command
             return self::SUCCESS;
         }
 
-        $labels = Label::query()->whereKey($connections->pluck('label_id'))->pluck('name', 'id');
+        $labels = Label::query()->whereKey($connections->pluck('label_id'))->get()->keyBy('id');
         $failed = 0;
 
         foreach ($connections as $connection) {
-            $name = $labels[$connection->label_id] ?? "Label {$connection->label_id}";
+            $label = $labels[$connection->label_id] ?? null;
+            $name = $label->name ?? "Label {$connection->label_id}";
+
+            // A label that switched Bandcamp off under Settings → Connections is not synced.
+            if ($label !== null && ! $label->usesService(Services::BANDCAMP)) {
+                $this->line("{$name}: Bandcamp is switched off.");
+
+                continue;
+            }
 
             try {
                 $this->info("{$name}: ".$sync->run($connection)->summary());

@@ -123,13 +123,14 @@ test('the accounting currency cannot change once the label has transactions', fu
     expect($this->label->refresh()->currency)->toBe('EUR');
 });
 
-test('saving label settings keeps importer settings it does not manage', function () {
+test('saving the Bandcamp card keeps importer settings it does not manage', function () {
     $this->label->update(['importer_settings' => ['bandcamp' => ['band_id' => 12345], 'other' => ['enabled' => true]]]);
 
-    $this->put(route('label-settings.update'), ['name' => $this->label->name, 'currency' => 'EUR', 'bandcamp_disable_fee' => '1'])->assertSessionHasNoErrors();
+    $this->put(route('connections.service', 'bandcamp'), ['disable_fee' => '1'])->assertSessionHasNoErrors();
+    $this->put(route('label-settings.update'), ['name' => $this->label->name, 'currency' => 'EUR'])->assertSessionHasNoErrors();
 
     expect($this->label->refresh()->importer_settings)->toBe([
-        'bandcamp' => ['band_id' => 12345, 'disable_fee' => true, 'exclude_physical' => false],
+        'bandcamp' => ['band_id' => 12345, 'disable_fee' => true],
         'other' => ['enabled' => true],
     ]);
 });

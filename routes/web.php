@@ -27,6 +27,7 @@ use App\Http\Controllers\StatementController;
 use App\Http\Controllers\TrackController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UploadController;
+use App\Support\Services;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -110,7 +111,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('settings/territories/{territory}', [LabelSettingsController::class, 'destroyTerritory'])->name('territories.destroy');
 
             Route::get('settings/connections', [ConnectionsController::class, 'edit'])->name('connections.edit');
+            Route::put('settings/connections/services/{service}', [ConnectionsController::class, 'service'])->whereIn('service', Services::keys())->name('connections.service');
             Route::put('settings/connections/search', [ConnectionsController::class, 'search'])->name('connections.search');
+            Route::put('settings/connections/search/markets', [ConnectionsController::class, 'markets'])->name('connections.search.markets');
             Route::put('settings/connections/ai', [ConnectionsController::class, 'ai'])->middleware('throttle:10,1')->name('connections.ai');
             Route::put('settings/connections/ai/model', [ConnectionsController::class, 'aiModel'])->middleware('throttle:10,1')->name('connections.ai.model');
             Route::put('settings/connections/storage', [ConnectionsController::class, 'storage'])->name('connections.storage');

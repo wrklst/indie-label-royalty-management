@@ -41,11 +41,11 @@ The arithmetic is explained with numbers in [Periods, statements and payouts](32
 This assumes the software is installed and you can sign in. If not, start with [Installation](02-installation.md).
 
 1. **Create your label.** After the first sign-in you are asked for the label's name and accounting currency. The currency cannot be changed once transactions exist.
-2. **Import a statement.** Open **Royalties → Data imports**, choose **Import a statement** and upload a file from your distributor. The source is detected from the columns. See [Importing statements](10-importing-statements.md).
+2. **Import a statement.** Open **Importing → Data imports**, choose **Import a statement** and upload a file from your distributor. The source is detected from the columns. See [Importing statements](10-importing-statements.md).
 3. **Look at what was created.** **Catalog → Releases** now lists the releases named in the file. Open one to see its tracks and its income by track and platform.
-4. **Add a payee and a contract.** Under **Catalog → Payees** create the artist, then under **Catalog → Contracts** a contract that gives them, say, 50%. See [Contracts, payees and ledgers](30-contracts-payees-and-ledgers.md).
+4. **Add a payee and a contract.** Under **Deals → Payees** create the artist, then under **Deals → Contracts** a contract that gives them, say, 50%. See [Contracts, payees and ledgers](30-contracts-payees-and-ledgers.md).
 5. **Assign the contract.** Open **Catalog → Catalog manager** and set the contract on the release. Every transaction of that release now follows it.
-6. **Create a period.** Under **Royalties → Periods** create the quarter the statement was paid in. The period lists each payee with their share.
+6. **Create a period.** Under **Accounting → Periods** create the quarter the statement was paid in. The period lists each payee with their share.
 7. **Generate and publish statements**, then record the payout once you have paid.
 
 > **Note:** Nothing is final until you generate statements. You can import, delete an import, change contracts and look at the period again as often as you like.
@@ -53,7 +53,7 @@ This assumes the software is installed and you can sign in. If not, start with [
 ## Where to find help
 
 - The **?** button in the top bar opens the handbook page for the screen you are on, beside your work.
-- **Overview → Handbook** shows every chapter with a search field.
+- **Handbook** at the top of the sidebar shows every chapter with a search field.
 - Something not working: see [Troubleshooting](52-troubleshooting.md).
 
 ## Good to know

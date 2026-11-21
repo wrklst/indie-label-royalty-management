@@ -1,13 +1,12 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import LabelSettingsController from '@/actions/App/Http/Controllers/Settings/LabelSettingsController';
 import { DeleteButton } from '@/components/delete-button';
-import { CheckField, Field, SelectInput } from '@/components/field';
-import Heading from '@/components/heading';
+import { CheckField, Field } from '@/components/field';
+import { Page, Panel } from '@/components/page';
 import { LabelImageUpload } from '@/components/label-image-upload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { edit as editBandcamp } from '@/routes/bandcamp';
 import { edit } from '@/routes/label-settings';
 
 type Props = {
@@ -18,16 +17,7 @@ type Props = {
         accounts_mechanicals: boolean;
         accounts_ppd: boolean;
         accounts_reserves: boolean;
-        bandcamp_disable_fee: boolean;
-        bandcamp_exclude_physical: boolean;
-        airplay_markets: string[];
-        zebralution_number: string | null;
-        zebralution_origin_country: string | null;
-        zebralution_price_group: number;
-        zebralution_work_rights: string;
     };
-    zebralutionWorkRights: string[];
-    distributors: { key: string; name: string; enabled: boolean }[];
     royaltyTools: {
         mechanicals_usd_rate: string | null;
         mechanicals_include_physical: boolean;
@@ -45,8 +35,6 @@ export default function LabelSettings({
     settings,
     royaltyTools,
     territories,
-    zebralutionWorkRights,
-    distributors,
 }: Props) {
     const { label } = usePage().props;
     const [tools, setTools] = useState({
@@ -54,27 +42,16 @@ export default function LabelSettings({
         ppd: settings.accounts_ppd,
     });
 
-    const [used, setUsed] = useState(
-        Object.fromEntries(
-            distributors.map((distributor) => [
-                distributor.key,
-                distributor.enabled,
-            ]),
-        ),
-    );
-
     return (
-        <>
-            <Head title="Label" />
-            <h1 className="sr-only">Label</h1>
-
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Label"
-                    description="Name, accounting currency and how imports behave for this label."
-                />
-
+        <Page
+            title="Label"
+            description="The name, currency and images of this label, the accounting features it uses and its territories. The services it works with are under Connections."
+            className="p-0 md:p-0"
+        >
+            <Panel
+                title="Logo and signet"
+                description="The images that stand for the label on statements and in the sidebar."
+            >
                 <div className="grid gap-6 sm:grid-cols-2">
                     <LabelImageUpload
                         kind="logo"
@@ -89,253 +66,71 @@ export default function LabelSettings({
                         current={label?.signet_url ?? null}
                     />
                 </div>
+            </Panel>
 
-                <Form
-                    {...LabelSettingsController.update.form()}
-                    options={{ preserveScroll: true }}
-                    className="grid gap-6"
-                >
-                    {({ errors, processing }) => (
-                        <>
-                            <Field
-                                label="Label name"
-                                htmlFor="name"
-                                error={errors.name}
-                                required
-                            >
-                                <Input
-                                    id="name"
-                                    name="name"
-                                    defaultValue={settings.name}
+            <Form
+                {...LabelSettingsController.update.form()}
+                options={{ preserveScroll: true }}
+                className="grid gap-6"
+            >
+                {({ errors, processing }) => (
+                    <>
+                        <Panel
+                            title="Details"
+                            description="The name, accounting currency and contact address of the label."
+                        >
+                            <div className="grid gap-6">
+                                <Field
+                                    label="Label name"
+                                    htmlFor="name"
+                                    error={errors.name}
                                     required
-                                />
-                            </Field>
-                            <Field
-                                label="Accounting currency"
-                                htmlFor="currency"
-                                error={errors.currency}
-                                required
-                                hint="Changing it does not convert existing transactions. Only change it before you import."
-                            >
-                                <Input
-                                    id="currency"
-                                    name="currency"
-                                    defaultValue={settings.currency}
-                                    maxLength={3}
-                                    className="w-24 uppercase"
+                                >
+                                    <Input
+                                        id="name"
+                                        name="name"
+                                        defaultValue={settings.name}
+                                        required
+                                    />
+                                </Field>
+                                <Field
+                                    label="Accounting currency"
+                                    htmlFor="currency"
+                                    error={errors.currency}
                                     required
-                                />
-                            </Field>
-                            <Field
-                                label="Contact email"
-                                htmlFor="contact_email"
-                                error={errors.contact_email}
-                            >
-                                <Input
-                                    id="contact_email"
-                                    name="contact_email"
-                                    type="email"
-                                    defaultValue={settings.contact_email ?? ''}
-                                />
-                            </Field>
-
-                            <div className="grid gap-3">
-                                <p className="text-sm font-medium">
-                                    Bandcamp imports
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    To import sales automatically,{' '}
-                                    <Link
-                                        href={editBandcamp()}
-                                        className="underline underline-offset-4"
-                                    >
-                                        connect your Bandcamp account
-                                    </Link>
-                                    .
-                                </p>
-                                <CheckField
-                                    withZero
-                                    name="bandcamp_disable_fee"
-                                    label="Do not deduct 1% from Bandcamp net amounts"
-                                    hint="By default 1% is taken off each Bandcamp line to cover payout fees."
-                                    defaultChecked={
-                                        settings.bandcamp_disable_fee
-                                    }
-                                />
-                                <CheckField
-                                    withZero
-                                    name="bandcamp_exclude_physical"
-                                    label="Skip physical and merch sales"
-                                    hint="Import downloads only, for labels that account physical sales elsewhere."
-                                    defaultChecked={
-                                        settings.bandcamp_exclude_physical
-                                    }
-                                />
-                            </div>
-
-                            <div className="grid gap-3">
-                                <p className="text-sm font-medium">
-                                    Distributors
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    The ones you work with. Their delivery
-                                    package, statement layouts and export links
-                                    are only shown when switched on.
-                                </p>
-                                {distributors.map((distributor) => (
-                                    <CheckField
-                                        withZero
-                                        key={distributor.key}
-                                        name={`distributors[${distributor.key}]`}
-                                        label={distributor.name}
-                                        defaultChecked={distributor.enabled}
-                                        onChange={(event) =>
-                                            setUsed((current) => ({
-                                                ...current,
-                                                [distributor.key]:
-                                                    event.target.checked,
-                                            }))
+                                    hint="Changing it does not convert existing transactions. Only change it before you import."
+                                >
+                                    <Input
+                                        id="currency"
+                                        name="currency"
+                                        defaultValue={settings.currency}
+                                        maxLength={3}
+                                        className="w-24 uppercase"
+                                        required
+                                    />
+                                </Field>
+                                <Field
+                                    label="Contact email"
+                                    htmlFor="contact_email"
+                                    error={errors.contact_email}
+                                >
+                                    <Input
+                                        id="contact_email"
+                                        name="contact_email"
+                                        type="email"
+                                        defaultValue={
+                                            settings.contact_email ?? ''
                                         }
                                     />
-                                ))}
+                                </Field>
                             </div>
+                        </Panel>
 
-                            <div
-                                className={
-                                    used.zebralution ? 'grid gap-3' : 'hidden'
-                                }
-                            >
-                                <p className="text-sm font-medium">
-                                    Zebralution delivery
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    Goes into every metadata sheet made under
-                                    Delivery on a release.
-                                </p>
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <Field
-                                        label="Zebralution number"
-                                        htmlFor="zebralution_number"
-                                        error={errors.zebralution_number}
-                                        hint="The number Zebralution gave the label."
-                                    >
-                                        <Input
-                                            id="zebralution_number"
-                                            name="zebralution_number"
-                                            defaultValue={
-                                                settings.zebralution_number ??
-                                                ''
-                                            }
-                                            className="font-mono"
-                                        />
-                                    </Field>
-                                    <Field
-                                        label="Country of origin"
-                                        htmlFor="zebralution_origin_country"
-                                        error={
-                                            errors.zebralution_origin_country
-                                        }
-                                        hint="Where the label's music comes from, as a two-letter code."
-                                    >
-                                        <Input
-                                            id="zebralution_origin_country"
-                                            name="zebralution_origin_country"
-                                            defaultValue={
-                                                settings.zebralution_origin_country ??
-                                                ''
-                                            }
-                                            placeholder="DE"
-                                            maxLength={2}
-                                            className="font-mono uppercase"
-                                        />
-                                    </Field>
-                                    <Field
-                                        label="Price group"
-                                        htmlFor="zebralution_price_group"
-                                        error={errors.zebralution_price_group}
-                                        hint="For tracks and releases alike."
-                                    >
-                                        <SelectInput
-                                            id="zebralution_price_group"
-                                            name="zebralution_price_group"
-                                            defaultValue={String(
-                                                settings.zebralution_price_group,
-                                            )}
-                                        >
-                                            <option value="5">5: back</option>
-                                            <option value="10">10: mid</option>
-                                            <option value="20">
-                                                20: standard
-                                            </option>
-                                            <option value="25">
-                                                25: standard plus
-                                            </option>
-                                            <option value="30">30: high</option>
-                                            <option value="35">
-                                                35: high plus
-                                            </option>
-                                        </SelectInput>
-                                    </Field>
-                                    <Field
-                                        label="Rights in compositions and lyrics"
-                                        htmlFor="zebralution_work_rights"
-                                        error={errors.zebralution_work_rights}
-                                    >
-                                        <SelectInput
-                                            id="zebralution_work_rights"
-                                            name="zebralution_work_rights"
-                                            defaultValue={
-                                                settings.zebralution_work_rights
-                                            }
-                                        >
-                                            {zebralutionWorkRights.map(
-                                                (rights) => (
-                                                    <option
-                                                        key={rights}
-                                                        value={rights}
-                                                    >
-                                                        {rights}
-                                                    </option>
-                                                ),
-                                            )}
-                                        </SelectInput>
-                                    </Field>
-                                </div>
-                            </div>
-
-                            <Field
-                                label="Airplay research countries"
-                                htmlFor="airplay_markets"
-                                error={
-                                    errors.airplay_markets ??
-                                    Object.entries(errors).find(([key]) =>
-                                        key.startsWith('airplay_markets.'),
-                                    )?.[1]
-                                }
-                                hint="Two-letter country codes separated by spaces or commas. Every track is searched once per country, and each search is billed. The search login is under Settings → Connections."
-                            >
-                                <Input
-                                    id="airplay_markets"
-                                    name="airplay_markets"
-                                    defaultValue={settings.airplay_markets.join(
-                                        ' ',
-                                    )}
-                                    placeholder="DE GB US"
-                                    className="font-mono uppercase"
-                                    required
-                                />
-                            </Field>
-
+                        <Panel
+                            title="Accounting features"
+                            description="Each feature adds a tool under Accounting. Nothing is calculated on its own: you run the tool for a range of paid dates and it creates ordinary transactions."
+                        >
                             <div className="grid gap-3">
-                                <p className="text-sm font-medium">
-                                    Accounting features
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    Each feature adds a tool under Royalties.
-                                    Nothing is calculated on its own: you run
-                                    the tool for a range of paid dates and it
-                                    creates ordinary transactions.
-                                </p>
                                 <CheckField
                                     withZero
                                     name="accounts_mechanicals"
@@ -417,101 +212,103 @@ export default function LabelSettings({
                                     defaultChecked={settings.accounts_reserves}
                                 />
                             </div>
+                        </Panel>
 
-                            <div>
-                                <Button disabled={processing}>Save</Button>
-                            </div>
-                        </>
-                    )}
-                </Form>
-            </div>
-
-            <div className="mt-10 space-y-6">
-                <Heading
-                    variant="small"
-                    title="Territories"
-                    description="Groups of countries for splits that only apply in part of the world. A split without a territory applies everywhere."
-                />
-
-                {territories.length > 0 && (
-                    <ul className="divide-y rounded-lg border text-sm">
-                        {territories.map((territory) => (
-                            <li
-                                key={territory.id}
-                                className="flex items-center justify-between gap-3 px-3 py-2"
-                            >
-                                <span className="min-w-0">
-                                    <span className="font-medium">
-                                        {territory.name}
-                                    </span>
-                                    <span className="block truncate font-mono text-xs text-muted-foreground">
-                                        {territory.countries.join(' ')}
-                                    </span>
-                                </span>
-                                <DeleteButton
-                                    url={LabelSettingsController.destroyTerritory.url(
-                                        territory.id,
-                                    )}
-                                    title={`Delete ${territory.name}?`}
-                                    blocked={territory.delete_block}
-                                    description="The territory is removed. No contract split uses it."
-                                />
-                            </li>
-                        ))}
-                    </ul>
+                        <div>
+                            <Button disabled={processing}>Save</Button>
+                        </div>
+                    </>
                 )}
+            </Form>
 
-                <Form
-                    {...LabelSettingsController.storeTerritory.form()}
-                    options={{ preserveScroll: true }}
-                    resetOnSuccess
-                    className="grid gap-4"
-                >
-                    {({ errors, processing }) => (
-                        <>
-                            <Field
-                                label="Territory name"
-                                htmlFor="territory_name"
-                                error={errors.name}
-                                required
-                            >
-                                <Input
-                                    id="territory_name"
-                                    name="name"
-                                    placeholder="GSA"
-                                    required
-                                />
-                            </Field>
-                            <Field
-                                label="Countries"
-                                htmlFor="countries"
-                                error={
-                                    errors.countries ??
-                                    Object.entries(errors).find(([key]) =>
-                                        key.startsWith('countries.'),
-                                    )?.[1]
-                                }
-                                required
-                                hint="Two-letter country codes separated by spaces or commas."
-                            >
-                                <Input
-                                    id="countries"
-                                    name="countries"
-                                    placeholder="DE AT CH"
-                                    className="font-mono uppercase"
-                                    required
-                                />
-                            </Field>
-                            <div>
-                                <Button variant="outline" disabled={processing}>
-                                    Add territory
-                                </Button>
-                            </div>
-                        </>
+            <Panel
+                title="Territories"
+                description="Groups of countries for splits that only apply in part of the world. A split without a territory applies everywhere."
+            >
+                <div className="space-y-6">
+                    {territories.length > 0 && (
+                        <ul className="divide-y rounded-lg border text-sm">
+                            {territories.map((territory) => (
+                                <li
+                                    key={territory.id}
+                                    className="flex items-center justify-between gap-3 px-3 py-2"
+                                >
+                                    <span className="min-w-0">
+                                        <span className="font-medium">
+                                            {territory.name}
+                                        </span>
+                                        <span className="block truncate font-mono text-xs text-muted-foreground">
+                                            {territory.countries.join(' ')}
+                                        </span>
+                                    </span>
+                                    <DeleteButton
+                                        url={LabelSettingsController.destroyTerritory.url(
+                                            territory.id,
+                                        )}
+                                        title={`Delete ${territory.name}?`}
+                                        blocked={territory.delete_block}
+                                        description="The territory is removed. No contract split uses it."
+                                    />
+                                </li>
+                            ))}
+                        </ul>
                     )}
-                </Form>
-            </div>
-        </>
+
+                    <Form
+                        {...LabelSettingsController.storeTerritory.form()}
+                        options={{ preserveScroll: true }}
+                        resetOnSuccess
+                        className="grid gap-4"
+                    >
+                        {({ errors, processing }) => (
+                            <>
+                                <Field
+                                    label="Territory name"
+                                    htmlFor="territory_name"
+                                    error={errors.name}
+                                    required
+                                >
+                                    <Input
+                                        id="territory_name"
+                                        name="name"
+                                        placeholder="GSA"
+                                        required
+                                    />
+                                </Field>
+                                <Field
+                                    label="Countries"
+                                    htmlFor="countries"
+                                    error={
+                                        errors.countries ??
+                                        Object.entries(errors).find(([key]) =>
+                                            key.startsWith('countries.'),
+                                        )?.[1]
+                                    }
+                                    required
+                                    hint="Two-letter country codes separated by spaces or commas."
+                                >
+                                    <Input
+                                        id="countries"
+                                        name="countries"
+                                        placeholder="DE AT CH"
+                                        className="font-mono uppercase"
+                                        required
+                                    />
+                                </Field>
+                                <div>
+                                    <Button
+                                        variant="outline"
+                                        disabled={processing}
+                                    >
+                                        Add territory
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                    </Form>
+                </div>
+            </Panel>
+        </Page>
     );
 }
 

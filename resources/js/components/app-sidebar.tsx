@@ -56,19 +56,27 @@ import { index as statements } from '@/routes/statements';
 import { index as tracks } from '@/routes/tracks';
 import { index as transactions } from '@/routes/transactions';
 
+/**
+ * The groups are the chapters of the handbook of the same name, in its
+ * order. Dashboard and Handbook stand above them.
+ */
 const adminGroups: NavGroup[] = [
     {
-        title: 'Overview',
         items: [
             { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
             { title: 'Handbook', href: handbook(), icon: BookMarked },
         ],
     },
     {
-        title: 'Royalties',
+        title: 'Importing',
         items: [
             { title: 'Data imports', href: dataImports(), icon: Upload },
             { title: 'Play counts', href: playCounts(), icon: AudioLines },
+        ],
+    },
+    {
+        title: 'Accounting',
+        items: [
             {
                 title: 'Transactions',
                 href: transactions(),
@@ -77,12 +85,14 @@ const adminGroups: NavGroup[] = [
             { title: 'Periods', href: periods(), icon: CalendarRange },
             { title: 'Statements', href: statements(), icon: FileText },
             { title: 'Payouts', href: payouts(), icon: Banknote },
-            {
-                title: 'Profitability',
-                href: profitability(),
-                icon: TrendingUp,
-            },
-            { title: 'Overheads', href: labelCosts(), icon: Receipt },
+        ],
+    },
+    {
+        title: 'Deals',
+        items: [
+            { title: 'Contracts', href: contracts(), icon: FileSignature },
+            { title: 'Payees', href: payees(), icon: Users },
+            { title: 'Ledgers', href: ledgers(), icon: BookOpenText },
         ],
     },
     {
@@ -92,24 +102,31 @@ const adminGroups: NavGroup[] = [
             { title: 'Releases', href: releases(), icon: Disc3 },
             { title: 'Tracks', href: tracks(), icon: ListMusic },
             { title: 'Artists', href: artists(), icon: Mic2 },
-            { title: 'Airplay', href: airplays(), icon: Radio },
             { title: 'Items', href: items(), icon: Package },
-            { title: 'Contracts', href: contracts(), icon: FileSignature },
-            { title: 'Payees', href: payees(), icon: Users },
-            { title: 'Ledgers', href: ledgers(), icon: BookOpenText },
+            { title: 'Airplay', href: airplays(), icon: Radio },
+        ],
+    },
+    {
+        title: 'Label',
+        items: [
+            {
+                title: 'Profitability',
+                href: profitability(),
+                icon: TrendingUp,
+            },
+            { title: 'Overheads', href: labelCosts(), icon: Receipt },
         ],
     },
 ];
 
 const payeeGroups: NavGroup[] = [
     {
-        title: 'Royalties',
         items: [{ title: 'My statements', href: portal(), icon: FileText }],
     },
 ];
 
 /**
- * The mechanicals, PPD and reserves tools appear under Royalties only for
+ * The mechanicals, PPD and reserves tools appear under Accounting only for
  * a label that switched them on.
  */
 function withTools(
@@ -131,7 +148,7 @@ function withTools(
     ].filter((item) => item !== false);
 
     return groups.map((group) =>
-        group.title === 'Royalties'
+        group.title === 'Accounting'
             ? { ...group, items: [...group.items, ...extra] }
             : group,
     );

@@ -864,7 +864,7 @@ export default function ReleaseForm({
                         label.tools.reserves) && (
                         <Panel
                             title="Mechanicals, PPD and reserves"
-                            description="Used by the tools under Royalties when you run them. Rates of single tracks and items are set from the tool pages."
+                            description="Used by the tools under Accounting when you run them. Rates of single tracks and items are set from the tool pages."
                         >
                             <div className="grid gap-4 md:grid-cols-3">
                                 {label.tools.mechanicals && (
