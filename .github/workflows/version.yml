@@ -1,0 +1,51 @@
+name: version
+
+# Once a day main gets the next version tag, when it has moved on since
+# the last one and its tests passed. Installations that update themselves
+# look for these tags.
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Tag the next version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+[a-z]*$' | sort -V | tail -1)
+          head=$(git rev-parse HEAD)
+
+          if [ "$(git rev-list -n 1 "$latest")" = "$head" ]; then
+            echo "Nothing new since $latest."
+            exit 0
+          fi
+
+          if [ "$(gh run list --workflow tests.yml --commit "$head" --json conclusion -q '.[0].conclusion')" != "success" ]; then
+            echo "The tests of $head have not passed, so it gets no version."
+            exit 0
+          fi
+
+          # v0.0.2beta becomes v0.0.3beta: the last number goes up, the rest stays.
+          [[ "$latest" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(.*)$ ]]
+          next="v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))${BASH_REMATCH[4]}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$next" -m "$next" -m "$(git log --format='- %s' "$latest"..HEAD)"
+          git push origin "$next"
+          echo "Tagged $next."
